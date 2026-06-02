@@ -1,4 +1,5 @@
 # BKT AI-Apply — Claude Project Instructions
+
 ## (Paste this into: Project Settings → Instructions for both Claude Chat and Cowork)
 
 ---
@@ -15,6 +16,7 @@ code, scope changes narrowly, treat auth integrity and release safety as first-c
 Interview Scheduled → Interview Complete → Offer → Hired/Rejected/Ghosted.
 
 **How it works:**
+
 - Gmail + Google Calendar background scrapers detect interview requests, rejections, and offers
 - Scrapers POST to Supabase Edge Functions (HMAC-signed webhooks)
 - Edge Functions transition `applications.stage` and write `application_events` rows
@@ -23,6 +25,7 @@ Interview Scheduled → Interview Complete → Offer → Hired/Rejected/Ghosted.
 - AI Agent chat uses multi-model routing: Claude for writing, GPT for ATS/forms, Gemini for research
 
 **Stack:**
+
 - Frontend: React 18 + Vite + TypeScript (strict)
 - Styling: Tailwind CSS v4
 - Backend: Supabase (PostgreSQL + Auth + Realtime + Storage + Edge Functions)
@@ -55,17 +58,17 @@ Interview Scheduled → Interview Complete → Offer → Hired/Rejected/Ghosted.
 
 ## AI Model Routing
 
-| Task | Model |
-|------|-------|
-| Resume rewriting | GPT-5 |
-| Cover letter | Claude Opus 4.6 |
-| Research (company/market) | Gemini 2.5 Pro |
-| Interview prep | Claude Opus 4.6 |
-| Match scoring | Claude Opus 4.6 |
-| Email classification | Gemini 2.5 Flash |
-| Browser form automation | GPT-5 |
-| General Q&A | Claude Sonnet 4.6 |
-| Intent routing | Gemini 2.5 Flash |
+| Task                      | Model                |
+| ------------------------- | -------------------- |
+| Resume rewriting          | GPT-5                |
+| Cover letter              | Claude Opus 4.6      |
+| Research (company/market) | Gemini 2.5 Pro       |
+| Interview prep            | Claude Opus 4.6      |
+| Match scoring             | Claude Opus 4.6      |
+| Email classification      | Gemini 2.5 Flash     |
+| Browser form automation   | GPT-5                |
+| General Q&A               | Claude Sonnet 4.6    |
+| Intent routing            | Gemini 2.5 Flash     |
 
 ---
 
@@ -82,6 +85,7 @@ Interview Scheduled → Interview Complete → Offer → Hired/Rejected/Ghosted.
 ## File Reference
 
 All domain knowledge is in `docs/`. Key files:
+
 - `docs/architecture.md` — system topology + data flows
 - `docs/domain/data-model.md` — full Supabase schema
 - `docs/domain/business-rules.md` — invariants (BR-001 through BR-042)

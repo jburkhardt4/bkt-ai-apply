@@ -3,6 +3,7 @@
 > **Read this file first. Always. Before writing any code.**
 
 ## Project Summary
+
 Automated job application pipeline — React/Vite/TS + Supabase. Tracks the full lifecycle from
 discovery through hire. Gmail/Calendar scrapers drive autonomous stage transitions via Supabase
 Edge Functions. Multi-model AI routing assigns the best model per task type.
@@ -10,8 +11,9 @@ Edge Functions. Multi-model AI routing assigns the best model per task type.
 ---
 
 ## Stack
+
 | Layer | Technology |
-|-------|-----------|
+| --- | --- |
 | Frontend | React 18 + Vite + TypeScript (strict) |
 | Styling | Tailwind CSS v4 — no arbitrary values without ADR |
 | Backend | Supabase (PostgreSQL + Auth + Realtime + Storage + Edge Functions) |
@@ -22,16 +24,19 @@ Edge Functions. Multi-model AI routing assigns the best model per task type.
 ---
 
 ## Application Pipeline
-```
+
+```text
 Discovery → Applied → Screening → Interview Scheduled → Interview Complete → Offer → Hired
                                                                                    ↘ Rejected
                                                                                    ↘ Ghosted
 ```
+
 **Every stage transition MUST write an `application_events` row. No exceptions.**
 
 ---
 
 ## Non-Negotiables
+>
 > Never violate without creating an ADR first.
 
 1. **RLS always on** — Never disable Row Level Security on any Supabase table
@@ -45,8 +50,9 @@ Discovery → Applied → Screening → Interview Scheduled → Interview Comple
 ---
 
 ## Key Reference Files
+
 | Topic | Path |
-|-------|------|
+| --- | --- |
 | Architecture + data flow | `docs/architecture.md` |
 | Database schema | `docs/domain/data-model.md` |
 | Business rules | `docs/domain/business-rules.md` |
@@ -60,7 +66,8 @@ Discovery → Applied → Screening → Interview Scheduled → Interview Comple
 ---
 
 ## Source Directory Contract
-```
+
+```text
 src/
   components/        # Presentational only — zero data fetching
   features/
@@ -83,6 +90,7 @@ src/
 ---
 
 ## Validation Sequence
+
 ```bash
 pnpm typecheck    # zero type errors required
 pnpm lint         # zero warnings (--max-warnings 0)
@@ -95,6 +103,7 @@ pnpm validate
 ---
 
 ## After Every Task
+
 - [ ] `pnpm validate` passes clean
 - [ ] New business logic → update `docs/domain/business-rules.md`
 - [ ] Architectural decision → create `docs/adr/NNN-description.md`
@@ -105,5 +114,6 @@ pnpm validate
 ---
 
 ## When Uncertain
+
 1. Check `docs/domain/` → `docs/conventions/` → `docs/adr/`
 2. If no answer exists — ask before assuming

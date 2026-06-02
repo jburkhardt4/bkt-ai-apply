@@ -1,32 +1,73 @@
-# BKT AI-Apply
+# React + TypeScript + Vite
 
-Automated job application pipeline — React/Vite/TS + Supabase.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-**Pipeline:** `Discovery → Applied → Screening → Interview Scheduled → Interview Complete → Offer → Hired | Rejected | Ghosted`
+Currently, two official plugins are available:
 
-## Stack
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-- React 18 + Vite + TypeScript (strict)
-- Tailwind CSS v4
-- Supabase (PostgreSQL + Auth + Realtime + Edge Functions)
-- Multi-model AI routing (Claude / GPT / Gemini by task)
-- Gmail + Google Calendar background scrapers
+## React Compiler
 
-## Quick Start (GitHub Codespaces)
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```bash
-pnpm install
-cp .env.example .env.local
-pnpm dev
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## Agent Orientation
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-See `CLAUDE.md` — read first before any code session.
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-## Docs
-
-- `docs/architecture.md` — system topology
-- `docs/domain/` — schema, business rules, pipeline stages, auth
-- `docs/conventions/` — golden principles, component patterns, model routing
-- `docs/adr/` — architecture decisions
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```

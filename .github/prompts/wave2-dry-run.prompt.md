@@ -1,7 +1,7 @@
 ---
 name: wave2-dry-run
 description: "Run a Wave 2 orchestration dry-run to validate BA spec-lock, UI-UX handoff, SUPABASE-SECURITY sign-off, and normal Wave 1 release gating behavior."
-mode: agent
+agent: agent
 ---
 Run a Wave 2 delegation dry-run. Do not implement real code and do not modify files.
 

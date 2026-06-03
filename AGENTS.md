@@ -5,13 +5,13 @@
 | Wave | Agents | Status |
 | --- | --- | --- |
 | Wave 1 | ORCHESTRATOR, FEATURE-DEV, QA-UAT, RELEASE-GATE | Active |
-| Wave 2 | BUSINESS-ANALYST, UI-UX, SUPABASE-SECURITY | Planned |
+| Wave 2 | BUSINESS-ANALYST, UI-UX, SUPABASE-SECURITY | Active |
 | Wave 3 | AI-INTEGRATIONS, CRITICAL-PATH, VERCEL, CONTEXT-KEEPER | Planned |
 
 ## Entry Points (Picker Visible)
 
 - ORCHESTRATOR (active)
-- BUSINESS-ANALYST (planned)
+- BUSINESS-ANALYST (active)
 - CONTEXT-KEEPER (planned)
 
 ## Engine Room (Hidden, Orchestrator-Callable)
@@ -19,15 +19,19 @@
 - FEATURE-DEV (active)
 - QA-UAT (active)
 - RELEASE-GATE (active)
-- UI-UX (planned)
+- UI-UX (active)
 - AI-INTEGRATIONS (planned)
-- SUPABASE-SECURITY (planned)
+- SUPABASE-SECURITY (active)
 - CRITICAL-PATH (planned)
 - VERCEL (planned)
 
 ## Wave 1 Dispatch Graph
 
 `ORCHESTRATOR -> FEATURE-DEV -> QA-UAT -> RELEASE-GATE`
+
+## Wave 2 Dispatch Graph
+
+`ORCHESTRATOR -> BUSINESS-ANALYST -> UI-UX -> FEATURE-DEV -> SUPABASE-SECURITY -> QA-UAT -> RELEASE-GATE`
 
 ## Gate Policy
 
@@ -80,3 +84,49 @@
 - failed_gate_ids
 - required_actions
 - override_required_flag
+
+## Wave 2 Handoff Contracts
+
+1. ORCHESTRATOR -> BUSINESS-ANALYST
+
+- task_id
+- objective
+- constraints
+- success_criteria
+- out_of_scope
+
+1. BUSINESS-ANALYST -> ORCHESTRATOR
+
+- requirements_summary
+- user_stories
+- acceptance_criteria
+- assumptions
+- locked_spec
+
+1. ORCHESTRATOR -> UI-UX
+
+- locked_spec
+- ui_surfaces
+- interaction_constraints
+
+1. UI-UX -> ORCHESTRATOR
+
+- design_summary
+- state_coverage_matrix
+- responsive_notes
+- handoff_packet
+
+1. ORCHESTRATOR -> SUPABASE-SECURITY
+
+- implementation_packet
+- schema_or_auth_change_summary
+- secrets_impact
+
+1. SUPABASE-SECURITY -> ORCHESTRATOR
+
+- security_findings
+- rls_checklist
+- auth_boundary_status
+- types_generation_status
+- secrets_exposure_status
+- security_verdict

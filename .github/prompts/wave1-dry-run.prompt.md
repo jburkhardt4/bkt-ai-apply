@@ -1,7 +1,7 @@
 ---
 name: wave1-dry-run
 description: "Run a Wave 1 delegation dry-run to confirm ORCHESTRATOR dispatches correctly, gates block advancement on failure, and RELEASE-GATE is terminal."
-mode: agent
+agent: agent
 ---
 Run a Wave 1 delegation dry-run. Do not implement any real code or modify any files. Use simulated inputs only.
 

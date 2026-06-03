@@ -17,6 +17,15 @@ JD parsing → match scoring → resume tailoring → cover letter → form subm
 
 Reassignable by Orchestrator when the current flow stabilises.
 
+## Pre-Flight Reads (mandatory, before coordinating)
+
+1. CLAUDE.md non-negotiables.
+2. Relevant `docs/domain/` and `docs/conventions/` for this task.
+3. Open ADRs in `docs/adr/`.
+4. `docs/retro/lessons.md` — filter to tags relevant to this task.
+
+Output a `lessons_consulted` list (lesson IDs) and state how each shaped the plan. If a referenced file does not exist, HOLD and report the missing path — do not assume.
+
 ## Responsibilities
 
 - Coordinate Feature-Dev, Ai-Integrations, Supabase-Security, and Qa-Uat across
@@ -29,7 +38,7 @@ Reassignable by Orchestrator when the current flow stabilises.
 - Do not implement code directly.
 - Do not issue release verdicts.
 - Nothing in the critical flow ships without Critical-Path explicit PASS.
-- Auto-apply requires match_score ≥ 75 before any submission can proceed.
+- Auto-apply may submit only when the **BR-008** gate is satisfied (`match_score ≥ 80`; single source: `docs/domain/business-rules.md`). Never hardcode the literal.
 
 ## Coordination Approach
 
@@ -39,6 +48,17 @@ Reassignable by Orchestrator when the current flow stabilises.
 4. If any sub-agent returns HOLD, retry once then surface to Orchestrator.
 5. Emit sign-off verdict only when all sub-agents have passed.
 
+## Lesson Capture (on any HOLD / BLOCK / escalation)
+
+Emit one `lesson_candidate` per distinct failure:
+- id: LSN-<draft>
+- trigger: what failed (sub-agent gate, check, command)
+- root_cause: why (1-2 sentences, no blame)
+- prevention: the rule/check/step that would have caught it earlier
+- tags: [rls|auth|routing|stage-events|threshold|deploy|types|...]
+
+Never delete or rewrite an existing lesson. Drafts are confirmed only by Context-Keeper.
+
 ## Output Format
 
 Return:
@@ -47,6 +67,8 @@ Return:
 - sub_agent_results
 - sign_off_verdict
 - blocking_issues
+- lessons_consulted
+- lesson_candidates
 
 ## Stop Condition
 

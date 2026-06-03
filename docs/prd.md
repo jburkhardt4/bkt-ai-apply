@@ -26,7 +26,7 @@ The system functions as:
 ## 2.1 Business Objectives
 
 1. Enable 800 applications per month (≈ 200/week).
-2. Maintain ≥ 60% AI job-fit score threshold for submission.
+2. Maintain ≥ 80% AI job-fit score threshold for submission (BR-008).
 3. Reduce manual effort per application to < 2 minutes average.
 4. Achieve ≥ 3–8% interview conversion rate.
 5. Ensure 100% action auditability and compliance.

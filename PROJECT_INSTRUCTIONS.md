@@ -48,7 +48,7 @@ Interview Scheduled → Interview Complete → Offer → Hired/Rejected/Ghosted.
 ## Key Domain Rules
 
 - Stage transitions are one-directional (except ghosted → applied)
-- Auto-apply requires match_score ≥ 75 before submitting
+- Auto-apply requires match_score ≥ 80 before submitting
 - Email events with confidence < 0.70 are stored but NOT auto-actioned
 - Documents are immutable after linked to an application (create new version)
 - `application_events` rows are never deleted — permanent audit trail

@@ -6,13 +6,13 @@
 | --- | --- | --- |
 | Wave 1 | ORCHESTRATOR, FEATURE-DEV, QA-UAT, RELEASE-GATE | Active |
 | Wave 2 | BUSINESS-ANALYST, UI-UX, SUPABASE-SECURITY | Active |
-| Wave 3 | AI-INTEGRATIONS, CRITICAL-PATH, VERCEL, CONTEXT-KEEPER | Planned |
+| Wave 3 | AI-INTEGRATIONS, CRITICAL-PATH, VERCEL, CONTEXT-KEEPER | Active |
 
 ## Entry Points (Picker Visible)
 
 - ORCHESTRATOR (active)
 - BUSINESS-ANALYST (active)
-- CONTEXT-KEEPER (planned)
+- CONTEXT-KEEPER (active)
 
 ## Engine Room (Hidden, Orchestrator-Callable)
 
@@ -20,10 +20,10 @@
 - QA-UAT (active)
 - RELEASE-GATE (active)
 - UI-UX (active)
-- AI-INTEGRATIONS (planned)
+- AI-INTEGRATIONS (active)
 - SUPABASE-SECURITY (active)
-- CRITICAL-PATH (planned)
-- VERCEL (planned)
+- CRITICAL-PATH (active)
+- VERCEL (active)
 
 ## Wave 1 Dispatch Graph
 
@@ -32,6 +32,13 @@
 ## Wave 2 Dispatch Graph
 
 `ORCHESTRATOR -> BUSINESS-ANALYST -> UI-UX -> FEATURE-DEV -> SUPABASE-SECURITY -> QA-UAT -> RELEASE-GATE`
+
+## Wave 3 Dispatch Graphs
+
+- AI feature path: `ORCHESTRATOR -> AI-INTEGRATIONS -> QA-UAT -> RELEASE-GATE`
+- Critical path: `ORCHESTRATOR -> CRITICAL-PATH -> [FEATURE-DEV | AI-INTEGRATIONS | SUPABASE-SECURITY] -> QA-UAT -> RELEASE-GATE`
+- Deploy path: `ORCHESTRATOR -> VERCEL -> RELEASE-GATE`
+- Session close: `ORCHESTRATOR -> CONTEXT-KEEPER` (terminal)
 
 ## Gate Policy
 
@@ -130,3 +137,67 @@
 - types_generation_status
 - secrets_exposure_status
 - security_verdict
+
+## Wave 3 Handoff Contracts
+
+1. ORCHESTRATOR -> AI-INTEGRATIONS
+
+- task_id
+- objective
+- task_type
+- latency_budget
+- model_preference
+- acceptance_criteria
+
+1. AI-INTEGRATIONS -> ORCHESTRATOR
+
+- implementation_summary
+- changed_files
+- model_routing_evidence
+- latency_measurements
+- known_risks
+- qa_focus_areas
+
+1. ORCHESTRATOR -> CRITICAL-PATH
+
+- task_id
+- critical_flow_scope
+- acceptance_criteria
+- risk_level
+
+1. CRITICAL-PATH -> ORCHESTRATOR
+
+- coordination_summary
+- sub_agent_results
+- sign_off_verdict
+- blocking_issues
+
+1. ORCHESTRATOR -> VERCEL
+
+- deploy_target
+- release_candidate_ref
+- env_var_scope
+- smoke_test_requirements
+- qa_uat_pass_evidence
+- security_pass_evidence
+
+1. VERCEL -> ORCHESTRATOR
+
+- deploy_summary
+- preview_url
+- smoke_test_results
+- env_var_status
+- deploy_verdict
+
+1. ORCHESTRATOR -> CONTEXT-KEEPER
+
+- confirmed_outcomes
+- session_scope
+- new_adr_decisions
+- feature_register_updates
+
+1. CONTEXT-KEEPER -> ORCHESTRATOR/JB
+
+- updated_doc_paths
+- appended_content_summaries
+- session_close_timestamp

@@ -6,7 +6,7 @@ tools: [read, search, agent, todo]
 model:
   - Claude Opus 4.6 (copilot)
   - GPT-5 (copilot)
-agents: [BUSINESS-ANALYST, UI-UX, FEATURE-DEV, SUPABASE-SECURITY, QA-UAT, RELEASE-GATE]
+agents: [BUSINESS-ANALYST, UI-UX, FEATURE-DEV, AI-INTEGRATIONS, SUPABASE-SECURITY, CRITICAL-PATH, QA-UAT, VERCEL, RELEASE-GATE, CONTEXT-KEEPER]
 argument-hint: "Provide objective, constraints, definition of done, deadline, and risk tolerance."
 ---
 You are the command-layer orchestrator for BKT AI-Apply.

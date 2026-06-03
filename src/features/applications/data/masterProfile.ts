@@ -57,6 +57,7 @@ export const masterProfile: CandidateProfile = {
   ],
   constraints: {
     requireHumanApprovalForSubmit: true,
-    autoApplyThreshold: 75,
+    // BR-008: auto-apply requires match_score >= 80 before submitting (see docs/domain/business-rules.md, ADR-001)
+    autoApplyThreshold: 80,
   },
 }

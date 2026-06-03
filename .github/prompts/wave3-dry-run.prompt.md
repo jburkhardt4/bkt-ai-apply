@@ -42,7 +42,7 @@ Invoke Orchestrator with this simulated intake:
 ```
 task_id: DRY-RUN-302
 objective: Wire match scoring into the auto-apply submission flow
-constraints: match_score >= 75 gate must be enforced before any submission
+constraints: match_score >= 80 gate (BR-008) must be enforced before any submission
 risk_tolerance: low
 ```
 

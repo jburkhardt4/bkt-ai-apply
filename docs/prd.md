@@ -6,7 +6,7 @@ AI-Orchestrated Job Application Automation & Pipeline Management Platform
 
 ---
 
-# 1. Product Vision
+## 1. Product Vision
 
 **BKT AI-Apply** is an AI-orchestrated, compliance-first, event-driven job application automation platform built on React + Supabase that enables John Burkhardt to apply to 800+ qualified jobs per month across compliant job sources while maintaining full visibility, auditability, and human-in-the-loop control.
 
@@ -71,18 +71,18 @@ The system functions as:
 
 # 4. User Personas
 
-### Persona 1 – Power Applicant (Primary)
+## Persona 1 – Power Applicant (Primary)
 
 * Applies to 800+ jobs monthly
 * Requires automation + oversight
 * Needs structured pipeline visibility
 
-### Persona 2 – Recruiter Intelligence Monitor
+## Persona 2 – Recruiter Intelligence Monitor
 
 * Tracks recruiter engagement
 * Analyzes response patterns
 
-### Persona 3 – AI Operations Engineer
+## Persona 3 – AI Operations Engineer
 
 * Configures model routing
 * Tunes scoring thresholds

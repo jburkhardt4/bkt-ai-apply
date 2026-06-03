@@ -1,5 +1,5 @@
 ---
-name: QA-UAT
+name: Qa-Uat
 description: "Use when validating implementation against acceptance criteria with pnpm validate, test:e2e, desktop/mobile checks, and structured evidence output."
 user-invocable: false
 tools: [read, search, execute, todo]
@@ -38,4 +38,4 @@ Return:
 - qa_verdict (PASS or HOLD)
 
 ## Stop Condition
-Stop after sending a complete evidence packet to ORCHESTRATOR for RELEASE-GATE dispatch.
+Stop after sending a complete evidence packet to Orchestrator for Release-Gate dispatch.

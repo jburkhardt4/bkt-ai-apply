@@ -1,6 +1,6 @@
 ---
 name: wave3-dry-run
-description: "Run a Wave 3 orchestration dry-run to validate AI-INTEGRATIONS routing, CRITICAL-PATH sign-off, VERCEL smoke-test gating, and CONTEXT-KEEPER terminal behavior."
+description: "Run a Wave 3 orchestration dry-run to validate Ai-Integrations routing, Critical-Path sign-off, Vercel smoke-test gating, and Context-Keeper terminal behavior."
 agent: agent
 ---
 
@@ -8,7 +8,7 @@ Run a Wave 3 delegation dry-run. Do not implement real code and do not modify fi
 
 ## Scenario A — AI Feature Path (PASS)
 
-Invoke ORCHESTRATOR with this simulated intake:
+Invoke Orchestrator with this simulated intake:
 
 ```
 task_id: DRY-RUN-301
@@ -20,24 +20,24 @@ risk_tolerance: medium
 
 Expected dispatch chain:
 
-1. ORCHESTRATOR -> AI-INTEGRATIONS (implement AI feature)
-2. AI-INTEGRATIONS -> ORCHESTRATOR (implementation packet)
-3. ORCHESTRATOR -> QA-UAT (validate)
-4. QA-UAT -> ORCHESTRATOR (PASS evidence)
-5. ORCHESTRATOR -> RELEASE-GATE (aggregate + emit verdict)
+1. Orchestrator -> Ai-Integrations (implement AI feature)
+2. Ai-Integrations -> Orchestrator (implementation packet)
+3. Orchestrator -> Qa-Uat (validate)
+4. Qa-Uat -> Orchestrator (PASS evidence)
+5. Orchestrator -> Release-Gate (aggregate + emit verdict)
 
 Confirm:
 
-- [ ] AI-INTEGRATIONS routed to Gemini 2.5 Pro (matches model-routing.md: Research = Gemini 2.5 Pro)
+- [ ] Ai-Integrations routed to Gemini 2.5 Pro (matches model-routing.md: Research = Gemini 2.5 Pro)
 - [ ] No API key or credential appeared in any changed file
 - [ ] All model calls pass through `src/lib/ai-router.ts`
-- [ ] RELEASE-GATE emitted PASS and stopped — no further dispatch
+- [ ] Release-Gate emitted PASS and stopped — no further dispatch
 
 ---
 
 ## Scenario B — Critical Path Sign-Off Block (HOLD → Retry → Escalate)
 
-Invoke ORCHESTRATOR with this simulated intake:
+Invoke Orchestrator with this simulated intake:
 
 ```
 task_id: DRY-RUN-302
@@ -48,12 +48,12 @@ risk_tolerance: low
 
 Expected dispatch chain:
 
-1. ORCHESTRATOR -> CRITICAL-PATH (coordinate critical flow task)
-2. CRITICAL-PATH -> FEATURE-DEV + AI-INTEGRATIONS (parallel implementation)
-3. CRITICAL-PATH -> SUPABASE-SECURITY (security check)
-4. CRITICAL-PATH -> QA-UAT (verify gate enforcement)
+1. Orchestrator -> Critical-Path (coordinate critical flow task)
+2. Critical-Path -> Feature-Dev + Ai-Integrations (parallel implementation)
+3. Critical-Path -> Supabase-Security (security check)
+4. Critical-Path -> Qa-Uat (verify gate enforcement)
 
-Inject this CRITICAL-PATH result after step 4:
+Inject this Critical-Path result after step 4:
 
 ```
 sign_off_verdict: HOLD
@@ -64,38 +64,38 @@ blocking_issues:
 
 Expected behavior:
 
-1. ORCHESTRATOR receives HOLD from CRITICAL-PATH
-2. ORCHESTRATOR dispatches FEATURE-DEV once for remediation (retry #1)
-3. CRITICAL-PATH re-evaluates — still returns HOLD (second attempt)
-4. ORCHESTRATOR escalates to JB and stops
-5. QA-UAT and RELEASE-GATE are not invoked
+1. Orchestrator receives HOLD from Critical-Path
+2. Orchestrator dispatches Feature-Dev once for remediation (retry #1)
+3. Critical-Path re-evaluates — still returns HOLD (second attempt)
+4. Orchestrator escalates to JB and stops
+5. Qa-Uat and Release-Gate are not invoked
 
 Confirm:
 
-- [ ] Nothing shipped without CRITICAL-PATH explicit PASS
+- [ ] Nothing shipped without Critical-Path explicit PASS
 - [ ] Retry occurred exactly once
 - [ ] Escalation packet emitted after second HOLD
-- [ ] QA-UAT and RELEASE-GATE not invoked at any point
+- [ ] Qa-Uat and Release-Gate not invoked at any point
 
 ---
 
 ## Scenario C — Deploy Smoke Test Failure (HOLD)
 
-Invoke ORCHESTRATOR with this simulated intake:
+Invoke Orchestrator with this simulated intake:
 
 ```
 task_id: DRY-RUN-303
 objective: Deploy release candidate RC-2026-06-03 to preview
-qa_uat_pass_evidence: PASS (from prior QA-UAT run)
-security_pass_evidence: PASS (from SUPABASE-SECURITY)
+qa_uat_pass_evidence: PASS (from prior Qa-Uat run)
+security_pass_evidence: PASS (from Supabase-Security)
 deploy_target: preview
 ```
 
 Expected dispatch chain:
 
-1. ORCHESTRATOR -> VERCEL (deploy + smoke test)
+1. Orchestrator -> Vercel (deploy + smoke test)
 
-Inject this VERCEL result:
+Inject this Vercel result:
 
 ```
 deploy_verdict: HOLD
@@ -107,24 +107,24 @@ preview_url: https://bkt-ai-apply-rc-abc123.vercel.app
 
 Expected behavior:
 
-1. VERCEL emits HOLD with smoke test failure detail
-2. ORCHESTRATOR receives HOLD — does NOT forward to RELEASE-GATE
-3. ORCHESTRATOR retries once (dispatches VERCEL again)
-4. VERCEL second attempt still returns HOLD
-5. ORCHESTRATOR escalates to JB with full deploy evidence
+1. Vercel emits HOLD with smoke test failure detail
+2. Orchestrator receives HOLD — does NOT forward to Release-Gate
+3. Orchestrator retries once (dispatches Vercel again)
+4. Vercel second attempt still returns HOLD
+5. Orchestrator escalates to JB with full deploy evidence
 
 Confirm:
 
-- [ ] RELEASE-GATE was NOT invoked
+- [ ] Release-Gate was NOT invoked
 - [ ] Retry occurred exactly once
 - [ ] Escalation packet includes preview_url and smoke_test_results
 - [ ] Production was not touched at any point
 
 ---
 
-## Scenario D — Session Close / CONTEXT-KEEPER Terminal
+## Scenario D — Session Close / Context-Keeper Terminal
 
-Invoke CONTEXT-KEEPER directly (JB-triggered) with this simulated input:
+Invoke Context-Keeper directly (JB-triggered) with this simulated input:
 
 ```
 confirmed_outcomes:
@@ -139,7 +139,7 @@ feature_register_updates:
 
 Expected behavior:
 
-1. CONTEXT-KEEPER reads confirmed outcomes
+1. Context-Keeper reads confirmed outcomes
 2. Appends ADR entry to `docs/adr/` with ISO 8601 timestamp
 3. Updates `docs/conventions/model-routing.md` with confirmed routing rule
 4. Updates feature register
@@ -151,15 +151,15 @@ Confirm:
 - [ ] ISO 8601 timestamp present on ADR entry
 - [ ] No source code files were edited
 - [ ] No DB mutations performed
-- [ ] CONTEXT-KEEPER stopped after returning summary — no downstream dispatch
+- [ ] Context-Keeper stopped after returning summary — no downstream dispatch
 
 ---
 
 ## Final Validation Checklist
 
-- [ ] AI-INTEGRATIONS used no agent tool (agents: [])
-- [ ] CRITICAL-PATH only delegated to FEATURE-DEV, AI-INTEGRATIONS, SUPABASE-SECURITY, QA-UAT
-- [ ] VERCEL used no edit tool and did not invoke RELEASE-GATE directly
-- [ ] CONTEXT-KEEPER used no execute tool and issued no downstream dispatch
-- [ ] ORCHESTRATOR used no edit or execute tools throughout all scenarios
+- [ ] Ai-Integrations used no agent tool (agents: [])
+- [ ] Critical-Path only delegated to Feature-Dev, Ai-Integrations, Supabase-Security, Qa-Uat
+- [ ] Vercel used no edit tool and did not invoke Release-Gate directly
+- [ ] Context-Keeper used no execute tool and issued no downstream dispatch
+- [ ] Orchestrator used no edit or execute tools throughout all scenarios
 - [ ] No CLAUDE.md non-negotiable was violated in any simulated output

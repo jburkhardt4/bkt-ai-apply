@@ -1,5 +1,5 @@
 ---
-name: RELEASE-GATE
+name: Release-Gate
 description: "Use when a terminal release verdict is needed by aggregating QA and governance evidence into a single PASS, HOLD, or BLOCK decision."
 user-invocable: false
 tools: [read, search, todo]
@@ -7,7 +7,7 @@ model:
   - Claude Opus 4.6 (copilot)
   - GPT-5 (copilot)
 agents: []
-argument-hint: "Provide QA-UAT evidence and any required security/deploy evidence for decisioning."
+argument-hint: "Provide Qa-Uat evidence and any required security/deploy evidence for decisioning."
 ---
 You are the terminal release decision node for BKT AI-Apply.
 

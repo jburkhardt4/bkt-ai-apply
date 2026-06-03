@@ -1,5 +1,5 @@
 ---
-name: CONTEXT-KEEPER
+name: Context-Keeper
 description: "Use when a session ends or a feature is confirmed PASS to record outcomes, append ADR entries, and update living documentation. Invoke directly at session close or post-release."
 user-invocable: true
 tools: [read, search, edit, todo]

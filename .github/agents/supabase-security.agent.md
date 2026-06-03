@@ -1,5 +1,5 @@
 ---
-name: SUPABASE-SECURITY
+name: Supabase-Security
 description: "Use when changes touch database, auth, RLS, generated DB types, or environment secrets and require security sign-off evidence."
 user-invocable: false
 tools: [read, search, edit, execute, todo]
@@ -38,4 +38,4 @@ Return:
 - security_verdict
 
 ## Stop Condition
-Stop after issuing security evidence/sign-off packet to ORCHESTRATOR.
+Stop after issuing security evidence/sign-off packet to Orchestrator.

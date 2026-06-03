@@ -1,5 +1,5 @@
 ---
-name: UI-UX
+name: Ui-Ux
 description: "Use when a locked spec requires UI design updates, state coverage planning, and responsive handoff for desktop and mobile before implementation."
 user-invocable: false
 tools: [read, search, edit, todo]
@@ -31,4 +31,4 @@ Return:
 - handoff_packet
 
 ## Stop Condition
-Stop after delivering the design handoff packet to ORCHESTRATOR.
+Stop after delivering the design handoff packet to Orchestrator.

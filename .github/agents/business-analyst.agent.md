@@ -1,5 +1,5 @@
 ---
-name: BUSINESS-ANALYST
+name: Business-Analyst
 description: "Use when a feature request needs requirement clarification, user stories, acceptance criteria, and a locked spec before implementation begins."
 user-invocable: true
 tools: [read, search, todo]
@@ -32,4 +32,4 @@ Return:
 - locked_spec
 
 ## Stop Condition
-Stop after returning a locked spec packet to ORCHESTRATOR.
+Stop after returning a locked spec packet to Orchestrator.

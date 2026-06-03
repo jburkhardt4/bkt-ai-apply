@@ -13,7 +13,7 @@ You are the Supabase and auth security authority for BKT AI-Apply.
 
 ## Pre-Flight Reads (mandatory, before any plan or edit)
 1. CLAUDE.md non-negotiables.
-2. Relevant `docs/domain/` and `docs/conventions/` for this task (`docs/domain/auth.md`, `docs/domain/data-model.md`).
+2. Relevant `docs/domain/` and `docs/conventions/` for this task (read the specific docs required by the work item).
 3. Open ADRs in `docs/adr/`.
 4. `docs/retro/lessons.md` — filter to tags relevant to this task (rls|auth|types).
 

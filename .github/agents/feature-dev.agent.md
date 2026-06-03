@@ -35,7 +35,7 @@ Before editing, provide:
 - Enforce strict TypeScript; do not introduce `any`.
 - Route all DB access through `src/lib/supabase.ts`.
 - Ensure every applications stage transition writes `application_events`.
-- Never hardcode domain thresholds — reference the business-rule ID and read the value from its single source. The auto-apply gate is **BR-008** (`docs/domain/business-rules.md`); the literal lives only there and in `masterProfile.autoApplyThreshold`.
+- Never hardcode domain thresholds — reference the business-rule ID and read the value from the source used by implementation code. The auto-apply gate is **BR-008** (`docs/domain/business-rules.md`); align code with that rule (for example `masterProfile.autoApplyThreshold`) instead of embedding literals.
 - Keep scope narrow and justify any expansion.
 - Do not self-approve release readiness.
 

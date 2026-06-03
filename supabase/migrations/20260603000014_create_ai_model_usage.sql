@@ -31,8 +31,11 @@ CREATE INDEX IF NOT EXISTS ai_usage_user_called_at_idx
 
 -- Composite index for monthly rollup queries:
 -- SELECT SUM(estimated_cost_usd) WHERE user_id = ? AND called_at >= month_start
+-- Note: date_trunc on timestamptz is STABLE (timezone-dependent); cast via
+-- AT TIME ZONE 'UTC' to a plain timestamp so the expression is IMMUTABLE and
+-- legal in an index. Monthly buckets are anchored to UTC.
 CREATE INDEX IF NOT EXISTS ai_usage_monthly_cost_idx
-  ON public.ai_model_usage (user_id, date_trunc('month', called_at), estimated_cost_usd);
+  ON public.ai_model_usage (user_id, date_trunc('month', (called_at AT TIME ZONE 'UTC')), estimated_cost_usd);
 
 CREATE INDEX IF NOT EXISTS ai_usage_provider_idx      ON public.ai_model_usage (model_provider);
 CREATE INDEX IF NOT EXISTS ai_usage_task_type_idx     ON public.ai_model_usage (task_type);

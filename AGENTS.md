@@ -1,18 +1,21 @@
 # BKT AI-Apply Agent Roster
 
 ## Wave Status
+
 | Wave | Agents | Status |
-|---|---|---|
+| --- | --- | --- |
 | Wave 1 | ORCHESTRATOR, FEATURE-DEV, QA-UAT, RELEASE-GATE | Active |
 | Wave 2 | BUSINESS-ANALYST, UI-UX, SUPABASE-SECURITY | Planned |
 | Wave 3 | AI-INTEGRATIONS, CRITICAL-PATH, VERCEL, CONTEXT-KEEPER | Planned |
 
 ## Entry Points (Picker Visible)
+
 - ORCHESTRATOR (active)
 - BUSINESS-ANALYST (planned)
 - CONTEXT-KEEPER (planned)
 
 ## Engine Room (Hidden, Orchestrator-Callable)
+
 - FEATURE-DEV (active)
 - QA-UAT (active)
 - RELEASE-GATE (active)
@@ -23,16 +26,20 @@
 - VERCEL (planned)
 
 ## Wave 1 Dispatch Graph
+
 `ORCHESTRATOR -> FEATURE-DEV -> QA-UAT -> RELEASE-GATE`
 
 ## Gate Policy
+
 - Phase PASS is required before advancing.
 - ORCHESTRATOR retries exactly once on failure.
 - On second failure, ORCHESTRATOR escalates to JB.
 - RELEASE-GATE is the terminal decision node.
 
 ## Wave 1 Handoff Contracts
+
 1. ORCHESTRATOR -> FEATURE-DEV
+
 - task_id
 - objective
 - locked_scope
@@ -40,7 +47,8 @@
 - constraints
 - done_definition
 
-2. FEATURE-DEV -> ORCHESTRATOR
+1. FEATURE-DEV -> ORCHESTRATOR
+
 - implementation_summary
 - changed_files
 - tests_run
@@ -48,22 +56,26 @@
 - rollback_notes
 - qa_focus_areas
 
-3. ORCHESTRATOR -> QA-UAT
+1. ORCHESTRATOR -> QA-UAT
+
 - feature_dev_packet
 - acceptance_checklist
 
-4. QA-UAT -> ORCHESTRATOR
+1. QA-UAT -> ORCHESTRATOR
+
 - criteria_results
 - command_results
 - viewport_results
 - defect_log
 - qa_verdict
 
-5. ORCHESTRATOR -> RELEASE-GATE
+1. ORCHESTRATOR -> RELEASE-GATE
+
 - qa_packet
 - non_negotiables_checklist_status
 
-6. RELEASE-GATE -> ORCHESTRATOR/JB
+1. RELEASE-GATE -> ORCHESTRATOR/JB
+
 - release_verdict
 - failed_gate_ids
 - required_actions

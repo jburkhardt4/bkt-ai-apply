@@ -2,7 +2,7 @@
 name: Business-Analyst
 description: "Use when a feature request needs requirement clarification, user stories, acceptance criteria, and a locked spec before implementation begins."
 user-invocable: true
-tools: [read, search, todo]
+tools: [read, search, edit, todo]
 model:
   - Claude Sonnet 4.6 (copilot)
   - GPT-5 (copilot)

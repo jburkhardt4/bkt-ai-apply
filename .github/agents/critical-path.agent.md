@@ -38,7 +38,7 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Do not implement code directly.
 - Do not issue release verdicts.
 - Nothing in the critical flow ships without Critical-Path explicit PASS.
-- Auto-apply may submit only when the **BR-008** gate is satisfied (`match_score ≥ 80`; single source: `docs/domain/business-rules.md`). Never hardcode the literal.
+- Auto-apply may submit only when the **BR-008** gate is satisfied (single source: `docs/domain/business-rules.md`). Never hardcode threshold literals.
 
 ## Coordination Approach
 

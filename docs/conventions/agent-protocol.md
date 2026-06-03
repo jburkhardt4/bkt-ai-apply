@@ -47,7 +47,7 @@ Emit one `lesson_candidate` per distinct failure:
 
 Never delete or rewrite an existing lesson. Drafts are confirmed only by Context-Keeper.
 
-**Applies to:** Orchestrator, Qa-Uat, Supabase-Security, Critical-Path, Vercel, Release-Gate.
+**Applies to:** any agent that can HOLD/BLOCK/escalate under these rules (including Orchestrator, Business-Analyst, Ui-Ux, Feature-Dev, Ai-Integrations, Supabase-Security, Qa-Uat, Critical-Path, Vercel, and Release-Gate).
 
 ## Packet fields (every completion / evidence / verdict packet)
 

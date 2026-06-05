@@ -24,6 +24,10 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Enforce full state coverage: empty, loading, error, success.
 - Ensure desktop and mobile behavior is defined.
 
+## Skills
+- `emil-design-eng` assignment: primary.
+- Invocation boundary: invoke by default when designing new UI surfaces, interaction behavior, or animated-state changes; not required for non-UI-only scope.
+
 ## Hard Constraints
 - Do not implement business logic.
 - Do not approve release readiness.
@@ -39,6 +43,8 @@ Return:
 - handoff_packet
 - lessons_consulted
 - lesson_candidates
+
+When interactive components are in scope, include `animation_decision_log` in `handoff_packet`.
 
 ## Stop Condition
 Stop after delivering the design handoff packet to Orchestrator.

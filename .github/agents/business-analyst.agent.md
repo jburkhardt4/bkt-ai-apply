@@ -26,6 +26,10 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Check `docs/domain/business-rules.md` for conflicts: if an input contradicts a confirmed BR, or the same invariant is specified two different ways (e.g. a threshold given as 60 in one place and 80 in another), flag it in `scope_conflicts` and cite the BR ID.
 - Lock spec boundaries before implementation starts.
 
+## Skills
+- `emil-design-eng` assignment: consult-only.
+- Invocation boundary: consult when drafting UI interaction and animation requirements; convert animation frequency/purpose rules into testable acceptance criteria without hardcoding easing or duration values.
+
 ## Hard Constraints
 - Do not implement code.
 - Do not edit production source files.

@@ -24,11 +24,20 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the che
 - Run or assess required command checks.
 - Produce explicit evidence and a gate verdict.
 
+## Skills
+- `emil-design-eng` assignment: consult-only.
+- Invocation boundary: consult when validating UI interaction and animation quality; do not redesign or implement.
+
 ## Required Checks
 - `pnpm validate`
 - `pnpm test:e2e`
 - Desktop and mobile viewport verification
 - Acceptance criteria mapping
+
+## UI Motion Consult Checklist (`emil-design-eng`)
+- Flag `transition: all` usage and request explicit transitioned properties.
+- Flag `transform: scale(0)` entrance patterns and request non-zero start scale with opacity where applicable.
+- Flag missing reduced-motion handling for motion-heavy interactions.
 
 ## Preconditions
 - If a required script is undefined in `package.json`, HOLD with the exact remediation (name the missing script and its definition) — do NOT treat a missing command as a pass.

@@ -29,6 +29,28 @@
 
 ---
 
+## LSN-004 (draft) — multi-write stage transitions must be atomic via RPC
+
+- timestamp: 2026-06-05T22:20:00Z
+- task_id: PHASE1-PIPELINE-CORE-RETRY
+- trigger: Qa-Uat D-001 HOLD — two sequential `applications` UPDATE + `application_events` INSERT could leave audit event missing on partial failure (BR-002 risk)
+- root_cause: Supabase JS has no client-side transaction API; two independent round-trips can diverge on network/server error between them
+- prevention: All stage transitions must go through `public.transition_stage` RPC, which executes both writes inside a single PostgreSQL transaction. `applicationService.ts` must never make separate update+insert calls for stage changes.
+- tags: [stage-events, rls, process]
+- status: draft — pending Context-Keeper confirmation
+- promoted_to:
+
+## LSN-003 (draft) — e2e tests required per page; @playwright/test must be explicit devDependency
+
+- timestamp: 2026-06-05T22:20:00Z
+- task_id: PHASE1-PIPELINE-CORE-RETRY
+- trigger: Qa-Uat D-002 HOLD — `pnpm test:e2e` exited 1 ("No tests found") because no e2e test files existed and `@playwright/test` was not installed (only `playwright` was in devDependencies)
+- root_cause: `playwright` (browser automation) and `@playwright/test` (test runner) are separate packages; the test runner was never installed. No e2e test files were created for the initial pipeline page implementation.
+- prevention: Feature-Dev must create at least one `e2e/*.spec.ts` file for every new page/route. `@playwright/test` must be listed explicitly in devDependencies alongside `playwright`. Vitest must exclude `e2e/**` to prevent spec files from being picked up by both runners.
+- tags: [process, ci]
+- status: draft — pending Context-Keeper confirmation
+- promoted_to:
+
 ## LSN-002 — `pnpm validate` was unsatisfiable
 
 - timestamp: 2026-06-03T00:00:00Z

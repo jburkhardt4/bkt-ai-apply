@@ -63,8 +63,8 @@
 **Acceptance Criteria:**
 
 - AC-004-01: Dashboard displays counts per stage: discovery, applied, screening, interview_scheduled, interview_complete, offer, hired, rejected, ghosted
-- AC-004-02: Stage changes are visible in real time via Supabase Realtime
-- AC-004-03: Each application card shows: company, title, match_score, days in current stage, last event
+- AC-004-02: Stage changes are visible in real time via a Supabase Realtime subscription on `applications` and `application_events` (BR-092); no manual refresh is required for stage updates
+- AC-004-03: Each application card shows: company, title, match_score, days in current stage, and a `last_event` summary (actor, event type, and timestamp from the most-recent `application_events` row) (BR-091)
 
 ---
 
@@ -181,7 +181,7 @@
 
 **Acceptance Criteria:**
 
-- AC-012-01: All `application_events` rows are displayed in chronological order
+- AC-012-01: All `application_events` rows are displayed in descending order by `created_at` (newest first) in both UI and API list endpoints (BR-090)
 - AC-012-02: Events are never deletable from UI or API
 - AC-012-03: Each event shows: timestamp, actor, from_stage, to_stage, reason, model used (if AI)
 

@@ -2,7 +2,7 @@
 
 **task_id:** BKT-AIAPPLY-PHASE1-REQS-LOCK-002
 **status:** LIVING DOCUMENT — append only; never delete rules; supersede with new rule ID
-**last_updated:** 2026-06-03
+**last_updated:** 2026-06-05
 
 ---
 
@@ -107,3 +107,13 @@
 | BR-080 | `pnpm validate` (typecheck + lint + test) must pass before any task is considered done | CLAUDE.md |
 | BR-081 | DB types (`src/types/db.types.ts`) must be regenerated via `pnpm db:gen-types` after every schema change | CLAUDE.md |
 | BR-082 | Never handwrite DB types; always use generated types | CLAUDE.md |
+
+---
+
+## Pipeline Visibility and Audit Rules
+
+| ID | Rule | Source |
+| --- | --- | --- |
+| BR-090 | `application_events` list endpoints and UI audit-log views MUST sort by `created_at DESC` (newest first); ascending sort is not a valid default for event timelines | D-003 |
+| BR-091 | Pipeline board cards MUST surface the `last_event` summary: actor, event type, and timestamp of the most-recent `application_events` row for that application | D-002 |
+| BR-092 | Pipeline board MUST maintain a Supabase Realtime subscription on `applications` and `application_events`; stage updates do NOT require a manual page refresh | D-001 |

@@ -80,6 +80,22 @@ export default function PipelinePage() {
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={() => {
+              window.location.href = '/ingestion'
+            }}
+            style={{
+              fontSize: '0.75rem',
+              padding: '0.3rem 0.6rem',
+              border: '1px solid var(--line)',
+              borderRadius: '6px',
+              background: 'white',
+              cursor: 'pointer',
+              color: 'var(--ink)',
+            }}
+          >
+            Ingestion
+          </button>
           <span style={{ fontSize: '0.8rem', color: 'var(--ink-subtle)' }}>{user.email}</span>
           <button
             onClick={() => void handleSignOut()}

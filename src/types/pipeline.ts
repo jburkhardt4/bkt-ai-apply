@@ -67,3 +67,27 @@ export interface CandidateProfile {
     autoApplyThreshold: number
   }
 }
+
+export type AiTaskType =
+  | 'cover_letter_generation'
+  | 'interview_prep'
+  | 'match_scoring'
+  | 'resume_rewriting'
+  | 'browser_form_automation'
+  | 'company_market_research'
+  | 'email_classification'
+  | 'intent_routing'
+  | 'general_qa'
+
+export type AiModelProvider = 'anthropic' | 'openai' | 'google'
+
+export type MatchRecommendationLabel = 'Reject' | 'Consideration' | 'Auto-Submit Prep'
+
+export type MatchRecommendation = 'reject' | 'consider' | 'apply'
+
+export type AiCostPolicyStatus =
+  | 'ok'
+  | 'warn_80'
+  | 'warn_90'
+  | 'capped_non_critical'
+  | 'capped_critical_override'

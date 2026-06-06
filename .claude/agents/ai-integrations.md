@@ -37,7 +37,7 @@ Before editing, provide:
 
 ## Hard Constraints
 - All model calls must route through `src/lib/ai-router.ts`.
-- Confirm pinned model names against `docs/conventions/model-routing.md` as the single source. Pinned versions are drift-prone — never hardcode model names anywhere else.
+- Confirm pinned model names against `docs/conventions/model-routing.md` as the single source. Pinned versions (claude-opus-4-8, claude-sonnet-4-6, Gemini 2.5 Pro) are drift-prone — never hardcode model names anywhere else.
 - Never expose API keys, tokens, or model credentials in client-side code.
 - Follow the routing matrix in `docs/conventions/model-routing.md` exactly.
 - No model calls outside the `ai-router.ts` pattern.

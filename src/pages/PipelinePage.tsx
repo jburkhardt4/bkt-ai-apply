@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/auth-context'
 import { AiCostMonitorCard } from '../features/applications/components/AiCostMonitorCard'
 import { AnalyticsReportsSection } from '../features/applications/components/AnalyticsReportsSection'
 import { AuditLogViewer } from '../features/applications/components/AuditLogViewer'
-import { ChatAssistantPanel } from '../features/applications/components/ChatAssistantPanel'
 import { DashboardSummarySection } from '../features/applications/components/DashboardSummarySection'
 import { NotificationFeedSection } from '../features/applications/components/NotificationFeedSection'
 import { PipelineBoard } from '../features/applications/components/PipelineBoard'
@@ -54,10 +53,7 @@ export default function PipelinePage() {
         <NotificationFeedSection refreshKey={refreshKey} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <AnalyticsReportsSection refreshKey={refreshKey} />
-        <ChatAssistantPanel selectedApplicationId={selectedApplicationId} />
-      </div>
+      <AnalyticsReportsSection refreshKey={refreshKey} />
 
       <PipelineBoard
         selectedApplicationId={selectedApplicationId}

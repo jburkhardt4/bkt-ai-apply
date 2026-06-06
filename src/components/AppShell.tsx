@@ -4,6 +4,7 @@ import { AppSidebar } from './AppSidebar'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useAuth } from '@/contexts/auth-context'
+import { ChatAssistantPanel } from '@/features/applications/components/ChatAssistantPanel'
 
 interface AppShellProps {
   children: ReactNode
@@ -28,8 +29,8 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-svh bg-background">
-      {/* Desktop sidebar */}
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Desktop left nav sidebar */}
       <aside className="hidden w-56 shrink-0 border-r border-sidebar-border md:flex md:flex-col">
         <AppSidebar className="flex-1" />
       </aside>
@@ -42,7 +43,7 @@ export function AppShell({ children }: AppShellProps) {
       </Sheet>
 
       {/* Main content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Mobile topbar */}
         <header className="flex items-center gap-3 border-b border-border px-4 py-3 md:hidden">
           <Button
@@ -58,10 +59,17 @@ export function AppShell({ children }: AppShellProps) {
           </span>
         </header>
 
-        <main className="flex-1 overflow-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8">
           {children}
         </main>
       </div>
+
+      {/* Right chat sidebar — desktop only; hidden on mobile */}
+      <aside className="hidden w-80 shrink-0 flex-col border-l border-border md:flex">
+        <div className="flex flex-1 flex-col overflow-y-auto p-4">
+          <ChatAssistantPanel />
+        </div>
+      </aside>
     </div>
   )
 }

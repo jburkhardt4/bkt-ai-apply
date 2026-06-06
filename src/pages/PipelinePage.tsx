@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/auth-context'
 import { AuditLogViewer } from '../features/applications/components/AuditLogViewer'
 import { PipelineBoard } from '../features/applications/components/PipelineBoard'
+import { SubmissionGatePanel } from '../features/applications/components/SubmissionGatePanel'
 
 export default function PipelinePage() {
   const { user, loading, signOut } = useAuth()
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -120,6 +122,13 @@ export default function PipelinePage() {
       />
 
       {selectedApplicationId && (
+        <SubmissionGatePanel
+          applicationId={selectedApplicationId}
+          onApproved={() => setAuditRefreshKey((value) => value + 1)}
+        />
+      )}
+
+      {selectedApplicationId && (
         <div
           style={{
             marginTop: '1.5rem',
@@ -128,7 +137,7 @@ export default function PipelinePage() {
             background: 'var(--surface)',
           }}
         >
-          <AuditLogViewer applicationId={selectedApplicationId} />
+          <AuditLogViewer applicationId={selectedApplicationId} refreshKey={auditRefreshKey} />
         </div>
       )}
     </div>

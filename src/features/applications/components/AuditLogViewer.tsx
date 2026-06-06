@@ -7,9 +7,10 @@ import {
 
 interface AuditLogViewerProps {
   applicationId: string
+  refreshKey?: number
 }
 
-export function AuditLogViewer({ applicationId }: AuditLogViewerProps) {
+export function AuditLogViewer({ applicationId, refreshKey = 0 }: AuditLogViewerProps) {
   const { user } = useAuth()
   const userId = user?.id ?? ''
 
@@ -40,7 +41,7 @@ export function AuditLogViewer({ applicationId }: AuditLogViewerProps) {
     return () => {
       cancelled = true
     }
-  }, [applicationId, userId])
+  }, [applicationId, userId, refreshKey])
 
   if (loading && events.length === 0) {
     return (

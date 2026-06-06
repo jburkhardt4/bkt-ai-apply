@@ -1,19 +1,61 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/auth-context'
+import { AiCostMonitorCard } from '../features/applications/components/AiCostMonitorCard'
 import { AuditLogViewer } from '../features/applications/components/AuditLogViewer'
+import { DashboardSummarySection } from '../features/applications/components/DashboardSummarySection'
+import { NotificationFeedSection } from '../features/applications/components/NotificationFeedSection'
 import { PipelineBoard } from '../features/applications/components/PipelineBoard'
 import { SubmissionGatePanel } from '../features/applications/components/SubmissionGatePanel'
+import { getSupabaseClient } from '../lib/supabase'
 
 export default function PipelinePage() {
   const { user, loading, signOut } = useAuth()
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
-  const [auditRefreshKey, setAuditRefreshKey] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!loading && !user) {
       window.location.href = '/login'
     }
   }, [loading, user])
+
+  useEffect(() => {
+    if (!user) return
+
+    const supabase = getSupabaseClient()
+    const channel = supabase
+      .channel(`pipeline-dashboard-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'applications', filter: `user_id=eq.${user.id}` },
+        () => setRefreshKey((value) => value + 1),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'application_events', filter: `user_id=eq.${user.id}` },
+        () => setRefreshKey((value) => value + 1),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'interviews', filter: `user_id=eq.${user.id}` },
+        () => setRefreshKey((value) => value + 1),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => setRefreshKey((value) => value + 1),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_model_usage', filter: `user_id=eq.${user.id}` },
+        () => setRefreshKey((value) => value + 1),
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user])
 
   if (loading) {
     return (
@@ -116,6 +158,20 @@ export default function PipelinePage() {
         </div>
       </header>
 
+      <DashboardSummarySection refreshKey={refreshKey} />
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '1rem',
+          marginTop: '1rem',
+        }}
+      >
+        <AiCostMonitorCard refreshKey={refreshKey} />
+        <NotificationFeedSection refreshKey={refreshKey} />
+      </div>
+
       <PipelineBoard
         selectedApplicationId={selectedApplicationId}
         onSelectApplication={setSelectedApplicationId}
@@ -124,7 +180,7 @@ export default function PipelinePage() {
       {selectedApplicationId && (
         <SubmissionGatePanel
           applicationId={selectedApplicationId}
-          onApproved={() => setAuditRefreshKey((value) => value + 1)}
+          onApproved={() => setRefreshKey((value) => value + 1)}
         />
       )}
 
@@ -137,7 +193,7 @@ export default function PipelinePage() {
             background: 'var(--surface)',
           }}
         >
-          <AuditLogViewer applicationId={selectedApplicationId} refreshKey={auditRefreshKey} />
+          <AuditLogViewer applicationId={selectedApplicationId} refreshKey={refreshKey} />
         </div>
       )}
     </div>

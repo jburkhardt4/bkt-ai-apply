@@ -52,7 +52,7 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
   const { user } = useAuth()
   const userId = user?.id ?? ''
 
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [localRefreshKey, setLocalRefreshKey] = useState(0)
   const [applications, setApplications] = useState<ApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -87,7 +87,7 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
     return () => {
       cancelled = true
     }
-  }, [userId, refreshKey])
+  }, [userId, localRefreshKey])
 
   function openMoveForm(applicationId: string, fromStage: PipelineStage) {
     setMoveTarget({ applicationId, fromStage })
@@ -109,7 +109,7 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
       setMoveTarget(null)
       setToStage('')
       setReason('')
-      setRefreshKey((k) => k + 1)
+      setLocalRefreshKey((k) => k + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Stage move failed')
     } finally {

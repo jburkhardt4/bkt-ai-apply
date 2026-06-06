@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/auth-context'
+import { useSelectedApplication } from '../contexts/selected-application-context'
 import { AiCostMonitorCard } from '../features/applications/components/AiCostMonitorCard'
 import { AnalyticsReportsSection } from '../features/applications/components/AnalyticsReportsSection'
 import { AuditLogViewer } from '../features/applications/components/AuditLogViewer'
-import { ChatAssistantPanel } from '../features/applications/components/ChatAssistantPanel'
 import { DashboardSummarySection } from '../features/applications/components/DashboardSummarySection'
 import { NotificationFeedSection } from '../features/applications/components/NotificationFeedSection'
 import { PipelineBoard } from '../features/applications/components/PipelineBoard'
@@ -13,7 +13,7 @@ import { getSupabaseClient } from '../lib/supabase'
 
 export default function PipelinePage() {
   const { user } = useAuth()
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
+  const { selectedApplicationId, setSelectedApplicationId } = useSelectedApplication()
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -54,10 +54,7 @@ export default function PipelinePage() {
         <NotificationFeedSection refreshKey={refreshKey} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <AnalyticsReportsSection refreshKey={refreshKey} />
-        <ChatAssistantPanel selectedApplicationId={selectedApplicationId} />
-      </div>
+      <AnalyticsReportsSection refreshKey={refreshKey} />
 
       <PipelineBoard
         selectedApplicationId={selectedApplicationId}

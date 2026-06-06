@@ -1,18 +1,27 @@
+import { Toaster } from 'sonner'
 import LoginPage from './pages/LoginPage'
 import IngestionPage from './pages/IngestionPage'
 import PipelinePage from './pages/PipelinePage'
+import { AppShell } from './components/AppShell'
 
 export default function App() {
   const path = window.location.pathname
 
   if (path === '/login') {
-    return <LoginPage />
+    return (
+      <>
+        <LoginPage />
+        <Toaster richColors position="top-right" />
+      </>
+    )
   }
 
-  if (path === '/ingestion') {
-    return <IngestionPage />
-  }
-
-  return <PipelinePage />
+  return (
+    <>
+      <AppShell>
+        {path === '/ingestion' ? <IngestionPage /> : <PipelinePage />}
+      </AppShell>
+      <Toaster richColors position="top-right" />
+    </>
+  )
 }
-

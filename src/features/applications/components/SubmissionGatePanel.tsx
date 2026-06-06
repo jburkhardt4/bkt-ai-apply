@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { CheckCircle, FileText, Shield } from 'lucide-react'
 import { useAuth } from '../../../contexts/auth-context'
 import { masterProfile } from '../data/masterProfile'
 import {
@@ -7,6 +8,10 @@ import {
   type PreparedSubmissionPacket,
   type PrepareSubmissionPacketResult,
 } from '../services/submissionApprovalService'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface SubmissionGatePanelProps {
   applicationId: string
@@ -14,15 +19,9 @@ interface SubmissionGatePanelProps {
 }
 
 function eligibilityLabel(packet: PreparedSubmissionPacket): string {
-  if (packet.autoSubmitEligible) {
-    return `Eligible for auto-submit prep path (score >= ${packet.threshold})`
-  }
-
-  if (packet.matchScore === null) {
-    return 'Score unavailable. Manual prep is allowed, but auto-submit prep eligibility is unknown.'
-  }
-
-  return `Manual prep only: score ${packet.matchScore} is below ${packet.threshold}.`
+  if (packet.autoSubmitEligible) return `Eligible for auto-submit (score ≥ ${packet.threshold})`
+  if (packet.matchScore === null) return 'Score unavailable — manual prep allowed, eligibility unknown.'
+  return `Manual prep only: score ${packet.matchScore} is below threshold ${packet.threshold}.`
 }
 
 export function SubmissionGatePanel({ applicationId, onApproved }: SubmissionGatePanelProps) {
@@ -36,52 +35,32 @@ export function SubmissionGatePanel({ applicationId, onApproved }: SubmissionGat
   const [confirmApproval, setConfirmApproval] = useState(false)
 
   const preparedPacket = useMemo(() => {
-    if (!prepareResult || prepareResult.status !== 'ready') {
-      return null
-    }
-
+    if (!prepareResult || prepareResult.status !== 'ready') return null
     return prepareResult.packet
   }, [prepareResult])
 
   async function handlePreparePacket() {
-    if (!userId) {
-      return
-    }
-
+    if (!userId) return
     setPreparing(true)
     setError(null)
     setStatusMessage(null)
     setConfirmApproval(false)
-
     try {
-      const result = await prepareSubmissionPacket({
-        userId,
-        applicationId,
-      })
-
+      const result = await prepareSubmissionPacket({ userId, applicationId })
       setPrepareResult(result)
-
-      if (result.status === 'queued') {
-        setStatusMessage(result.reason)
-      } else {
-        setStatusMessage('Packet prepared. Review content and explicitly approve to continue.')
-      }
+      setStatusMessage(result.status === 'queued' ? result.reason : 'Packet prepared. Review and approve to continue.')
     } catch (err) {
       setPrepareResult(null)
-      setError(err instanceof Error ? err.message : 'Failed to prepare submission packet')
+      setError(err instanceof Error ? err.message : 'Failed to prepare packet')
     } finally {
       setPreparing(false)
     }
   }
 
   async function handleApprovePacket() {
-    if (!preparedPacket || !confirmApproval) {
-      return
-    }
-
+    if (!preparedPacket || !confirmApproval) return
     setApproving(true)
     setError(null)
-
     try {
       await approvePreparedPacket({
         userId,
@@ -90,169 +69,103 @@ export function SubmissionGatePanel({ applicationId, onApproved }: SubmissionGat
         resumeDocumentId: preparedPacket.resume.documentId,
         coverLetterDocumentId: preparedPacket.coverLetter.documentId,
       })
-
-      setStatusMessage('Approval recorded. No autonomous external submission was executed in MVP.')
+      setStatusMessage('Approval recorded. No autonomous external submission in MVP.')
       onApproved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve submission packet')
+      setError(err instanceof Error ? err.message : 'Failed to approve packet')
     } finally {
       setApproving(false)
     }
   }
 
   return (
-    <section
-      style={{
-        marginTop: '1.5rem',
-        border: '1px solid var(--line)',
-        borderRadius: '16px',
-        background: 'var(--surface)',
-        padding: '1rem',
-      }}
-    >
-      <h3
-        style={{
-          fontFamily: 'var(--font-display)',
-          margin: '0 0 0.5rem',
-          fontSize: '1rem',
-          color: 'var(--ink-strong)',
-        }}
-      >
-        UITL Submission Gate
-      </h3>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+            <Shield className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+              Submission Gate
+            </CardTitle>
+            <CardDescription className="text-xs">
+              BR-040/041: packet review and explicit approval required. No autonomous submission in MVP.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
 
-      <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--ink-subtle)' }}>
-        BR-040 and BR-041: packet review and explicit approval are required in MVP. No autonomous submission is performed.
-      </p>
-
-      <button
-        onClick={() => void handlePreparePacket()}
-        disabled={preparing || approving || !userId}
-        style={{
-          fontSize: '0.78rem',
-          padding: '0.35rem 0.65rem',
-          border: '1px solid var(--line)',
-          borderRadius: '8px',
-          background: 'white',
-          cursor: preparing || approving || !userId ? 'not-allowed' : 'pointer',
-          color: 'var(--ink)',
-          marginBottom: '0.8rem',
-        }}
-      >
-        {preparing ? 'Preparing packet…' : 'Prepare Packet'}
-      </button>
-
-      {statusMessage && (
-        <div
-          style={{
-            fontSize: '0.8rem',
-            color: 'var(--ink-subtle)',
-            marginBottom: '0.75rem',
-          }}
+      <CardContent className="space-y-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void handlePreparePacket()}
+          disabled={preparing || approving || !userId}
+          className="gap-1.5"
         >
-          {statusMessage}
-        </div>
-      )}
+          <FileText className="h-3.5 w-3.5" />
+          {preparing ? 'Preparing…' : 'Prepare Packet'}
+        </Button>
 
-      {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{error}</div>}
+        {statusMessage && (
+          <p className="text-sm text-muted-foreground">{statusMessage}</p>
+        )}
 
-      {preparedPacket && (
-        <div style={{ display: 'grid', gap: '0.75rem' }}>
-          <div
-            style={{
-              padding: '0.55rem 0.65rem',
-              borderRadius: '10px',
-              background: preparedPacket.autoSubmitEligible ? '#ecfdf3' : '#fffbeb',
-              color: preparedPacket.autoSubmitEligible ? '#166534' : '#92400e',
-              fontSize: '0.78rem',
-              border: preparedPacket.autoSubmitEligible ? '1px solid #bbf7d0' : '1px solid #fde68a',
-            }}
-          >
-            {eligibilityLabel(preparedPacket)}
-          </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-          <div
-            style={{
-              border: '1px solid var(--line)',
-              borderRadius: '10px',
-              padding: '0.65rem',
-              background: 'white',
-            }}
-          >
-            <strong style={{ fontSize: '0.8rem', color: 'var(--ink-strong)' }}>
-              Resume preview (v{preparedPacket.resume.version})
-            </strong>
-            <pre
-              style={{
-                margin: '0.45rem 0 0',
-                fontSize: '0.72rem',
-                whiteSpace: 'pre-wrap',
-                color: 'var(--ink)',
-                maxHeight: '220px',
-                overflowY: 'auto',
-              }}
+        {preparedPacket && (
+          <div className="space-y-3">
+            {/* Eligibility banner */}
+            <div className={`rounded-md border px-3 py-2 text-sm ${preparedPacket.autoSubmitEligible ? 'bg-green-50 border-green-200 text-green-800' : 'bg-yellow-50 border-yellow-200 text-yellow-800'}`}>
+              {eligibilityLabel(preparedPacket)}
+            </div>
+
+            {/* Document previews */}
+            {[
+              { label: `Resume (v${preparedPacket.resume.version})`, content: preparedPacket.resume.content },
+              { label: `Cover letter (v${preparedPacket.coverLetter.version})`, content: preparedPacket.coverLetter.content },
+            ].map(({ label, content }) => (
+              <div key={label} className="rounded-md border bg-muted/30 p-3">
+                <p className="mb-1.5 text-xs font-semibold text-foreground">{label}</p>
+                <pre className="max-h-48 overflow-y-auto text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {content}
+                </pre>
+              </div>
+            ))}
+
+            {/* Confirm + approve */}
+            <div className="flex items-start gap-2.5 rounded-md border bg-muted/20 p-3">
+              <Checkbox
+                id="confirm-approval"
+                checked={confirmApproval}
+                onCheckedChange={(v) => setConfirmApproval(v === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="confirm-approval" className="cursor-pointer text-sm text-foreground">
+                I explicitly approve this packet for submission flow processing (manual gate).
+              </label>
+            </div>
+
+            <Button
+              onClick={() => void handleApprovePacket()}
+              disabled={!confirmApproval || approving || !userId}
+              className="gap-1.5"
             >
-              {preparedPacket.resume.content}
-            </pre>
+              <CheckCircle className="h-4 w-4" />
+              {approving ? 'Recording approval…' : 'Approve Packet'}
+            </Button>
           </div>
+        )}
 
-          <div
-            style={{
-              border: '1px solid var(--line)',
-              borderRadius: '10px',
-              padding: '0.65rem',
-              background: 'white',
-            }}
-          >
-            <strong style={{ fontSize: '0.8rem', color: 'var(--ink-strong)' }}>
-              Cover letter preview (v{preparedPacket.coverLetter.version})
-            </strong>
-            <pre
-              style={{
-                margin: '0.45rem 0 0',
-                fontSize: '0.72rem',
-                whiteSpace: 'pre-wrap',
-                color: 'var(--ink)',
-                maxHeight: '220px',
-                overflowY: 'auto',
-              }}
-            >
-              {preparedPacket.coverLetter.content}
-            </pre>
-          </div>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', color: 'var(--ink)' }}>
-            <input
-              type="checkbox"
-              checked={confirmApproval}
-              onChange={(event) => setConfirmApproval(event.target.checked)}
-            />
-            I explicitly approve this packet for submission flow processing (manual gate).
-          </label>
-
-          <button
-            onClick={() => void handleApprovePacket()}
-            disabled={!confirmApproval || approving || !userId}
-            style={{
-              fontSize: '0.8rem',
-              padding: '0.42rem 0.7rem',
-              border: 'none',
-              borderRadius: '8px',
-              background: '#1d4ed8',
-              color: 'white',
-              cursor: !confirmApproval || approving || !userId ? 'not-allowed' : 'pointer',
-              opacity: !confirmApproval || approving || !userId ? 0.65 : 1,
-              width: 'fit-content',
-            }}
-          >
-            {approving ? 'Recording approval…' : 'Approve Packet'}
-          </button>
-        </div>
-      )}
-
-      <p style={{ margin: '0.8rem 0 0', fontSize: '0.72rem', color: 'var(--ink-subtle)' }}>
-        Eligibility threshold source: masterProfile.constraints.autoApplyThreshold = {masterProfile.constraints.autoApplyThreshold}.
-      </p>
-    </section>
+        <p className="text-xs text-muted-foreground">
+          Threshold: masterProfile.constraints.autoApplyThreshold = {masterProfile.constraints.autoApplyThreshold}
+        </p>
+      </CardContent>
+    </Card>
   )
 }

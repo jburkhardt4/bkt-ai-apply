@@ -1,27 +1,97 @@
-:root {
-  --bg: #f2f6fb;
-  --surface: #fdfefe;
-  --line: #d6e1ed;
-  --ink: #213342;
-  --ink-strong: #0f1f2d;
-  --ink-subtle: #4f6376;
-  --font-display: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
-  --font-body: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    /* shadcn semantic tokens */
+    --background: oklch(0.985 0.004 247);
+    --foreground: oklch(0.17 0.025 255);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.17 0.025 255);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.17 0.025 255);
+    --primary: oklch(0.52 0.215 264);
+    --primary-foreground: oklch(0.985 0.002 250);
+    --secondary: oklch(0.955 0.008 248);
+    --secondary-foreground: oklch(0.22 0.03 258);
+    --muted: oklch(0.955 0.008 248);
+    --muted-foreground: oklch(0.49 0.04 254);
+    --accent: oklch(0.945 0.015 255);
+    --accent-foreground: oklch(0.22 0.03 258);
+    --destructive: oklch(0.58 0.24 27);
+    --border: oklch(0.9 0.013 253);
+    --input: oklch(0.9 0.013 253);
+    --ring: oklch(0.52 0.215 264);
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar: oklch(0.972 0.006 250);
+    --sidebar-foreground: oklch(0.17 0.025 255);
+    --sidebar-primary: oklch(0.52 0.215 264);
+    --sidebar-primary-foreground: oklch(0.985 0.002 250);
+    --sidebar-accent: oklch(0.945 0.015 255);
+    --sidebar-accent-foreground: oklch(0.22 0.03 258);
+    --sidebar-border: oklch(0.9 0.013 253);
+
+    /* Legacy tokens — used by non-migrated components */
+    --bg: oklch(0.985 0.004 247);
+    --surface: oklch(1 0 0);
+    --line: oklch(0.9 0.013 253);
+    --ink: oklch(0.3 0.025 255);
+    --ink-strong: oklch(0.17 0.025 255);
+    --ink-subtle: oklch(0.49 0.04 254);
+    --font-display: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+    --font-body: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+  }
 }
 
 * {
   box-sizing: border-box;
+  border-color: var(--border);
 }
 
 body {
   margin: 0;
   min-height: 100svh;
-  color: var(--ink);
+  color: var(--foreground);
   font-family: var(--font-body);
-  background:
-    radial-gradient(circle at 8% -2%, rgba(12, 122, 255, 0.14), transparent 28%),
-    radial-gradient(circle at 94% 2%, rgba(243, 112, 42, 0.14), transparent 30%),
-    linear-gradient(180deg, #f4f8fc 0%, #edf3fa 100%);
+  background-color: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {

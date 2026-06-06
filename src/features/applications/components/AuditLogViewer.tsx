@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
+import { ArrowRight, ScrollText } from 'lucide-react'
 import { useAuth } from '../../../contexts/auth-context'
-import {
-  type AuditEventRow,
-  fetchAuditLog,
-} from '../services/applicationService'
+import { type AuditEventRow, fetchAuditLog } from '../services/applicationService'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface AuditLogViewerProps {
   applicationId: string
@@ -20,115 +20,57 @@ export function AuditLogViewer({ applicationId, refreshKey = 0 }: AuditLogViewer
 
   useEffect(() => {
     if (!userId || !applicationId) return
-
     let cancelled = false
-
     void fetchAuditLog(applicationId, userId)
-      .then((data) => {
-        if (!cancelled) {
-          setEvents(data)
-          setError(null)
-          setLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load audit log')
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .then((data) => { if (!cancelled) { setEvents(data); setError(null); setLoading(false) } })
+      .catch((err: unknown) => { if (!cancelled) { setError(err instanceof Error ? err.message : 'Failed to load audit log'); setLoading(false) } })
+    return () => { cancelled = true }
   }, [applicationId, userId, refreshKey])
 
-  if (loading && events.length === 0) {
-    return (
-      <div style={{ padding: '1rem', color: 'var(--ink-subtle)', fontSize: '0.875rem' }}>
-        Loading audit log…
-      </div>
-    )
-  }
-
   return (
-    <div style={{ padding: '1rem' }}>
-      <h3
-        style={{
-          fontFamily: 'var(--font-display)',
-          margin: '0 0 0.75rem',
-          fontSize: '1rem',
-          color: 'var(--ink-strong)',
-        }}
-      >
-        Audit Log
-      </h3>
-
-      {error && (
-        <div style={{ color: '#dc2626', marginBottom: '0.75rem', fontSize: '0.82rem' }}>
-          {error}
-        </div>
-      )}
-
-      {events.length === 0 ? (
-        <div style={{ color: 'var(--ink-subtle)', fontSize: '0.875rem' }}>
-          No events recorded.
-        </div>
-      ) : (
-        <ol
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-          }}
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <ScrollText className="h-4 w-4 text-muted-foreground" />
+        <h3
+          className="text-base font-semibold text-foreground"
+          style={{ fontFamily: 'var(--font-display)' }}
         >
+          Audit Log
+        </h3>
+      </div>
+
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+
+      {loading && events.length === 0 ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+        </div>
+      ) : events.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No events recorded.</p>
+      ) : (
+        <ol className="relative space-y-2 border-l border-border pl-4">
           {events.map((event) => (
-            <li
-              key={event.id}
-              style={{
-                border: '1px solid var(--line)',
-                borderRadius: '10px',
-                padding: '0.6rem 0.75rem',
-                background: '#fff',
-                fontSize: '0.82rem',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>
-                  {event.event_type}
-                </span>
-                <span style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem', flexShrink: 0 }}>
-                  {new Date(event.created_at).toLocaleString()}
-                </span>
-              </div>
-
-              {event.from_stage && event.to_stage && (
-                <div style={{ color: 'var(--ink)', marginTop: '0.2rem' }}>
-                  <span style={{ color: 'var(--ink-subtle)' }}>{event.from_stage}</span>
-                  {' → '}
-                  <span style={{ fontWeight: 600 }}>{event.to_stage}</span>
+            <li key={event.id} className="relative">
+              {/* Timeline dot */}
+              <span className="absolute -left-[1.35rem] top-1.5 h-2 w-2 rounded-full border-2 border-background bg-border" />
+              <div className="rounded-md border bg-background p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-semibold text-foreground">{event.event_type}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {new Date(event.created_at).toLocaleString()}
+                  </span>
                 </div>
-              )}
-
-              <div style={{ marginTop: '0.25rem', color: 'var(--ink-subtle)' }}>
-                actor:{' '}
-                <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{event.actor}</span>
-                {event.reason && (
-                  <>
-                    {' · '}
-                    <span style={{ fontStyle: 'italic' }}>{event.reason}</span>
-                  </>
+                {event.from_stage && event.to_stage && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>{event.from_stage}</span>
+                    <ArrowRight className="h-3 w-3" />
+                    <span className="font-medium text-foreground">{event.to_stage}</span>
+                  </div>
                 )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  actor: <span className="font-medium text-foreground">{event.actor}</span>
+                  {event.reason && <span className="ml-1 italic"> · {event.reason}</span>}
+                </p>
               </div>
             </li>
           ))}

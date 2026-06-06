@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Upload, PlusCircle, Inbox } from 'lucide-react'
 import { useAuth } from '../contexts/auth-context'
 import {
   parseCsvIngestionText,
@@ -8,6 +9,13 @@ import {
   type ScoreRunResult,
 } from '../features/applications/services/ingestionService'
 import type { IngestionDraftJob } from '../features/applications/services/ingestionCsv'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
 
 interface DisplayRow extends IngestionResultRow {
   score?: ScoreRunResult
@@ -15,10 +23,16 @@ interface DisplayRow extends IngestionResultRow {
   scoring?: boolean
 }
 
-function statusColor(status: IngestionResultRow['status']): string {
-  if (status === 'inserted') return '#0c7c43'
-  if (status === 'duplicate') return '#9a6700'
-  return '#b42318'
+function statusVariant(status: IngestionResultRow['status']): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (status === 'inserted') return 'default'
+  if (status === 'duplicate') return 'secondary'
+  return 'destructive'
+}
+
+function statusClass(status: IngestionResultRow['status']): string {
+  if (status === 'inserted') return 'bg-green-600 text-white hover:bg-green-600'
+  if (status === 'duplicate') return 'bg-yellow-500 text-white hover:bg-yellow-500'
+  return ''
 }
 
 function labelText(label: ScoreRunResult['label']): string {
@@ -28,7 +42,7 @@ function labelText(label: ScoreRunResult['label']): string {
 }
 
 export default function IngestionPage() {
-  const { user, loading, signOut } = useAuth()
+  const { user } = useAuth()
   const userId = user?.id ?? ''
 
   const [csvRows, setCsvRows] = useState<IngestionDraftJob[]>([])
@@ -41,58 +55,17 @@ export default function IngestionPage() {
   const [rows, setRows] = useState<DisplayRow[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
 
-  useEffect(() => {
-    if (!loading && !user) {
-      window.location.href = '/login'
-    }
-  }, [loading, user])
+  const summary = useMemo(() => ({
+    inserted: rows.filter((r) => r.status === 'inserted').length,
+    duplicate: rows.filter((r) => r.status === 'duplicate').length,
+    failed: rows.filter((r) => r.status === 'failed').length,
+  }), [rows])
 
-  const summary = useMemo(() => {
-    const inserted = rows.filter((row) => row.status === 'inserted').length
-    const duplicate = rows.filter((row) => row.status === 'duplicate').length
-    const failed = rows.filter((row) => row.status === 'failed').length
-    return { inserted, duplicate, failed }
-  }, [rows])
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          color: 'var(--ink-subtle)',
-        }}
-      >
-        Loading…
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null
-  }
-
-  async function handleSignOut() {
-    try {
-      await signOut()
-      window.location.href = '/login'
-    } catch {
-      window.location.href = '/login'
-    }
-  }
-
-  async function handleCsvFileSelect(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
-
+  async function processCsvFile(file: File) {
     setBusy(true)
     setError(null)
-
     try {
       const text = await file.text()
       const parsed = parseCsvIngestionText(text)
@@ -106,31 +79,28 @@ export default function IngestionPage() {
     }
   }
 
-  async function handleRunCsvIngestion() {
-    if (!userId) {
-      return
-    }
+  async function handleCsvFileSelect(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (file) await processCsvFile(file)
+  }
 
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setDragOver(false)
+    const file = event.dataTransfer.files[0]
+    if (file) void processCsvFile(file)
+  }
+
+  async function handleRunCsvIngestion() {
+    if (!userId) return
     setBusy(true)
     setError(null)
-
     try {
-      const result = await runIngestion({
-        userId,
-        rows: csvRows,
-        sourceFallback: 'csv_upload',
-      })
-
+      const result = await runIngestion({ userId, rows: csvRows, sourceFallback: 'csv_upload' })
       const issueRows: DisplayRow[] = csvIssues.map((issue) => ({
-        rowNumber: issue.rowNumber,
-        sourceUrl: '',
-        title: 'Invalid row',
-        status: 'failed',
-        message: issue.reason,
+        rowNumber: issue.rowNumber, sourceUrl: '', title: 'Invalid row', status: 'failed', message: issue.reason,
       }))
-
-      const merged = [...result.results, ...issueRows].sort((a, b) => a.rowNumber - b.rowNumber)
-      setRows(merged)
+      setRows([...result.results, ...issueRows].sort((a, b) => a.rowNumber - b.rowNumber))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ingestion failed')
     } finally {
@@ -140,13 +110,9 @@ export default function IngestionPage() {
 
   async function handleManualIngestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!userId) {
-      return
-    }
-
+    if (!userId) return
     setBusy(true)
     setError(null)
-
     try {
       const manualRow: IngestionDraftJob = {
         rowNumber: 1,
@@ -157,14 +123,12 @@ export default function IngestionPage() {
         source: 'manual_entry',
         applicationMethod: 'manual',
       }
-
-      const result = await runIngestion({
-        userId,
-        rows: [manualRow],
-        sourceFallback: 'manual_entry',
-      })
-
+      const result = await runIngestion({ userId, rows: [manualRow], sourceFallback: 'manual_entry' })
       setRows(result.results)
+      setManualSourceUrl('')
+      setManualTitle('')
+      setManualLocation('')
+      setManualDescription('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Manual ingestion failed')
     } finally {
@@ -173,332 +137,237 @@ export default function IngestionPage() {
   }
 
   async function handleScore(row: DisplayRow) {
-    if (!userId || !row.jobId) {
-      return
-    }
-
-    setRows((current) =>
-      current.map((item) => (item.rowNumber === row.rowNumber ? { ...item, scoring: true, scoreError: undefined } : item)),
-    )
-
+    if (!userId || !row.jobId) return
+    setRows((curr) => curr.map((item) => item.rowNumber === row.rowNumber ? { ...item, scoring: true, scoreError: undefined } : item))
     try {
-      const score = await runScoreForJob({
-        userId,
-        jobId: row.jobId,
-        applicationId: row.applicationId,
-      })
-
-      setRows((current) =>
-        current.map((item) =>
-          item.rowNumber === row.rowNumber
-            ? {
-                ...item,
-                scoring: false,
-                score,
-                scoreError: undefined,
-              }
-            : item,
-        ),
-      )
+      const score = await runScoreForJob({ userId, jobId: row.jobId, applicationId: row.applicationId })
+      setRows((curr) => curr.map((item) => item.rowNumber === row.rowNumber ? { ...item, scoring: false, score } : item))
     } catch (err) {
-      setRows((current) =>
-        current.map((item) =>
-          item.rowNumber === row.rowNumber
-            ? {
-                ...item,
-                scoring: false,
-                scoreError: err instanceof Error ? err.message : 'Scoring failed',
-              }
-            : item,
-        ),
-      )
+      setRows((curr) => curr.map((item) => item.rowNumber === row.rowNumber ? { ...item, scoring: false, scoreError: err instanceof Error ? err.message : 'Scoring failed' } : item))
     }
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.25rem 3rem' }}>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-          paddingBottom: '0.75rem',
-          borderBottom: '1px solid var(--line)',
-        }}
-      >
-        <div>
-          <p
-            style={{
-              margin: 0,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              fontSize: '0.7rem',
-              color: 'var(--ink-subtle)',
-              fontWeight: 700,
-            }}
-          >
-            BKT AI-Apply
-          </p>
-          <h1
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(1.2rem, 2.5vw, 1.6rem)',
-              margin: '0.2rem 0 0',
-              color: 'var(--ink-strong)',
-            }}
-          >
-            Job Ingestion
-          </h1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <button
-            onClick={() => {
-              window.location.href = '/'
-            }}
-            style={{
-              fontSize: '0.75rem',
-              padding: '0.3rem 0.6rem',
-              border: '1px solid var(--line)',
-              borderRadius: '6px',
-              background: 'white',
-              cursor: 'pointer',
-              color: 'var(--ink)',
-            }}
-          >
-            Pipeline
-          </button>
-          <span style={{ fontSize: '0.8rem', color: 'var(--ink-subtle)' }}>{user.email}</span>
-          <button
-            onClick={() => void handleSignOut()}
-            style={{
-              fontSize: '0.75rem',
-              padding: '0.3rem 0.6rem',
-              border: '1px solid var(--line)',
-              borderRadius: '6px',
-              background: 'white',
-              cursor: 'pointer',
-              color: 'var(--ink)',
-            }}
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1rem',
-        }}
-      >
-        <section
-          style={{
-            border: '1px solid var(--line)',
-            borderRadius: '16px',
-            padding: '1rem',
-            background: 'var(--surface)',
-          }}
-        >
-          <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem', color: 'var(--ink-strong)' }}>CSV Upload (INT-009)</h2>
-          <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--ink-subtle)' }}>
-            Required columns: source_url, title
-          </p>
-
-          <input type="file" accept=".csv,text/csv" onChange={(event) => void handleCsvFileSelect(event)} disabled={busy} />
-
-          <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: 'var(--ink-subtle)' }}>
-            {selectedFileName ? `Loaded: ${selectedFileName}` : 'No file selected.'}
-          </div>
-
-          <div style={{ marginTop: '0.6rem', fontSize: '0.8rem', color: 'var(--ink-subtle)' }}>
-            Parsed rows: {csvRows.length} | Parse issues: {csvIssues.length}
-          </div>
-
-          <button
-            onClick={() => void handleRunCsvIngestion()}
-            disabled={busy || (csvRows.length === 0 && csvIssues.length === 0)}
-            style={{
-              marginTop: '0.8rem',
-              fontSize: '0.82rem',
-              padding: '0.45rem 0.7rem',
-              border: '1px solid var(--line)',
-              borderRadius: '8px',
-              background: 'white',
-              cursor: busy || (csvRows.length === 0 && csvIssues.length === 0) ? 'not-allowed' : 'pointer',
-              color: 'var(--ink)',
-            }}
-          >
-            {busy ? 'Running…' : 'Run CSV Ingestion'}
-          </button>
-        </section>
-
-        <section
-          style={{
-            border: '1px solid var(--line)',
-            borderRadius: '16px',
-            padding: '1rem',
-            background: 'var(--surface)',
-          }}
-        >
-          <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.05rem', color: 'var(--ink-strong)' }}>Manual Single Job</h2>
-
-          <form onSubmit={(event) => void handleManualIngestion(event)} style={{ display: 'grid', gap: '0.5rem' }}>
-            <input
-              value={manualSourceUrl}
-              onChange={(event) => setManualSourceUrl(event.target.value)}
-              placeholder="source_url"
-              required
-              style={{
-                padding: '0.45rem 0.6rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                font: 'inherit',
-              }}
-            />
-            <input
-              value={manualTitle}
-              onChange={(event) => setManualTitle(event.target.value)}
-              placeholder="title"
-              required
-              style={{
-                padding: '0.45rem 0.6rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                font: 'inherit',
-              }}
-            />
-            <input
-              value={manualLocation}
-              onChange={(event) => setManualLocation(event.target.value)}
-              placeholder="location (optional)"
-              style={{
-                padding: '0.45rem 0.6rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                font: 'inherit',
-              }}
-            />
-            <textarea
-              value={manualDescription}
-              onChange={(event) => setManualDescription(event.target.value)}
-              placeholder="description (optional)"
-              rows={3}
-              style={{
-                padding: '0.45rem 0.6rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                font: 'inherit',
-                resize: 'vertical',
-              }}
-            />
-
-            <button
-              type="submit"
-              disabled={busy}
-              style={{
-                fontSize: '0.82rem',
-                padding: '0.45rem 0.7rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                background: 'white',
-                cursor: busy ? 'not-allowed' : 'pointer',
-                color: 'var(--ink)',
-              }}
-            >
-              {busy ? 'Submitting…' : 'Ingest Single Job'}
-            </button>
-          </form>
-        </section>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">BKT AI-Apply</p>
+        <h1 className="mt-1 text-2xl font-semibold text-foreground" style={{ fontFamily: 'var(--font-display)' }}>
+          Job Ingestion
+        </h1>
       </div>
 
       {error && (
-        <div
-          style={{
-            color: '#dc2626',
-            marginBottom: '1rem',
-            padding: '0.6rem 0.75rem',
-            background: '#fef2f2',
-            borderRadius: '8px',
-            fontSize: '0.82rem',
-          }}
-        >
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <section
-        style={{
-          border: '1px solid var(--line)',
-          borderRadius: '16px',
-          padding: '1rem',
-          background: 'var(--surface)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--ink-strong)' }}>Ingestion Results</h2>
-          <div style={{ fontSize: '0.8rem', color: 'var(--ink-subtle)' }}>
-            inserted {summary.inserted} | duplicates {summary.duplicate} | failed {summary.failed}
-          </div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* CSV Upload */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                <Upload className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+                  CSV Upload
+                </CardTitle>
+                <CardDescription className="text-xs">Required columns: source_url, title</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Drop zone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'}`}
+              onClick={() => document.getElementById('csv-file-input')?.click()}
+            >
+              <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">
+                {selectedFileName ?? 'Drop CSV here or click to browse'}
+              </p>
+              {selectedFileName ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {csvRows.length} rows · {csvIssues.length} issues
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-muted-foreground">.csv files only</p>
+              )}
+              <input
+                id="csv-file-input"
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={(e) => void handleCsvFileSelect(e)}
+                disabled={busy}
+              />
+            </div>
 
-        {rows.length === 0 ? (
-          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-subtle)' }}>No results yet.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '980px' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>Row</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>Title</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>source_url</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>Status</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>Message</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>Score</th>
-                  <th style={{ textAlign: 'left', borderBottom: '1px solid var(--line)', padding: '0.5rem' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={`${row.rowNumber}-${row.sourceUrl || row.title}`}>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem' }}>{row.rowNumber}</td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem' }}>{row.title}</td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem' }}>{row.sourceUrl || '—'}</td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem', color: statusColor(row.status), fontWeight: 600 }}>
-                      {row.status}
-                    </td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem' }}>{row.message}</td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem' }}>
-                      {row.score
-                        ? `${row.score.overallScore} | ${labelText(row.score.label)} | ${row.score.recommendation}`
-                        : row.scoreError || '—'}
-                    </td>
-                    <td style={{ borderBottom: '1px solid var(--line)', padding: '0.5rem', fontSize: '0.8rem' }}>
-                      <button
-                        onClick={() => void handleScore(row)}
-                        disabled={!row.jobId || row.scoring}
-                        style={{
-                          fontSize: '0.76rem',
-                          padding: '0.3rem 0.5rem',
-                          border: '1px solid var(--line)',
-                          borderRadius: '8px',
-                          background: 'white',
-                          cursor: !row.jobId || row.scoring ? 'not-allowed' : 'pointer',
-                          color: 'var(--ink)',
-                        }}
-                      >
-                        {row.scoring ? 'Scoring…' : 'Score Job'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Button
+              onClick={() => void handleRunCsvIngestion()}
+              disabled={busy || (csvRows.length === 0 && csvIssues.length === 0)}
+              className="w-full gap-1.5"
+            >
+              <Upload className="h-4 w-4" />
+              {busy ? 'Running…' : 'Run CSV Ingestion'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Manual entry */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+                <PlusCircle className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+                  Manual Single Job
+                </CardTitle>
+                <CardDescription className="text-xs">Enter job details directly</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={(e) => void handleManualIngestion(e)} className="space-y-2.5">
+              <Input
+                value={manualSourceUrl}
+                onChange={(e) => setManualSourceUrl(e.target.value)}
+                placeholder="source_url (required)"
+                required
+                className="text-sm"
+              />
+              <Input
+                value={manualTitle}
+                onChange={(e) => setManualTitle(e.target.value)}
+                placeholder="title (required)"
+                required
+                className="text-sm"
+              />
+              <Input
+                value={manualLocation}
+                onChange={(e) => setManualLocation(e.target.value)}
+                placeholder="location (optional)"
+                className="text-sm"
+              />
+              <Textarea
+                value={manualDescription}
+                onChange={(e) => setManualDescription(e.target.value)}
+                placeholder="description (optional)"
+                rows={3}
+                className="resize-y text-sm"
+              />
+              <Button type="submit" disabled={busy} className="w-full gap-1.5">
+                <PlusCircle className="h-4 w-4" />
+                {busy ? 'Submitting…' : 'Ingest Job'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Results */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Inbox className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+                Ingestion Results
+              </CardTitle>
+            </div>
+            {rows.length > 0 && (
+              <div className="flex gap-2">
+                <Badge className="bg-green-600 text-white hover:bg-green-600 text-xs">
+                  {summary.inserted} inserted
+                </Badge>
+                <Badge className="bg-yellow-500 text-white hover:bg-yellow-500 text-xs">
+                  {summary.duplicate} duplicate
+                </Badge>
+                <Badge variant="destructive" className="text-xs">
+                  {summary.failed} failed
+                </Badge>
+              </div>
+            )}
           </div>
-        )}
-      </section>
+        </CardHeader>
+
+        <CardContent>
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <Inbox className="h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No results yet. Run ingestion above.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] text-sm">
+                <thead>
+                  <tr>
+                    {['Row', 'Title', 'Source URL', 'Status', 'Message', 'Score', 'Action'].map((h) => (
+                      <th
+                        key={h}
+                        className="border-b border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr
+                      key={`${row.rowNumber}-${row.sourceUrl || row.title}`}
+                      className="border-b border-border/50 last:border-0 hover:bg-muted/30"
+                    >
+                      <td className="px-3 py-2 text-muted-foreground">{row.rowNumber}</td>
+                      <td className="max-w-[180px] truncate px-3 py-2 font-medium">{row.title}</td>
+                      <td className="max-w-[180px] truncate px-3 py-2 text-muted-foreground">{row.sourceUrl || '—'}</td>
+                      <td className="px-3 py-2">
+                        <Badge className={statusClass(row.status)} variant={statusVariant(row.status)}>
+                          {row.status}
+                        </Badge>
+                      </td>
+                      <td className="max-w-[200px] truncate px-3 py-2 text-muted-foreground">{row.message}</td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {row.score
+                          ? `${row.score.overallScore} · ${labelText(row.score.label)}`
+                          : row.scoreError ?? '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleScore(row)}
+                          disabled={!row.jobId || row.scoring}
+                          className="h-7 text-xs"
+                        >
+                          {row.scoring ? 'Scoring…' : 'Score'}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <>
+              <Separator className="my-3" />
+              <p className="text-xs text-muted-foreground">
+                {rows.length} total rows processed.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

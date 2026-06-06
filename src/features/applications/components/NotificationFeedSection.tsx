@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Bell } from 'lucide-react'
 import { useAuth } from '../../../contexts/auth-context'
 import { getNotifications, type NotificationFeedResult } from '../services/notificationFeedService'
 import { buildNotificationFeedSections } from './notificationFeedView'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface NotificationFeedSectionProps {
   refreshKey?: number
 }
 
 function formatTime(value: string): string {
-  return new Date(value).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+  return new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 export function NotificationFeedSection({ refreshKey = 0 }: NotificationFeedSectionProps) {
@@ -26,166 +26,104 @@ export function NotificationFeedSection({ refreshKey = 0 }: NotificationFeedSect
 
   useEffect(() => {
     if (!userId) return
-
     let cancelled = false
-
     void getNotifications(userId)
-      .then((data) => {
-        if (!cancelled) {
-          setFeed(data)
-          setError(null)
-          setLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load notifications')
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .then((data) => { if (!cancelled) { setFeed(data); setError(null); setLoading(false) } })
+      .catch((err: unknown) => { if (!cancelled) { setError(err instanceof Error ? err.message : 'Failed to load notifications'); setLoading(false) } })
+    return () => { cancelled = true }
   }, [userId, refreshKey])
 
   const sections = useMemo(() => (feed ? buildNotificationFeedSections(feed) : []), [feed])
-
-  if (loading && feed === null) {
-    return <div style={{ marginTop: '1rem', color: 'var(--ink-subtle)', fontSize: '0.875rem' }}>Loading notifications…</div>
-  }
+  const unreadCount = feed?.unreadCount ?? 0
 
   return (
-    <section
-      style={{
-        marginTop: '1rem',
-        border: '1px solid var(--line)',
-        borderRadius: '18px',
-        padding: '1rem',
-        background: 'var(--surface)',
-        boxShadow: '0 12px 28px rgba(7, 16, 27, 0.06)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start' }}>
-        <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', margin: 0, fontSize: '1.05rem', color: 'var(--ink-strong)' }}>
-            Notification Feed
-          </h2>
-          <p style={{ margin: '0.25rem 0 0', color: 'var(--ink-subtle)', fontSize: '0.82rem' }}>
-            Read-only, newest-first notifications grouped by type.
-          </p>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+              <Bell className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+                Notifications
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Grouped by type, newest first.
+              </CardDescription>
+            </div>
+          </div>
+          {unreadCount > 0 && (
+            <Badge className="shrink-0 text-xs">{unreadCount} unread</Badge>
+          )}
         </div>
-        <span
-          style={{
-            borderRadius: '999px',
-            padding: '0.24rem 0.55rem',
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            background: 'rgba(37, 99, 235, 0.08)',
-            border: '1px solid rgba(37, 99, 235, 0.18)',
-            color: '#1d4ed8',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-          }}
-        >
-          {feed?.unreadCount ?? 0} unread
-        </span>
-      </div>
 
-      {error && <div style={{ color: '#dc2626', marginTop: '0.85rem', fontSize: '0.82rem' }}>{error}</div>}
+        {/* Type chips */}
+        {sections.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {sections.map((section) => (
+              <span
+                key={section.group}
+                className="inline-flex items-center rounded-full border bg-background px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {section.label}: {section.items.length}
+              </span>
+            ))}
+          </div>
+        )}
+      </CardHeader>
 
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.45rem',
-          marginTop: '0.85rem',
-        }}
-      >
-        {sections.map((section) => (
-          <span
-            key={section.group}
-            style={{
-              border: '1px solid var(--line)',
-              borderRadius: '999px',
-              padding: '0.28rem 0.55rem',
-              fontSize: '0.76rem',
-              color: 'var(--ink-subtle)',
-              background: '#fff',
-            }}
-          >
-            {section.label}: {section.items.length}
-          </span>
-        ))}
-      </div>
-
-      <div style={{ marginTop: '0.9rem', display: 'grid', gap: '0.75rem' }}>
-        {sections.length === 0 ? (
-          <div style={{ color: 'var(--ink-subtle)', fontSize: '0.875rem' }}>No notifications yet.</div>
+      <CardContent className="space-y-3">
+        {loading && feed === null ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+          </div>
         ) : (
-          sections.map((section) => (
-            <section
-              key={section.group}
-              style={{
-                border: '1px solid var(--line)',
-                borderRadius: '16px',
-                padding: '0.85rem',
-                background: 'rgba(255,255,255,0.92)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--ink-strong)' }}>{section.label}</h3>
-                <span style={{ color: 'var(--ink-subtle)', fontSize: '0.74rem' }}>
-                  {section.unreadCount} unread · newest first
-                </span>
-              </div>
+          <>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-              <div style={{ display: 'grid', gap: '0.55rem', marginTop: '0.7rem' }}>
-                {section.items.map((item) => (
-                  <article
-                    key={item.id}
-                    style={{
-                      border: '1px solid var(--line)',
-                      borderRadius: '12px',
-                      padding: '0.72rem',
-                      background: item.is_read ? '#fff' : '#f8fbff',
-                      display: 'grid',
-                      gap: '0.3rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'flex-start', minWidth: 0 }}>
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            width: '0.55rem',
-                            height: '0.55rem',
-                            marginTop: '0.34rem',
-                            borderRadius: '999px',
-                            background: item.is_read ? 'rgba(79, 99, 118, 0.35)' : '#2563eb',
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ color: 'var(--ink-strong)', fontWeight: 600, fontSize: '0.84rem' }}>
-                            {item.title}
-                          </div>
-                          <div style={{ color: 'var(--ink-subtle)', fontSize: '0.76rem', lineHeight: 1.45, marginTop: '0.18rem' }}>
-                            {item.body}
+            {sections.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Bell className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No notifications yet.</p>
+              </div>
+            ) : (
+              sections.map((section) => (
+                <div key={section.group} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">{section.label}</h3>
+                    <span className="text-xs text-muted-foreground">{section.unreadCount} unread</span>
+                  </div>
+                  {section.items.map((item) => (
+                    <article
+                      key={item.id}
+                      className={`rounded-lg border p-3 text-sm transition-colors ${item.is_read ? 'bg-background' : 'bg-primary/5 border-primary/20'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span
+                            aria-hidden="true"
+                            className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${item.is_read ? 'bg-muted-foreground/30' : 'bg-primary'}`}
+                          />
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{item.title}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{item.body}</p>
                           </div>
                         </div>
+                        <span className="shrink-0 text-xs text-muted-foreground">{formatTime(item.created_at)}</span>
                       </div>
-                      <span style={{ color: 'var(--ink-subtle)', fontSize: '0.73rem', flexShrink: 0 }}>
-                        {formatTime(item.created_at)}
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))
+                    </article>
+                  ))}
+                </div>
+              ))
+            )}
+          </>
         )}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }

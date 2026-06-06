@@ -1,26 +1,23 @@
 import { useMemo, useState } from 'react'
+import { Send, Bot } from 'lucide-react'
 import { useAuth } from '../../../contexts/auth-context'
 import { runChatAssistant, type ChatAssistantResponse } from '../services/chatAssistantService'
 import { buildChatAssistantMeta } from './chatAssistantPanelView'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface ChatAssistantPanelProps {
   selectedApplicationId?: string | null
 }
 
-function getToneStyles(response: ChatAssistantResponse | null): { background: string; border: string; color: string } {
-  if (response?.status === 'deferred') {
-    return { background: '#fff1f2', border: '#fecdd3', color: '#9f1239' }
-  }
-
-  if (response?.costStatus === 'warn') {
-    return { background: '#fff7ed', border: '#fed7aa', color: '#9a3412' }
-  }
-
-  if (response?.costStatus === 'capped') {
-    return { background: '#fff1f2', border: '#fecdd3', color: '#9f1239' }
-  }
-
-  return { background: '#ecfdf3', border: '#bbf7d0', color: '#166534' }
+function responseBannerClass(response: ChatAssistantResponse | null): string {
+  if (response?.status === 'deferred') return 'bg-red-50 border-red-200 text-red-800'
+  if (response?.costStatus === 'warn') return 'bg-orange-50 border-orange-200 text-orange-800'
+  if (response?.costStatus === 'capped') return 'bg-red-50 border-red-200 text-red-800'
+  return 'bg-green-50 border-green-200 text-green-800'
 }
 
 export function ChatAssistantPanel({ selectedApplicationId = null }: ChatAssistantPanelProps) {
@@ -31,28 +28,18 @@ export function ChatAssistantPanel({ selectedApplicationId = null }: ChatAssista
   const [response, setResponse] = useState<ChatAssistantResponse | null>(null)
 
   const metadata = useMemo(() => (response ? buildChatAssistantMeta(response) : []), [response])
-  const tone = getToneStyles(response)
   const canSubmit = prompt.trim().length > 0 && !loading && !!user?.id
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
     const userId = user?.id
     const message = prompt.trim()
-    if (!userId || message.length === 0) {
-      return
-    }
+    if (!userId || !message) return
 
     setLoading(true)
     setError(null)
-
     try {
-      const nextResponse = await runChatAssistant({
-        userId,
-        message,
-        applicationId: selectedApplicationId ?? undefined,
-      })
-
+      const nextResponse = await runChatAssistant({ userId, message, applicationId: selectedApplicationId ?? undefined })
       setResponse(nextResponse)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to get assistant response')
@@ -62,111 +49,74 @@ export function ChatAssistantPanel({ selectedApplicationId = null }: ChatAssista
   }
 
   return (
-    <section
-      style={{
-        marginTop: '1rem',
-        border: '1px solid var(--line)',
-        borderRadius: '18px',
-        padding: '1rem',
-        background: 'var(--surface)',
-        boxShadow: '0 12px 28px rgba(7, 16, 27, 0.06)',
-      }}
-    >
-      <div>
-        <h2 style={{ fontFamily: 'var(--font-display)', margin: 0, fontSize: '1.05rem', color: 'var(--ink-strong)' }}>
-          AI Chat Assistant
-        </h2>
-        <p style={{ margin: '0.25rem 0 0', color: 'var(--ink-subtle)', fontSize: '0.82rem' }}>
-          Strategy support powered by deterministic local routing and context from your pipeline.
-        </p>
-      </div>
-
-      <form onSubmit={(event) => void handleSubmit(event)} style={{ marginTop: '0.85rem', display: 'grid', gap: '0.6rem' }}>
-        <label htmlFor="chat-assistant-prompt" style={{ fontSize: '0.78rem', color: 'var(--ink-subtle)', fontWeight: 600 }}>
-          Ask about score rationale, follow-up drafts, or targeting strategy
-        </label>
-        <textarea
-          id="chat-assistant-prompt"
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Example: Suggest filters to increase interview rate for SaaS platform roles."
-          rows={4}
-          style={{
-            border: '1px solid var(--line)',
-            borderRadius: '12px',
-            padding: '0.7rem 0.75rem',
-            color: 'var(--ink)',
-            background: '#fff',
-            resize: 'vertical',
-            font: 'inherit',
-          }}
-        />
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center' }}>
-          <span style={{ color: 'var(--ink-subtle)', fontSize: '0.76rem' }}>
-            {selectedApplicationId ? 'Scoped to selected application context.' : 'Using overall pipeline context.'}
-          </span>
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            style={{
-              fontSize: '0.78rem',
-              padding: '0.42rem 0.78rem',
-              border: '1px solid var(--line)',
-              borderRadius: '8px',
-              background: canSubmit ? '#fff' : '#f6f8fb',
-              cursor: canSubmit ? 'pointer' : 'not-allowed',
-              color: 'var(--ink)',
-              fontWeight: 600,
-            }}
-          >
-            {loading ? 'Working…' : 'Run assistant'}
-          </button>
-        </div>
-      </form>
-
-      {error && <div style={{ color: '#dc2626', marginTop: '0.75rem', fontSize: '0.82rem' }}>{error}</div>}
-
-      {response && (
-        <div
-          style={{
-            marginTop: '0.9rem',
-            borderRadius: '16px',
-            border: `1px solid ${tone.border}`,
-            background: tone.background,
-            padding: '0.8rem',
-            display: 'grid',
-            gap: '0.6rem',
-          }}
-        >
-          <div style={{ color: tone.color, fontWeight: 700, fontSize: '0.83rem' }}>
-            {response.status === 'deferred' ? 'Deferred due to AI cap' : 'Assistant response'}
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+            <Bot className="h-4 w-4 text-primary" />
           </div>
-          <div style={{ color: 'var(--ink)', fontSize: '0.85rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{response.answerText}</div>
+          <div>
+            <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+              AI Chat Assistant
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Strategy support from your pipeline context.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
 
-          {response.status === 'deferred' && (
-            <div style={{ color: tone.color, fontSize: '0.79rem', fontWeight: 600 }}>
-              Deferred reason: {response.deferredReason}
-            </div>
-          )}
+      <CardContent className="space-y-3">
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-2">
+          <label htmlFor="chat-prompt" className="text-xs font-medium text-muted-foreground">
+            Ask about score rationale, follow-up drafts, or targeting strategy
+          </label>
+          <Textarea
+            id="chat-prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="e.g. Suggest filters to increase interview rate for SaaS platform roles."
+            rows={4}
+            className="resize-y text-sm"
+          />
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-muted-foreground">
+              {selectedApplicationId ? 'Scoped to selected application.' : 'Using pipeline context.'}
+            </span>
+            <Button type="submit" disabled={!canSubmit} size="sm" className="gap-1.5">
+              <Send className="h-3.5 w-3.5" />
+              {loading ? 'Working…' : 'Ask'}
+            </Button>
+          </div>
+        </form>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '0.5rem',
-            }}
-          >
-            {metadata.map((item) => (
-              <div key={item.label} style={{ border: '1px solid var(--line)', borderRadius: '10px', padding: '0.5rem', background: '#fff' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--ink-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {item.label}
-                </div>
-                <div style={{ marginTop: '0.2rem', color: 'var(--ink-strong)', fontSize: '0.8rem', fontWeight: 600 }}>{item.value}</div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {response && (
+          <div className={`rounded-lg border p-3 space-y-2 ${responseBannerClass(response)}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide">
+              {response.status === 'deferred' ? 'Deferred — AI cap reached' : 'Assistant response'}
+            </p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{response.answerText}</p>
+            {response.status === 'deferred' && (
+              <p className="text-xs font-medium">Reason: {response.deferredReason}</p>
+            )}
+            {metadata.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-current/20">
+                {metadata.map((item) => (
+                  <Badge key={item.label} variant="outline" className="text-xs font-normal">
+                    {item.label}: {item.value}
+                  </Badge>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        </div>
-      )}
-    </section>
+        )}
+      </CardContent>
+    </Card>
   )
 }

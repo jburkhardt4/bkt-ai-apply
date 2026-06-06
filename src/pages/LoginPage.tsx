@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Eye, EyeOff, Zap } from 'lucide-react'
 import { getSupabaseClient } from '../lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -26,146 +32,135 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: 'var(--bg)',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '360px',
-          border: '1px solid var(--line)',
-          borderRadius: '18px',
-          padding: '2rem',
-          background: 'var(--surface)',
-          boxShadow: '0 16px 34px rgba(12,16,22,0.08)',
-        }}
-      >
-        <p
+    <div className="flex min-h-svh bg-background">
+      {/* Left panel — brand + gradient */}
+      <div className="relative hidden flex-col items-start justify-between overflow-hidden bg-foreground p-10 text-background md:flex md:w-[45%]">
+        {/* Animated gradient blobs */}
+        <div
+          className="pointer-events-none absolute inset-0"
           style={{
-            margin: '0 0 0.2rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            fontSize: '0.7rem',
-            color: 'var(--ink-subtle)',
-            fontWeight: 700,
+            background:
+              'radial-gradient(circle at 20% 30%, rgba(37,99,235,0.35) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(99,102,241,0.25) 0%, transparent 50%)',
           }}
-        >
-          BKT AI-Apply
-        </p>
-        <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '1.5rem',
-            margin: '0 0 1.5rem',
-            color: 'var(--ink-strong)',
-          }}
-        >
-          Sign in
-        </h1>
-
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-        >
-          <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '0.3rem',
-                color: 'var(--ink-subtle)',
-              }}
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                font: 'inherit',
-                fontSize: '0.9rem',
-                background: '#fff',
-              }}
-            />
+        />
+        {/* Brand mark */}
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-lg">
+            <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                marginBottom: '0.3rem',
-                color: 'var(--ink-subtle)',
-              }}
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-background/50">
+              BKT
+            </p>
+            <p
+              className="text-base font-semibold leading-tight text-background"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                border: '1px solid var(--line)',
-                borderRadius: '8px',
-                font: 'inherit',
-                fontSize: '0.9rem',
-                background: '#fff',
-              }}
-            />
+              AI-Apply
+            </p>
           </div>
+        </div>
 
-          {error && (
-            <div
-              style={{
-                color: '#dc2626',
-                fontSize: '0.82rem',
-                padding: '0.5rem 0.75rem',
-                background: '#fef2f2',
-                borderRadius: '6px',
-              }}
+        {/* Tagline */}
+        <div className="relative">
+          <blockquote className="space-y-2">
+            <p
+              className="text-2xl font-semibold leading-snug text-background"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
-              {error}
-            </div>
-          )}
+              Your automated job application pipeline.
+            </p>
+            <p className="text-sm text-background/60">
+              From discovery to hire — intelligent, systematic, and always on.
+            </p>
+          </blockquote>
+        </div>
+      </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: '0.25rem',
-              padding: '0.6rem 1rem',
-              background: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-            }}
+      {/* Right panel — login form */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+        {/* Mobile brand mark */}
+        <div className="mb-8 flex items-center gap-2.5 md:hidden">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <Zap className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span
+            className="text-sm font-semibold"
+            style={{ fontFamily: 'var(--font-display)' }}
           >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+            BKT AI-Apply
+          </span>
+        </div>
+
+        <Card className="w-full max-w-sm shadow-lg">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle
+              className="text-2xl"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Sign in
+            </CardTitle>
+            <CardDescription>Enter your credentials to access your pipeline.</CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground" htmlFor="email">
+                  Email
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground" htmlFor="password">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

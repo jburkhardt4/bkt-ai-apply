@@ -1,3 +1,5 @@
+/* Legacy utility classes — kept for non-migrated components */
+
 .app-shell {
   max-width: 1200px;
   margin: 0 auto;
@@ -24,32 +26,10 @@
   font-weight: 700;
 }
 
-h1 {
-  margin: 0.35rem 0 0.6rem;
-  font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  line-height: 1.08;
-  color: var(--ink-strong);
-}
-
 .summary {
   margin: 0;
   max-width: 65ch;
   color: var(--ink);
-}
-
-.grid {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.two-up {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.three-up {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .panel {
@@ -65,17 +45,6 @@ h1 {
   font-family: var(--font-display);
   font-size: 1.05rem;
   color: var(--ink-strong);
-}
-
-textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  resize: vertical;
-  padding: 0.8rem;
-  font: inherit;
-  line-height: 1.5;
-  background: #ffffff;
 }
 
 .chips {
@@ -156,21 +125,6 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-button {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f8fc 100%);
-  color: var(--ink-strong);
-  font: inherit;
-  padding: 0.4rem 0.62rem;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .letter {

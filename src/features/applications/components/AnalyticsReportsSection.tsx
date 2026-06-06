@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
+import { BarChart3 } from 'lucide-react'
 import { useAuth } from '../../../contexts/auth-context'
 import { getAnalyticsReport, type AnalyticsReport } from '../services/analyticsReportService'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface AnalyticsReportsSectionProps {
   refreshKey?: number
@@ -14,6 +18,10 @@ function formatScore(value: number | null): string {
   return value === null ? '—' : value.toFixed(1)
 }
 
+function EmptyState({ message }: { message: string }) {
+  return <p className="py-2 text-xs text-muted-foreground">{message}</p>
+}
+
 export function AnalyticsReportsSection({ refreshKey = 0 }: AnalyticsReportsSectionProps) {
   const { user } = useAuth()
   const userId = user?.id ?? ''
@@ -24,32 +32,12 @@ export function AnalyticsReportsSection({ refreshKey = 0 }: AnalyticsReportsSect
 
   useEffect(() => {
     if (!userId) return
-
     let cancelled = false
-
     void getAnalyticsReport(userId)
-      .then((data) => {
-        if (!cancelled) {
-          setReport(data)
-          setError(null)
-          setLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load analytics reports')
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .then((data) => { if (!cancelled) { setReport(data); setError(null); setLoading(false) } })
+      .catch((err: unknown) => { if (!cancelled) { setError(err instanceof Error ? err.message : 'Failed to load analytics'); setLoading(false) } })
+    return () => { cancelled = true }
   }, [userId, refreshKey])
-
-  if (loading && report === null) {
-    return <div style={{ marginTop: '1rem', color: 'var(--ink-subtle)', fontSize: '0.875rem' }}>Loading analytics reports…</div>
-  }
 
   const topSources = (report?.conversionBySource ?? []).slice(0, 4)
   const topIndustries = (report?.interviewRateByIndustry ?? []).slice(0, 4)
@@ -57,137 +45,115 @@ export function AnalyticsReportsSection({ refreshKey = 0 }: AnalyticsReportsSect
   const trendPoints = (report?.scoreOutcomeTrend ?? []).slice(-4)
 
   return (
-    <section
-      style={{
-        marginTop: '1rem',
-        border: '1px solid var(--line)',
-        borderRadius: '18px',
-        padding: '1rem',
-        background: 'var(--surface)',
-        boxShadow: '0 12px 28px rgba(7, 16, 27, 0.06)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start' }}>
-        <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', margin: 0, fontSize: '1.05rem', color: 'var(--ink-strong)' }}>
-            Analytics Reports
-          </h2>
-          <p style={{ margin: '0.25rem 0 0', color: 'var(--ink-subtle)', fontSize: '0.82rem' }}>
-            Conversion by board, interview rate by industry, and score-to-outcome trends.
-          </p>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+              <BarChart3 className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base" style={{ fontFamily: 'var(--font-display)' }}>
+                Analytics Reports
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Conversion, interview rate, and score trends.
+              </CardDescription>
+            </div>
+          </div>
+          {report && (
+            <span className="text-xs text-muted-foreground">
+              {new Date(report.generatedAtIso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          )}
         </div>
-        {report && (
-          <span style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem' }}>
-            Updated {new Date(report.generatedAtIso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-          </span>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {loading && report === null ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        ) : (
+          <>
+            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Conversion by source */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conversion by source</h3>
+                {topSources.length === 0 ? (
+                  <EmptyState message="No source activity yet." />
+                ) : (
+                  topSources.map((row) => (
+                    <div key={row.source} className="rounded-md border bg-muted/30 px-2.5 py-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground truncate">{row.source}</span>
+                        <span className="ml-2 shrink-0 font-semibold text-foreground">{formatPercent(row.conversionRate)}</span>
+                      </div>
+                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">{row.convertedApplications}/{row.totalApplications} converted</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Interview rate by industry */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interview rate by industry</h3>
+                {topIndustries.length === 0 ? (
+                  <EmptyState message="No interview activity yet." />
+                ) : (
+                  topIndustries.map((row) => (
+                    <div key={row.industry} className="rounded-md border bg-muted/30 px-2.5 py-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground truncate">{row.industry}</span>
+                        <span className="ml-2 shrink-0 font-semibold text-foreground">{formatPercent(row.interviewRate)}</span>
+                      </div>
+                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">{row.interviewReachedApplications}/{row.totalApplications} reached interview</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Score vs outcome */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Score vs outcome</h3>
+                {outcomeDistribution.length === 0 ? (
+                  <EmptyState message="No score/outcome data yet." />
+                ) : (
+                  outcomeDistribution.map((row) => (
+                    <div key={row.outcome} className="rounded-md border bg-muted/30 px-2.5 py-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground capitalize">{row.outcome.replace('_', ' ')}</span>
+                        <span className="text-muted-foreground">{row.applicationCount} apps</span>
+                      </div>
+                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">Avg {formatScore(row.averageScore)} · 80+ {formatPercent(row.highScoreShare)}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Trend */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Score/outcome trend</h3>
+                {trendPoints.length === 0 ? (
+                  <EmptyState message="No trend points yet." />
+                ) : (
+                  trendPoints.map((row) => (
+                    <div key={row.month} className="rounded-md border bg-muted/30 px-2.5 py-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground">{row.month}</span>
+                        <span className="text-muted-foreground">{row.applicationCount} apps</span>
+                      </div>
+                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground">Avg {formatScore(row.averageScore)} · Success {formatPercent(row.successRate)}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
         )}
-      </div>
-
-      {error && <div style={{ color: '#dc2626', marginTop: '0.85rem', fontSize: '0.82rem' }}>{error}</div>}
-
-      <div
-        style={{
-          marginTop: '0.85rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '0.7rem',
-        }}
-      >
-        <div style={{ border: '1px solid var(--line)', borderRadius: '14px', background: '#fff', padding: '0.72rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--ink-strong)', fontSize: '0.85rem' }}>Conversion by source</h3>
-          <div style={{ display: 'grid', gap: '0.45rem', marginTop: '0.55rem' }}>
-            {topSources.length === 0 ? (
-              <div style={{ color: 'var(--ink-subtle)', fontSize: '0.78rem' }}>No source activity yet.</div>
-            ) : (
-              topSources.map((row) => (
-                <div key={row.source} style={{ border: '1px solid var(--line)', borderRadius: '10px', padding: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.55rem' }}>
-                    <span style={{ color: 'var(--ink-strong)', fontWeight: 600, fontSize: '0.79rem' }}>{row.source}</span>
-                    <span style={{ color: 'var(--ink-strong)', fontWeight: 700, fontSize: '0.78rem' }}>{formatPercent(row.conversionRate)}</span>
-                  </div>
-                  <div style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem', marginTop: '0.18rem' }}>
-                    {row.convertedApplications}/{row.totalApplications} converted
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div style={{ border: '1px solid var(--line)', borderRadius: '14px', background: '#fff', padding: '0.72rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--ink-strong)', fontSize: '0.85rem' }}>Interview rate by industry</h3>
-          <div style={{ display: 'grid', gap: '0.45rem', marginTop: '0.55rem' }}>
-            {topIndustries.length === 0 ? (
-              <div style={{ color: 'var(--ink-subtle)', fontSize: '0.78rem' }}>No interview activity yet.</div>
-            ) : (
-              topIndustries.map((row) => (
-                <div key={row.industry} style={{ border: '1px solid var(--line)', borderRadius: '10px', padding: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.55rem' }}>
-                    <span style={{ color: 'var(--ink-strong)', fontWeight: 600, fontSize: '0.79rem' }}>{row.industry}</span>
-                    <span style={{ color: 'var(--ink-strong)', fontWeight: 700, fontSize: '0.78rem' }}>{formatPercent(row.interviewRate)}</span>
-                  </div>
-                  <div style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem', marginTop: '0.18rem' }}>
-                    {row.interviewReachedApplications}/{row.totalApplications} reached interview stages
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          marginTop: '0.7rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '0.7rem',
-        }}
-      >
-        <div style={{ border: '1px solid var(--line)', borderRadius: '14px', background: '#fff', padding: '0.72rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--ink-strong)', fontSize: '0.85rem' }}>Score vs outcome distribution</h3>
-          <div style={{ display: 'grid', gap: '0.45rem', marginTop: '0.55rem' }}>
-            {outcomeDistribution.length === 0 ? (
-              <div style={{ color: 'var(--ink-subtle)', fontSize: '0.78rem' }}>No score/outcome data yet.</div>
-            ) : (
-              outcomeDistribution.map((row) => (
-                <div key={row.outcome} style={{ border: '1px solid var(--line)', borderRadius: '10px', padding: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.55rem' }}>
-                    <span style={{ color: 'var(--ink-strong)', fontWeight: 600, fontSize: '0.79rem', textTransform: 'capitalize' }}>
-                      {row.outcome.replace('_', ' ')}
-                    </span>
-                    <span style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem' }}>{row.applicationCount} apps</span>
-                  </div>
-                  <div style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem', marginTop: '0.18rem' }}>
-                    Avg score: {formatScore(row.averageScore)} · 80+ share: {formatPercent(row.highScoreShare)}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div style={{ border: '1px solid var(--line)', borderRadius: '14px', background: '#fff', padding: '0.72rem' }}>
-          <h3 style={{ margin: 0, color: 'var(--ink-strong)', fontSize: '0.85rem' }}>Score/outcome trend</h3>
-          <div style={{ display: 'grid', gap: '0.45rem', marginTop: '0.55rem' }}>
-            {trendPoints.length === 0 ? (
-              <div style={{ color: 'var(--ink-subtle)', fontSize: '0.78rem' }}>No trend points yet.</div>
-            ) : (
-              trendPoints.map((row) => (
-                <div key={row.month} style={{ border: '1px solid var(--line)', borderRadius: '10px', padding: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.55rem' }}>
-                    <span style={{ color: 'var(--ink-strong)', fontWeight: 600, fontSize: '0.79rem' }}>{row.month}</span>
-                    <span style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem' }}>{row.applicationCount} apps</span>
-                  </div>
-                  <div style={{ color: 'var(--ink-subtle)', fontSize: '0.75rem', marginTop: '0.18rem' }}>
-                    Avg score: {formatScore(row.averageScore)} · Success: {formatPercent(row.successRate)} · Rejected: {formatPercent(row.rejectionRate)}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }

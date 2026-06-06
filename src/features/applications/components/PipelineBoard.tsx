@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowRight, MoveRight } from 'lucide-react'
 import { useAuth } from '../../../contexts/auth-context'
 import type { PipelineStage } from '../../../types/pipeline'
 import { canTransitionStage } from '../domain/stageRules'
@@ -7,17 +8,24 @@ import {
   fetchApplications,
   transitionStage,
 } from '../services/applicationService'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
 
 const PIPELINE_STAGES: PipelineStage[] = [
-  'discovery',
-  'applied',
-  'screening',
-  'interview_scheduled',
-  'interview_complete',
-  'offer',
-  'hired',
-  'rejected',
-  'ghosted',
+  'discovery', 'applied', 'screening', 'interview_scheduled', 'interview_complete',
+  'offer', 'hired', 'rejected', 'ghosted',
 ]
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
@@ -32,15 +40,27 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
   ghosted: 'Ghosted',
 }
 
+const STAGE_COLORS: Partial<Record<PipelineStage, string>> = {
+  hired: 'text-green-700',
+  offer: 'text-blue-700',
+  rejected: 'text-red-600',
+  ghosted: 'text-muted-foreground',
+}
+
 function daysInStage(updatedAt: string): number {
   return Math.floor((Date.now() - new Date(updatedAt).getTime()) / 86_400_000)
 }
 
-function scoreBadgeColor(score: number): string {
-  // BR-008: auto-apply threshold is 80 (see masterProfile.constraints.autoApplyThreshold)
-  if (score >= 80) return '#16a34a'
-  if (score >= 60) return '#ca8a04'
-  return '#dc2626'
+function scoreVariant(score: number): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (score >= 80) return 'default'
+  if (score >= 60) return 'secondary'
+  return 'destructive'
+}
+
+function scoreBadgeClass(score: number): string {
+  if (score >= 80) return 'bg-green-600 text-white hover:bg-green-600'
+  if (score >= 60) return 'bg-yellow-500 text-white hover:bg-yellow-500'
+  return 'bg-red-600 text-white hover:bg-red-600'
 }
 
 interface PipelineBoardProps {
@@ -56,40 +76,21 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
   const [applications, setApplications] = useState<ApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [moveTarget, setMoveTarget] = useState<{
-    applicationId: string
-    fromStage: PipelineStage
-  } | null>(null)
+  const [moveTarget, setMoveTarget] = useState<{ applicationId: string; fromStage: PipelineStage } | null>(null)
   const [toStage, setToStage] = useState<PipelineStage | ''>('')
   const [reason, setReason] = useState('')
   const [moving, setMoving] = useState(false)
 
   useEffect(() => {
     if (!userId) return
-
     let cancelled = false
-
     void fetchApplications(userId)
-      .then((apps) => {
-        if (!cancelled) {
-          setApplications(apps)
-          setError(null)
-          setLoading(false)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load applications')
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .then((apps) => { if (!cancelled) { setApplications(apps); setError(null); setLoading(false) } })
+      .catch((err: unknown) => { if (!cancelled) { setError(err instanceof Error ? err.message : 'Failed to load applications'); setLoading(false) } })
+    return () => { cancelled = true }
   }, [userId, localRefreshKey])
 
-  function openMoveForm(applicationId: string, fromStage: PipelineStage) {
+  function openMoveDialog(applicationId: string, fromStage: PipelineStage) {
     setMoveTarget({ applicationId, fromStage })
     setToStage('')
     setReason('')
@@ -99,16 +100,8 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
     if (!moveTarget || !toStage || !reason.trim()) return
     setMoving(true)
     try {
-      await transitionStage({
-        applicationId: moveTarget.applicationId,
-        userId,
-        fromStage: moveTarget.fromStage,
-        toStage,
-        reason: reason.trim(),
-      })
+      await transitionStage({ applicationId: moveTarget.applicationId, userId, fromStage: moveTarget.fromStage, toStage, reason: reason.trim() })
       setMoveTarget(null)
-      setToStage('')
-      setReason('')
       setLocalRefreshKey((k) => k + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Stage move failed')
@@ -118,246 +111,102 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
   }
 
   const stageMap = new Map<PipelineStage, ApplicationRow[]>()
-  for (const stage of PIPELINE_STAGES) {
-    stageMap.set(stage, [])
-  }
+  for (const stage of PIPELINE_STAGES) stageMap.set(stage, [])
   for (const app of applications) {
     const bucket = stageMap.get(app.stage as PipelineStage)
     if (bucket) bucket.push(app)
   }
 
-  if (loading && applications.length === 0) {
-    return <div style={{ padding: '2rem', color: 'var(--ink-subtle)' }}>Loading pipeline…</div>
-  }
+  const movingApp = applications.find((a) => a.id === moveTarget?.applicationId)
+  const validNextStages = moveTarget
+    ? PIPELINE_STAGES.filter((s) => canTransitionStage(moveTarget.fromStage, s))
+    : []
 
   return (
-    <div style={{ padding: '1rem 0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', margin: 0, fontSize: '1.25rem', color: 'var(--ink-strong)' }}>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2
+          className="text-lg font-semibold text-foreground"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           Pipeline Board
         </h2>
-        {loading && <span style={{ fontSize: '0.75rem', color: 'var(--ink-subtle)' }}>Refreshing…</span>}
+        {loading && <span className="text-xs text-muted-foreground">Refreshing…</span>}
       </div>
 
       {error && (
-        <div
-          style={{
-            color: '#dc2626',
-            marginBottom: '1rem',
-            padding: '0.6rem 0.75rem',
-            background: '#fef2f2',
-            borderRadius: '8px',
-            fontSize: '0.82rem',
-          }}
-        >
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', paddingBottom: '0.75rem' }}>
+      <div className="flex gap-3 overflow-x-auto pb-2">
         {PIPELINE_STAGES.map((stage) => {
           const cards = stageMap.get(stage) ?? []
           return (
-            <div
-              key={stage}
-              style={{
-                minWidth: '210px',
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: 'var(--ink-subtle)',
-                  padding: '0.25rem 0',
-                }}
-              >
-                {STAGE_LABELS[stage]}
-                <span style={{ marginLeft: '0.35rem', opacity: 0.7 }}>({cards.length})</span>
+            <div key={stage} className="flex w-52 shrink-0 flex-col gap-2">
+              {/* Column header */}
+              <div className="flex items-center justify-between px-1">
+                <span className={cn('text-xs font-semibold uppercase tracking-wide', STAGE_COLORS[stage] ?? 'text-muted-foreground')}>
+                  {STAGE_LABELS[stage]}
+                </span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                  {cards.length}
+                </span>
               </div>
 
+              {/* Cards */}
               {cards.map((app) => {
                 const title = app.jobs?.title ?? app.job_id
                 const company = app.jobs?.companies?.name ?? (app.jobs?.company_id ? `ID: ${app.jobs.company_id.slice(0, 6)}…` : '—')
                 const days = daysInStage(app.updated_at)
-                const isMoveOpen = moveTarget?.applicationId === app.id
                 const isSelected = selectedApplicationId === app.id
-                const validNextStages = PIPELINE_STAGES.filter((s) =>
-                  canTransitionStage(app.stage as PipelineStage, s),
-                )
+                const hasNextStages = PIPELINE_STAGES.filter((s) => canTransitionStage(app.stage as PipelineStage, s)).length > 0
 
                 return (
-                  <div
+                  <Card
                     key={app.id}
                     onClick={() => onSelectApplication(app.id)}
-                    style={{
-                      border: `1px solid ${isSelected ? '#3b82f6' : 'var(--line)'}`,
-                      borderRadius: '12px',
-                      padding: '0.7rem',
-                      background: 'var(--surface)',
-                      cursor: 'pointer',
-                      boxShadow: isSelected
-                        ? '0 0 0 2px #93c5fd'
-                        : '0 2px 4px rgba(0,0,0,0.04)',
-                    }}
+                    className={cn(
+                      'cursor-pointer transition-all duration-150 hover:shadow-md',
+                      isSelected && 'ring-2 ring-primary shadow-md',
+                    )}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: '0.4rem',
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontWeight: 600,
-                            fontSize: '0.82rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            color: 'var(--ink-strong)',
-                          }}
-                        >
-                          {title}
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-foreground">{title}</p>
+                          <p className="text-[0.65rem] text-muted-foreground">{company}</p>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--ink-subtle)', marginTop: '0.1rem' }}>
-                          {company}
-                        </div>
+                        {app.match_score !== null && (
+                          <Badge className={cn('shrink-0 text-[0.65rem] px-1.5 py-0.5', scoreBadgeClass(app.match_score))} variant={scoreVariant(app.match_score)}>
+                            {app.match_score}
+                          </Badge>
+                        )}
                       </div>
-                      {app.match_score !== null && (
-                        <span
-                          style={{
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            padding: '0.15rem 0.35rem',
-                            borderRadius: '999px',
-                            background: scoreBadgeColor(app.match_score),
-                            color: '#fff',
-                            flexShrink: 0,
-                          }}
+
+                      <p className="text-[0.65rem] text-muted-foreground">
+                        {days === 0 ? 'Today' : `${days}d in stage`}
+                      </p>
+
+                      {hasNextStages && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); openMoveDialog(app.id, app.stage as PipelineStage) }}
+                          className="h-6 w-full gap-1 text-[0.65rem]"
                         >
-                          {app.match_score}
-                        </span>
+                          <MoveRight className="h-3 w-3" />
+                          Move Stage
+                        </Button>
                       )}
-                    </div>
-
-                    <div style={{ fontSize: '0.68rem', color: 'var(--ink-subtle)', marginTop: '0.35rem' }}>
-                      {days === 0 ? 'Today' : `${days}d in stage`}
-                    </div>
-
-                    {validNextStages.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (isMoveOpen) {
-                            setMoveTarget(null)
-                          } else {
-                            openMoveForm(app.id, app.stage as PipelineStage)
-                          }
-                        }}
-                        style={{
-                          marginTop: '0.5rem',
-                          fontSize: '0.72rem',
-                          padding: '0.25rem 0.5rem',
-                          border: '1px solid var(--line)',
-                          borderRadius: '6px',
-                          background: 'white',
-                          cursor: 'pointer',
-                          width: '100%',
-                          color: 'var(--ink)',
-                        }}
-                      >
-                        {isMoveOpen ? 'Cancel' : 'Move Stage'}
-                      </button>
-                    )}
-
-                    {isMoveOpen && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          marginTop: '0.5rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.4rem',
-                        }}
-                      >
-                        <select
-                          value={toStage}
-                          onChange={(e) => setToStage(e.target.value as PipelineStage | '')}
-                          style={{
-                            fontSize: '0.72rem',
-                            padding: '0.25rem',
-                            border: '1px solid var(--line)',
-                            borderRadius: '6px',
-                            width: '100%',
-                            background: 'white',
-                          }}
-                        >
-                          <option value="">Select stage…</option>
-                          {validNextStages.map((s) => (
-                            <option key={s} value={s}>
-                              {STAGE_LABELS[s]}
-                            </option>
-                          ))}
-                        </select>
-
-                        <input
-                          type="text"
-                          placeholder="Reason (required)"
-                          value={reason}
-                          onChange={(e) => setReason(e.target.value)}
-                          style={{
-                            fontSize: '0.72rem',
-                            padding: '0.25rem',
-                            border: '1px solid var(--line)',
-                            borderRadius: '6px',
-                            width: '100%',
-                            font: 'inherit',
-                          }}
-                        />
-
-                        <button
-                          onClick={() => void handleMoveStage()}
-                          disabled={!toStage || !reason.trim() || moving}
-                          style={{
-                            fontSize: '0.72rem',
-                            padding: '0.3rem 0.5rem',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: '#2563eb',
-                            color: 'white',
-                            cursor: !toStage || !reason.trim() || moving ? 'not-allowed' : 'pointer',
-                            opacity: !toStage || !reason.trim() || moving ? 0.6 : 1,
-                            width: '100%',
-                          }}
-                        >
-                          {moving ? 'Moving…' : 'Confirm Move'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    </CardContent>
+                  </Card>
                 )
               })}
 
               {cards.length === 0 && (
-                <div
-                  style={{
-                    fontSize: '0.72rem',
-                    color: 'var(--ink-subtle)',
-                    textAlign: 'center',
-                    padding: '1rem 0.5rem',
-                    border: '1px dashed var(--line)',
-                    borderRadius: '12px',
-                  }}
-                >
+                <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
                   Empty
                 </div>
               )}
@@ -365,6 +214,52 @@ export function PipelineBoard({ selectedApplicationId, onSelectApplication }: Pi
           )
         })}
       </div>
+
+      {/* Move stage dialog */}
+      <Dialog open={!!moveTarget} onOpenChange={(open) => { if (!open) setMoveTarget(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'var(--font-display)' }}>Move Stage</DialogTitle>
+          </DialogHeader>
+          {movingApp && (
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">{movingApp.jobs?.title ?? movingApp.job_id}</p>
+              <p className="mt-0.5 flex items-center gap-1">
+                <span>{STAGE_LABELS[moveTarget!.fromStage]}</span>
+                <ArrowRight className="h-3 w-3" />
+                <span className="text-primary">{toStage ? STAGE_LABELS[toStage] : '…'}</span>
+              </p>
+            </div>
+          )}
+          <div className="space-y-3">
+            <Select value={toStage} onValueChange={(v) => setToStage(v as PipelineStage)}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Select target stage…" />
+              </SelectTrigger>
+              <SelectContent>
+                {validNextStages.map((s) => (
+                  <SelectItem key={s} value={s}>{STAGE_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Reason (required)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMoveTarget(null)}>Cancel</Button>
+            <Button
+              onClick={() => void handleMoveStage()}
+              disabled={!toStage || !reason.trim() || moving}
+            >
+              {moving ? 'Moving…' : 'Confirm Move'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

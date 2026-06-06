@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/auth-context'
 import { AiCostMonitorCard } from '../features/applications/components/AiCostMonitorCard'
+import { AnalyticsReportsSection } from '../features/applications/components/AnalyticsReportsSection'
 import { AuditLogViewer } from '../features/applications/components/AuditLogViewer'
+import { ChatAssistantPanel } from '../features/applications/components/ChatAssistantPanel'
 import { DashboardSummarySection } from '../features/applications/components/DashboardSummarySection'
 import { NotificationFeedSection } from '../features/applications/components/NotificationFeedSection'
 import { PipelineBoard } from '../features/applications/components/PipelineBoard'
@@ -170,6 +172,17 @@ export default function PipelinePage() {
       >
         <AiCostMonitorCard refreshKey={refreshKey} />
         <NotificationFeedSection refreshKey={refreshKey} />
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: '1rem',
+        }}
+      >
+        <AnalyticsReportsSection refreshKey={refreshKey} />
+        <ChatAssistantPanel selectedApplicationId={selectedApplicationId} />
       </div>
 
       <PipelineBoard

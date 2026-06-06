@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/auth-context'
+import { useSelectedApplication } from '../contexts/selected-application-context'
 import { AiCostMonitorCard } from '../features/applications/components/AiCostMonitorCard'
 import { AnalyticsReportsSection } from '../features/applications/components/AnalyticsReportsSection'
 import { AuditLogViewer } from '../features/applications/components/AuditLogViewer'
@@ -12,7 +13,7 @@ import { getSupabaseClient } from '../lib/supabase'
 
 export default function PipelinePage() {
   const { user } = useAuth()
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
+  const { selectedApplicationId, setSelectedApplicationId } = useSelectedApplication()
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {

@@ -22,6 +22,10 @@ export function AppShell({ children }: AppShellProps) {
   const startWidth = useRef<number>(320)
 
   function handleResizeMouseDown(e: React.MouseEvent) {
+    // Prevent the initial focus/selection trigger and suppress page-wide
+    // text selection for the duration of the drag.
+    e.preventDefault()
+    document.body.style.userSelect = 'none'
     setIsDraggingState(true)
     startX.current = e.clientX
     startWidth.current = sidebarWidth
@@ -35,6 +39,7 @@ export function AppShell({ children }: AppShellProps) {
       setSidebarWidth(clamped)
     }
     function handleMouseUp() {
+      document.body.style.userSelect = ''
       setIsDraggingState(false)
     }
     window.addEventListener('mousemove', handleMouseMove)
@@ -42,6 +47,9 @@ export function AppShell({ children }: AppShellProps) {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
+      // Revert in case the component unmounts mid-drag so the body style
+      // is never left stuck in a non-selectable state.
+      document.body.style.userSelect = ''
     }
   }, [isDraggingState])
 

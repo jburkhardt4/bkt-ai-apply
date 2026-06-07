@@ -1,78 +1,119 @@
-import { useState } from 'react'
+import { useCallback } from 'react'
 import { Search } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ProspectorToggle } from './components/ProspectorToggle'
-import { ProspectorProfileForm, type ProspectorFormValues, type ProspectingProfile } from './components/ProspectorProfileForm'
+import { ProspectorProfileForm, type ProspectorFormValues } from './components/ProspectorProfileForm'
 import { ProspectorRunStatus } from './components/ProspectorRunStatus'
-import { ProspectorReadyQueue, type ProspectorJobMatch } from './components/ProspectorReadyQueue'
-
-// ── Mock state — no Supabase calls in this scaffold ───────────
-// All state here is local only. DB integration will be wired in the
-// subsequent Feature-Dev gate once the migration is applied and types
-// are generated (BR-081, BR-082).
-
-const MOCK_PROFILE: ProspectingProfile | null = null
-
-const MOCK_JOBS: ProspectorJobMatch[] = []
+import { ProspectorReadyQueue } from './components/ProspectorReadyQueue'
+import { useProspectorProfile } from './hooks/useProspectorProfile'
+import { useProspectingRuns } from './hooks/useProspectingRuns'
+import { useProspectorReadyQueue } from './hooks/useProspectorReadyQueue'
+import { getSupabaseClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts/auth-context'
 
 export function ProspectorDashboard() {
-  // Profile state
-  const [profile, setProfile] = useState<ProspectingProfile | null>(MOCK_PROFILE)
-  const [isSaving, setIsSaving] = useState(false)
+  const { user } = useAuth()
 
-  // Toggle state
-  const [isActive, setIsActive] = useState(false)
-  const [isTogglingActive, setIsTogglingActive] = useState(false)
+  // Live Supabase state — replaces all mock state (BR-004, BR-005, BR-008)
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+    upsertProfile,
+    toggleActive,
+    isSaving,
+    isToggling,
+  } = useProspectorProfile()
 
-  // Run status state
-  const [lastRunAt] = useState<string | null>(null)
-  const [nextRunAt] = useState<string | null>(null)
-  const [isRunning, setIsRunning] = useState(false)
+  const {
+    lastRunAt,
+    loading: runsLoading,
+    refetch: refetchRuns,
+  } = useProspectingRuns()
 
-  // Ready queue state
-  const [queuedJobs] = useState<ProspectorJobMatch[]>(MOCK_JOBS)
-  const [isQueueLoading] = useState(false)
+  const {
+    jobs: queuedJobs,
+    loading: queueLoading,
+    refetch: refetchQueue,
+  } = useProspectorReadyQueue()
 
-  // ── Handlers (mock — no DB calls) ────────────────────────────
 
-  function handleSave(values: ProspectorFormValues) {
-    setIsSaving(true)
-    // Simulate async save latency for UX testing
-    setTimeout(() => {
-      const now = new Date().toISOString()
-      const saved: ProspectingProfile = {
-        id: profile?.id ?? 'mock-id',
-        user_id: 'mock-user-id',
-        is_active: isActive,
+  // next_run_at lives on the profile row (set by the Edge Function)
+  const nextRunAt = profile?.next_run_at ?? null
+
+  // ── Handlers ─────────────────────────────────────────────────
+
+  const handleSave = useCallback(
+    async (values: ProspectorFormValues) => {
+      await upsertProfile({
         job_titles: values.jobTitles,
         locations: values.locations,
         job_types: values.jobTypes,
         environments: values.environments,
         min_salary: values.minSalary,
         keywords: values.keywords,
-        last_run_at: lastRunAt,
-        next_run_at: nextRunAt,
-        created_at: profile?.created_at ?? now,
-        updated_at: now,
+        // Preserve existing is_active state; toggle controls it separately
+        is_active: profile?.is_active ?? false,
+      })
+      toast.success('Profile saved')
+    },
+    [upsertProfile, profile],
+  )
+
+  const handleToggle = useCallback(
+    async (active: boolean) => {
+      await toggleActive(active)
+      // Only show toast on success — error is shown via profileError
+      if (!profileError) {
+        toast.success(active ? 'Auto-Search enabled' : 'Auto-Search disabled')
       }
-      setProfile(saved)
-      setIsSaving(false)
-    }, 600)
-  }
+    },
+    [toggleActive, profileError],
+  )
 
-  function handleToggle(active: boolean) {
-    setIsTogglingActive(true)
-    setTimeout(() => {
-      setIsActive(active)
-      setIsTogglingActive(false)
-    }, 400)
-  }
+  const handleRunNow = useCallback(async () => {
+    if (!user || !profile) return
 
-  function handleRunNow() {
-    setIsRunning(true)
-    setTimeout(() => {
-      setIsRunning(false)
-    }, 1500)
+    // Sprint stub: update last_run_at on the profile row directly.
+    // The actual Edge Function trigger is wired in a later sprint.
+    const supabase = getSupabaseClient()
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from('prospecting_profiles')
+      .update({ last_run_at: now })
+      .eq('user_id', user.id)
+
+    if (error) {
+      toast.error('Failed to trigger run')
+    } else {
+      toast.success('Run triggered')
+      refetchRuns()
+      refetchQueue()
+    }
+  }, [user, profile, refetchRuns, refetchQueue])
+
+  // ── Loading skeleton ─────────────────────────────────────────
+
+  const isInitialLoading = profileLoading && runsLoading
+
+  if (isInitialLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Skeleton className="mb-2 h-3 w-20" />
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="mt-1.5 h-4 w-52" />
+          </div>
+          <Skeleton className="h-7 w-32 sm:mt-2" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    )
   }
 
   return (
@@ -97,12 +138,19 @@ export function ProspectorDashboard() {
 
         <div className="sm:mt-2">
           <ProspectorToggle
-            isActive={isActive}
-            isUpdating={isTogglingActive}
+            isActive={profile?.is_active ?? false}
+            isUpdating={isToggling}
             onToggle={handleToggle}
           />
         </div>
       </div>
+
+      {/* Inline error banner — shown on fetch error, non-throwing */}
+      {profileError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          Could not load profile: {profileError}
+        </div>
+      )}
 
       {/* Search Profile card */}
       <Card>
@@ -116,6 +164,7 @@ export function ProspectorDashboard() {
         </CardHeader>
         <CardContent>
           <ProspectorProfileForm
+            key={profile?.id ?? 'new'}
             profile={profile}
             isSaving={isSaving}
             onSave={handleSave}
@@ -137,7 +186,7 @@ export function ProspectorDashboard() {
           <ProspectorRunStatus
             lastRunAt={lastRunAt}
             nextRunAt={nextRunAt}
-            isRunning={isRunning}
+            isRunning={false}
             onRunNow={handleRunNow}
           />
         </CardContent>
@@ -156,7 +205,7 @@ export function ProspectorDashboard() {
         <CardContent>
           <ProspectorReadyQueue
             jobs={queuedJobs}
-            isLoading={isQueueLoading}
+            isLoading={queueLoading}
           />
         </CardContent>
       </Card>

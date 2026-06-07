@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ai_model_usage: {
@@ -623,6 +598,95 @@ export type Database = {
           },
         ]
       }
+      prospecting_profiles: {
+        Row: {
+          created_at: string
+          environments: string[]
+          id: string
+          is_active: boolean
+          job_titles: string[]
+          job_types: string[]
+          keywords: string[]
+          last_run_at: string | null
+          locations: string[]
+          min_salary: number | null
+          next_run_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          environments?: string[]
+          id?: string
+          is_active?: boolean
+          job_titles?: string[]
+          job_types?: string[]
+          keywords?: string[]
+          last_run_at?: string | null
+          locations?: string[]
+          min_salary?: number | null
+          next_run_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          environments?: string[]
+          id?: string
+          is_active?: boolean
+          job_titles?: string[]
+          job_types?: string[]
+          keywords?: string[]
+          last_run_at?: string | null
+          locations?: string[]
+          min_salary?: number | null
+          next_run_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prospecting_runs: {
+        Row: {
+          error: string | null
+          id: string
+          jobs_found: number
+          jobs_queued: number
+          profile_id: string
+          run_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          error?: string | null
+          id?: string
+          jobs_found?: number
+          jobs_queued?: number
+          profile_id: string
+          run_at?: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          jobs_found?: number
+          jobs_queued?: number
+          profile_id?: string
+          run_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_runs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recruiters: {
         Row: {
           company_id: string | null
@@ -871,9 +935,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

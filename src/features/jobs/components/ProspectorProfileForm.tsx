@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import type { ProspectingProfileRow } from '../hooks/useProspectorProfile'
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -20,24 +21,13 @@ export interface ProspectorFormValues {
   keywords: string[]
 }
 
-export interface ProspectingProfile {
-  id: string
-  user_id: string
-  is_active: boolean
-  job_titles: string[]
-  locations: string[]
-  job_types: JobType[]
-  environments: Environment[]
-  min_salary: number | null
-  keywords: string[]
-  last_run_at: string | null
-  next_run_at: string | null
-  created_at: string
-  updated_at: string
-}
+// Re-export for backward compat — consumers that imported ProspectingProfile
+// from this file should now use ProspectingProfileRow from the hook directly.
+// The alias keeps the dashboard working without changing the prop type.
+export type { ProspectingProfileRow as ProspectingProfile }
 
 interface ProspectorProfileFormProps {
-  profile: ProspectingProfile | null
+  profile: ProspectingProfileRow | null
   isSaving: boolean
   onSave: (values: ProspectorFormValues) => void
 }
@@ -144,13 +134,25 @@ function FieldLabel({ htmlFor, children, required }: { htmlFor?: string; childre
   )
 }
 
+// ── Coerce DB string[] to typed union arrays ──────────────────
+
+function toJobTypes(arr: string[]): JobType[] {
+  const valid: JobType[] = ['full-time', 'contract', 'part-time']
+  return arr.filter((v): v is JobType => valid.includes(v as JobType))
+}
+
+function toEnvironments(arr: string[]): Environment[] {
+  const valid: Environment[] = ['remote', 'hybrid', 'in-office']
+  return arr.filter((v): v is Environment => valid.includes(v as Environment))
+}
+
 // ── Main Form ─────────────────────────────────────────────────
 
 export function ProspectorProfileForm({ profile, isSaving, onSave }: ProspectorProfileFormProps) {
   const [jobTitles, setJobTitles] = useState<string[]>(profile?.job_titles ?? [])
   const [locations, setLocations] = useState<string[]>(profile?.locations ?? [])
-  const [jobTypes, setJobTypes] = useState<JobType[]>(profile?.job_types ?? [])
-  const [environments, setEnvironments] = useState<Environment[]>(profile?.environments ?? [])
+  const [jobTypes, setJobTypes] = useState<JobType[]>(toJobTypes(profile?.job_types ?? []))
+  const [environments, setEnvironments] = useState<Environment[]>(toEnvironments(profile?.environments ?? []))
   const [minSalary, setMinSalary] = useState<string>(
     profile?.min_salary != null ? String(profile.min_salary) : '',
   )
@@ -158,6 +160,11 @@ export function ProspectorProfileForm({ profile, isSaving, onSave }: ProspectorP
 
   // Validation state
   const [attempted, setAttempted] = useState(false)
+
+  // Form fields are initialized from the profile row in useState above.
+  // When the profile row loads/changes, the parent re-mounts this component
+  // via a key prop (key={profile?.id ?? 'new'}) so useState initializers
+  // run fresh — no useEffect needed.
 
   const jobTitlesError = attempted && jobTitles.length === 0
 

@@ -152,9 +152,8 @@ function buildSerpApiUrl(
   params.set('hl', 'en')
   params.set('gl', 'us')
 
-  // Keep q tight: title + work-mode modifier only.
-  // Keywords stuffed into q make the query too specific and produce zero results.
-  // Deduplication is handled by ON CONFLICT on source_url — no date filter needed.
+  // q = "<title> [remote|hybrid] job opening"
+  // "job opening" signals active listings to Google Jobs; keeps query broad enough to return results.
   const qParts: string[] = [jobTitle]
 
   for (const env of profile.environments) {
@@ -162,6 +161,8 @@ function buildSerpApiUrl(
       qParts.push(env)
     }
   }
+
+  qParts.push('job opening')
 
   params.set('q', qParts.join(' '))
 

@@ -11,7 +11,7 @@ export function ProspectorToggle({ isActive, isUpdating, onToggle }: ProspectorT
     <div className="flex items-center gap-3">
       <span
         className={cn(
-          'text-sm font-medium',
+          'text-sm font-medium transition-colors duration-150',
           isActive ? 'text-foreground' : 'text-muted-foreground',
         )}
       >
@@ -27,8 +27,9 @@ export function ProspectorToggle({ isActive, isUpdating, onToggle }: ProspectorT
         onClick={() => onToggle(!isActive)}
         className={cn(
           'relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent',
-          'transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          'disabled:cursor-not-allowed disabled:opacity-50',
+          'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'active:scale-95',
+          'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
           isActive ? 'bg-primary' : 'bg-muted',
         )}
       >
@@ -43,7 +44,7 @@ export function ProspectorToggle({ isActive, isUpdating, onToggle }: ProspectorT
 
       <span
         className={cn(
-          'min-w-[2.5rem] text-sm font-semibold',
+          'min-w-10 text-sm font-semibold transition-colors duration-150',
           isActive ? 'text-foreground' : 'text-muted-foreground',
         )}
       >

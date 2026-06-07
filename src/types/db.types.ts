@@ -488,6 +488,7 @@ export type Database = {
           description: string | null
           expires_at: string | null
           id: string
+          job_type: string | null
           location: string | null
           posted_at: string | null
           remote_type: string | null
@@ -506,6 +507,7 @@ export type Database = {
           description?: string | null
           expires_at?: string | null
           id?: string
+          job_type?: string | null
           location?: string | null
           posted_at?: string | null
           remote_type?: string | null
@@ -524,6 +526,7 @@ export type Database = {
           description?: string | null
           expires_at?: string | null
           id?: string
+          job_type?: string | null
           location?: string | null
           posted_at?: string | null
           remote_type?: string | null

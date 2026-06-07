@@ -17,7 +17,27 @@ import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { Tables, TablesInsert } from '@/types/db.types'
 
-export type ProspectingProfileRow = Tables<'prospecting_profiles'>
+// Columns the form, toggle, and dashboard actually consume. Derived from the
+// generated Tables<'prospecting_profiles'> type — never handwritten
+// (BR-081 / BR-082) — and kept in sync with the explicit .select() calls below
+// so we stop over-fetching created_at / updated_at / last_run_at, none of which
+// any consumer reads (the dashboard derives last-run from useProspectingRuns).
+const PROFILE_COLUMNS =
+  'id, user_id, job_titles, locations, job_types, environments, min_salary, keywords, is_active, next_run_at' as const
+
+export type ProspectingProfileRow = Pick<
+  Tables<'prospecting_profiles'>,
+  | 'id'
+  | 'user_id'
+  | 'job_titles'
+  | 'locations'
+  | 'job_types'
+  | 'environments'
+  | 'min_salary'
+  | 'keywords'
+  | 'is_active'
+  | 'next_run_at'
+>
 export type ProspectingProfileInsert = TablesInsert<'prospecting_profiles'>
 
 export interface UseProspectorProfileResult {
@@ -51,7 +71,7 @@ export function useProspectorProfile(): UseProspectorProfileResult {
     Promise.resolve(
       supabase
         .from('prospecting_profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('user_id', user.id)
         .maybeSingle(),
     )
@@ -92,7 +112,7 @@ export function useProspectorProfile(): UseProspectorProfileResult {
       const { data, error: upsertError } = await supabase
         .from('prospecting_profiles')
         .upsert(payload, { onConflict: 'user_id' })
-        .select()
+        .select(PROFILE_COLUMNS)
         .single()
 
       if (upsertError) {
@@ -122,7 +142,7 @@ export function useProspectorProfile(): UseProspectorProfileResult {
           { user_id: user.id, is_active: active },
           { onConflict: 'user_id' },
         )
-        .select()
+        .select(PROFILE_COLUMNS)
         .single()
 
       if (toggleError) {

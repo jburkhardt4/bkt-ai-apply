@@ -1,4 +1,4 @@
-import { PlayCircle } from 'lucide-react'
+import { Loader2, PlayCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface ProspectorRunStatusProps {
@@ -40,9 +40,17 @@ export function ProspectorRunStatus({
         size="sm"
         onClick={onRunNow}
         disabled={isRunning}
-        className="gap-1.5 self-start sm:self-auto"
+        className={[
+          'gap-1.5 self-start transition-transform duration-150 sm:self-auto',
+          'active:translate-y-px active:scale-95',
+          'disabled:cursor-not-allowed disabled:opacity-40 disabled:active:translate-y-0 disabled:active:scale-100',
+        ].join(' ')}
       >
-        <PlayCircle className="h-4 w-4" />
+        {isRunning ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <PlayCircle className="h-4 w-4" />
+        )}
         {isRunning ? 'Running…' : 'Run Now'}
       </Button>
     </div>

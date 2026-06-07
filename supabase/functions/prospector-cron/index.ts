@@ -131,11 +131,19 @@ interface JobInsert {
   compensation_min: number | null
   compensation_max: number | null
   posted_at: string | null
+  job_type: string | null
   application_method: string | null
 }
 
 /** Summary stats accumulated per profile run. */
 interface RunStats {
+  // Raw count of results returned by SerpApi across all title queries. Never
+  // decremented — this is the true "fetched" figure for audit/observability.
+  // Kept separate from jobs_found so the existing jobs_found/jobs_queued column
+  // semantics (and the response shape) stay unchanged; jobs_found continues to
+  // mean "ingestable results" (raw minus non-ingestable), jobs_queued means
+  // "newly inserted after dedupe".
+  jobs_fetched_raw: number
   jobs_found: number
   jobs_queued: number
   status: 'success' | 'empty' | 'partial' | 'error'
@@ -521,6 +529,8 @@ async function mapJobResult(
     compensation_min: compensationMin,
     compensation_max: compensationMax,
     posted_at: parsePostedAt(result.detected_extensions?.posted_at),
+    // schedule_type from SerpApi: "Full-time" | "Contractor" | "Part-time" | "Internship"
+    job_type: result.detected_extensions?.schedule_type?.trim() ?? null,
     application_method: null,
   }
 }
@@ -546,6 +556,7 @@ async function runForProfile(
   serpApiKey: string
 ): Promise<RunStats> {
   const stats: RunStats = {
+    jobs_fetched_raw: 0,
     jobs_found: 0,
     jobs_queued: 0,
     status: 'success',
@@ -573,6 +584,9 @@ async function runForProfile(
       continue
     }
 
+    // Raw fetched count (never decremented) vs. ingestable count (jobs_found,
+    // decremented below when a result lacks a title/source_url).
+    stats.jobs_fetched_raw += serpResults.length
     stats.jobs_found += serpResults.length
 
     for (const result of serpResults) {
@@ -710,6 +724,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`prospector-cron: unexpected error for profile ${profile.id}: ${msg}`)
       stats = {
+        jobs_fetched_raw: 0,
         jobs_found: 0,
         jobs_queued: 0,
         status: 'error',
@@ -764,7 +779,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     console.log(
       `prospector-cron: profile ${profile.id} complete — status=${stats.status}, ` +
-      `jobs_found=${stats.jobs_found}, jobs_queued=${stats.jobs_queued}`
+      `jobs_fetched_raw=${stats.jobs_fetched_raw}, jobs_found=${stats.jobs_found}, ` +
+      `jobs_queued=${stats.jobs_queued}`
     )
   }
 

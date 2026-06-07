@@ -17,7 +17,16 @@ import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { Tables } from '@/types/db.types'
 
-export type ProspectingRunRow = Tables<'prospecting_runs'>
+// Columns actually read downstream (last-run derivation + run-history display).
+// Derived from the generated Tables<'prospecting_runs'> type — never handwritten
+// (BR-081 / BR-082) — and kept in sync with the explicit .select() below so we
+// do not over-fetch profile_id / user_id, which no consumer reads.
+const RUN_COLUMNS = 'id, run_at, status, jobs_found, jobs_queued, error' as const
+
+export type ProspectingRunRow = Pick<
+  Tables<'prospecting_runs'>,
+  'id' | 'run_at' | 'status' | 'jobs_found' | 'jobs_queued' | 'error'
+>
 
 export interface UseProspectingRunsResult {
   runs: ProspectingRunRow[]
@@ -45,7 +54,7 @@ export function useProspectingRuns(): UseProspectingRunsResult {
     Promise.resolve(
       supabase
         .from('prospecting_runs')
-        .select('*')
+        .select(RUN_COLUMNS)
         .eq('user_id', user.id)
         .order('run_at', { ascending: false })
         .limit(10),
@@ -72,6 +81,10 @@ export function useProspectingRuns(): UseProspectingRunsResult {
   }, [user, refetchTrigger])
 
   const refetch = useCallback(() => {
+    // Surface loading on manual refetch (e.g. after a Run Now) so the Run
+    // Status reflects the in-flight fetch. setLoading lives in the callback,
+    // not the effect body, to avoid the react-hooks/set-state-in-effect error.
+    setLoading(true)
     setRefetchTrigger((n) => n + 1)
   }, [])
 

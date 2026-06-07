@@ -23,8 +23,11 @@ export interface ProspectorSearchResult {
   company_name: string | null
   location: string | null
   remote_type: string | null
+  job_type: string | null
   compensation_min: number | null
   compensation_max: number | null
+  description: string | null
+  posted_at: string | null
   source_url: string
   created_at: string
 }
@@ -58,8 +61,11 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           title,
           location,
           remote_type,
+          job_type,
           compensation_min,
           compensation_max,
+          description,
+          posted_at,
           source_url,
           created_at,
           companies (
@@ -93,8 +99,11 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
               company_name: companyName,
               location: row.location,
               remote_type: row.remote_type,
+              job_type: row.job_type,
               compensation_min: row.compensation_min,
               compensation_max: row.compensation_max,
+              description: row.description,
+              posted_at: row.posted_at,
               source_url: row.source_url,
               created_at: row.created_at,
             }
@@ -118,6 +127,11 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
   }, [user, refetchTrigger])
 
   const refetch = useCallback(() => {
+    // Surface the loading state on manual refetch so the list shows its
+    // skeleton instead of silently swapping rows. setLoading lives here in the
+    // callback (not in the effect body) to avoid the
+    // react-hooks/set-state-in-effect lint error.
+    setLoading(true)
     setRefetchTrigger((n) => n + 1)
   }, [])
 

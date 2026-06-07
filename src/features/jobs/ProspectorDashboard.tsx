@@ -14,6 +14,15 @@ import { useProspectorSearchResults } from './hooks/useProspectorSearchResults'
 import { useProspectorReadyQueue } from './hooks/useProspectorReadyQueue'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import {
+  summarizeRunResults,
+  type ProspectorRunResponse,
+} from './summarizeRunResults'
+
+// Manual "Run Now" invoke ceiling. Transport/UX timeout — NOT a domain rule, so
+// a literal const is intentional here (cf. LSN-001, which bans hardcoding
+// *business* thresholds, not request timeouts).
+const RUN_NOW_TIMEOUT_MS = 30_000
 
 export function ProspectorDashboard() {
   const { user } = useAuth()
@@ -87,19 +96,64 @@ export function ProspectorDashboard() {
     if (!user || !profile || isRunning) return
 
     setIsRunning(true)
+
+    // Immediate transient feedback. Reusing this id means the eventual result
+    // toast replaces the loading toast in place (sonner id pattern) — no flash
+    // of two stacked toasts.
+    const toastId = toast.loading('Searching jobs…')
+
+    // Hard ceiling on the invoke so a hung Edge Function can't strand the UI in
+    // a permanent "Running…" state. AbortController.signal is forwarded to the
+    // underlying fetch by supabase-js.
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), RUN_NOW_TIMEOUT_MS)
+
+    // Refetch the three live lists. Called on every non-transport-error outcome
+    // (success, partial, and empty) so the UI reflects the run even when zero
+    // new jobs were added.
+    const refetchAll = () => {
+      refetchRuns()
+      refetchSearchResults()
+      refetchQueue()
+    }
+
     try {
       const supabase = getSupabaseClient()
-      const { error } = await supabase.functions.invoke('prospector-cron')
+      const { data, error } = await supabase.functions.invoke<ProspectorRunResponse>(
+        'prospector-cron',
+        { signal: controller.signal },
+      )
 
       if (error) {
-        toast.error(`Run failed: ${error.message}`)
-      } else {
-        toast.success('Jobs fetched successfully')
-        refetchRuns()
-        refetchSearchResults()
-        refetchQueue()
+        // Transport-level failure (network, non-2xx, abort surfaced as error).
+        toast.error('Run failed. Please try again.', { id: toastId })
+        return
       }
+
+      const outcome = summarizeRunResults(data ?? null)
+
+      if (outcome.kind === 'error') {
+        toast.error(outcome.message, { id: toastId })
+      } else if (outcome.kind === 'empty') {
+        toast.info(outcome.message, { id: toastId })
+      } else {
+        toast.success(outcome.message, { id: toastId })
+      }
+
+      // Non-transport-error outcome — refetch even on per-profile errors and
+      // empty runs so the run history / lists stay current.
+      refetchAll()
+    } catch (err) {
+      // invoke threw (e.g. AbortController fired the timeout). Distinguish the
+      // timeout for a clearer message.
+      const aborted =
+        controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')
+      toast.error(
+        aborted ? 'Search timed out — please try again' : 'Run failed. Please try again.',
+        { id: toastId },
+      )
     } finally {
+      clearTimeout(timeoutId)
       setIsRunning(false)
     }
   }, [user, profile, isRunning, refetchRuns, refetchSearchResults, refetchQueue])

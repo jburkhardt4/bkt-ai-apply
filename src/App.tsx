@@ -2,6 +2,7 @@ import { Toaster } from 'sonner'
 import LoginPage from './pages/LoginPage'
 import IngestionPage from './pages/IngestionPage'
 import PipelinePage from './pages/PipelinePage'
+import ProspectorPage from './pages/ProspectorPage'
 import { AppShell } from './components/AppShell'
 
 export default function App() {
@@ -19,7 +20,13 @@ export default function App() {
   return (
     <>
       <AppShell>
-        {path === '/ingestion' ? <IngestionPage /> : <PipelinePage />}
+        {path === '/ingestion' ? (
+          <IngestionPage />
+        ) : path === '/prospector' ? (
+          <ProspectorPage />
+        ) : (
+          <PipelinePage />
+        )}
       </AppShell>
       <Toaster richColors position="top-right" />
     </>

@@ -134,7 +134,7 @@ SerpApi call per profile by merging array values.
 | `locations text[]` | `location` (optional, string) | First non-empty element used. SerpApi `location` accepts a city, state, or country string. |
 | `environments text[]` | appended to `q` | If `environments` contains `'remote'`, the string `"remote"` is appended to `q`. If `'hybrid'`, `"hybrid"` is appended. Multiple values each append a term. |
 | `keywords text[]` | *(not sent to SerpApi)* | Keywords are stored for downstream RAG scoring but are **not** appended to `q` — doing so makes queries too specific and produces zero results for niche roles. |
-| `job_types text[]` | `chips` (optional) | Mapped to SerpApi `chips` date/filter parameter where applicable. `'full-time'` → `job_type:fulltime`, `'contract'` → `job_type:contract`, `'part-time'` → `job_type:parttime`. Multiple values are comma-separated in `chips`. |
+| `job_types text[]` | `chips` (optional) | Mapped to SerpApi `chips` employment-type token. **Must use the uppercase enum token** `employment_type:FULLTIME`, NOT `job_type:fulltime` — the latter makes Google return a soft "no results" (HTTP 200 + `error` field, zero `jobs_results`), silently zeroing every run. Verified tokens: `'full-time'` → `employment_type:FULLTIME`, `'part-time'` → `employment_type:PARTTIME`, `'contract'` → `employment_type:CONTRACTOR`, `'internship'`/`'intern'` → `employment_type:INTERN`. Multiple values are comma-separated in `chips`. |
 
 **Standard (fixed) parameters applied to every request:**
 
@@ -167,12 +167,13 @@ profile: {
 SerpApi URL:
 https://serpapi.com/search.json
   ?engine=google_jobs
-  &q=Senior+Product+Manager+remote+SaaS+B2B
+  &q=Senior+Product+Manager+remote
   &location=San+Francisco%2C+CA
-  &chips=job_type%3Afulltime%2Cdate_posted%3Aweek
+  &chips=employment_type%3AFULLTIME
   &num=10
   &hl=en
   &gl=us
+  &google_domain=google.com
   &api_key=<SERPAPI_KEY>
 ```
 

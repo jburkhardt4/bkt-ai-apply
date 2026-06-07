@@ -224,17 +224,24 @@ function buildSerpApiUrl(
     params.set('location', primaryLocation)
   }
 
-  // chips: job_type filters only. date_posted:week removed — it was zeroing out results
-  // for niche role/location combos. Source-url deduplication handles re-ingestion.
+  // chips: employment-type filters only. date_posted:week removed — it was zeroing out
+  // results for niche role/location combos. Source-url deduplication handles re-ingestion.
+  //
+  // CRITICAL: SerpApi's Google Jobs engine expects the chip token `employment_type:FULLTIME`
+  // (uppercase enum), NOT `job_type:fulltime`. The wrong token makes Google return a soft
+  // "no results" (HTTP 200 + error field, zero jobs_results) — silently zeroing every run.
+  // Verified tokens: FULLTIME, PARTTIME, CONTRACTOR, INTERN.
   const chipsparts: string[] = []
 
   const jobTypeMap: Record<string, string> = {
-    'full-time': 'job_type:fulltime',
-    contract: 'job_type:contract',
-    'part-time': 'job_type:parttime',
+    'full-time': 'employment_type:FULLTIME',
+    'part-time': 'employment_type:PARTTIME',
+    contract: 'employment_type:CONTRACTOR',
+    internship: 'employment_type:INTERN',
+    intern: 'employment_type:INTERN',
   }
   for (const jt of profile.job_types) {
-    const mapped = jobTypeMap[jt]
+    const mapped = jobTypeMap[jt.toLowerCase()]
     if (mapped) chipsparts.push(mapped)
   }
 
@@ -248,6 +255,11 @@ function buildSerpApiUrl(
 /**
  * Fetches SerpApi with exponential backoff on 429 (INT-RULE-003).
  * A non-retryable error (e.g. 401, 400) is thrown immediately.
+ *
+ * NOTE: SerpApi returns HTTP 200 with an `error` field for "soft" failures
+ * (e.g. "Google hasn't returned any results for this query"). We log these so
+ * a genuine zero-result run is distinguishable from a malformed query in the
+ * edge logs — the wrong `chips` token previously hid here as a silent empty.
  */
 async function fetchSerpApi(url: string): Promise<SerpApiJobResult[]> {
   let attempt = 0
@@ -256,8 +268,13 @@ async function fetchSerpApi(url: string): Promise<SerpApiJobResult[]> {
     const response = await fetch(url)
 
     if (response.ok) {
-      // deno-lint-ignore no-explicit-any
-      const data = await response.json() as { jobs_results?: SerpApiJobResult[] }
+      const data = await response.json() as {
+        jobs_results?: SerpApiJobResult[]
+        error?: string
+      }
+      if (data.error) {
+        console.warn(`prospector-cron: SerpApi soft error (HTTP 200): ${data.error}`)
+      }
       return data.jobs_results ?? []
     }
 

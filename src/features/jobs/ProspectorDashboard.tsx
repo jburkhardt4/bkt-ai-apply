@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -73,26 +73,27 @@ export function ProspectorDashboard() {
     [toggleActive, profileError],
   )
 
+  const [isRunning, setIsRunning] = useState(false)
+
   const handleRunNow = useCallback(async () => {
-    if (!user || !profile) return
+    if (!user || !profile || isRunning) return
 
-    // Sprint stub: update last_run_at on the profile row directly.
-    // The actual Edge Function trigger is wired in a later sprint.
-    const supabase = getSupabaseClient()
-    const now = new Date().toISOString()
-    const { error } = await supabase
-      .from('prospecting_profiles')
-      .update({ last_run_at: now })
-      .eq('user_id', user.id)
+    setIsRunning(true)
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.functions.invoke('prospector-cron')
 
-    if (error) {
-      toast.error('Failed to trigger run')
-    } else {
-      toast.success('Run triggered')
-      refetchRuns()
-      refetchQueue()
+      if (error) {
+        toast.error(`Run failed: ${error.message}`)
+      } else {
+        toast.success('Jobs fetched successfully')
+        refetchRuns()
+        refetchQueue()
+      }
+    } finally {
+      setIsRunning(false)
     }
-  }, [user, profile, refetchRuns, refetchQueue])
+  }, [user, profile, isRunning, refetchRuns, refetchQueue])
 
   // ── Loading skeleton ─────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export function ProspectorDashboard() {
           <ProspectorRunStatus
             lastRunAt={lastRunAt}
             nextRunAt={nextRunAt}
-            isRunning={false}
+            isRunning={isRunning}
             onRunNow={handleRunNow}
           />
         </CardContent>

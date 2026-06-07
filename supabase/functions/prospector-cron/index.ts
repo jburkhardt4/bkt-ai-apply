@@ -21,6 +21,12 @@
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -537,7 +543,14 @@ async function runForProfile(
 // Main handler
 // ---------------------------------------------------------------------------
 
-Deno.serve(async (): Promise<Response> => {
+Deno.serve(async (req): Promise<Response> => {
+  // Handle CORS preflight — required for supabase.functions.invoke() from the browser
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS })
+  }
+
+  const jsonHeaders = { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+
   console.log('prospector-cron: invoked')
 
   const serpApiKey = Deno.env.get('SERPAPI_KEY')
@@ -545,7 +558,7 @@ Deno.serve(async (): Promise<Response> => {
     console.error('prospector-cron: SERPAPI_KEY env var is not set')
     return new Response(
       JSON.stringify({ error: 'SERPAPI_KEY is not configured' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: jsonHeaders }
     )
   }
 
@@ -557,7 +570,7 @@ Deno.serve(async (): Promise<Response> => {
     console.error(`prospector-cron: failed to create Supabase client: ${msg}`)
     return new Response(
       JSON.stringify({ error: msg }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: jsonHeaders }
     )
   }
 
@@ -572,7 +585,7 @@ Deno.serve(async (): Promise<Response> => {
     console.error(`prospector-cron: failed to fetch profiles: ${profilesError.message}`)
     return new Response(
       JSON.stringify({ error: profilesError.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: jsonHeaders }
     )
   }
 
@@ -580,7 +593,7 @@ Deno.serve(async (): Promise<Response> => {
     console.log('prospector-cron: no active profiles found — exiting')
     return new Response(
       JSON.stringify({ message: 'No active profiles', profiles_processed: 0 }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: jsonHeaders }
     )
   }
 
@@ -663,6 +676,6 @@ Deno.serve(async (): Promise<Response> => {
       profiles_processed: profiles.length,
       results: profileResults,
     }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
+    { status: 200, headers: jsonHeaders }
   )
 })

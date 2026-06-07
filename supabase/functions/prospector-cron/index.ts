@@ -19,9 +19,8 @@
  * - INT-RULE-006: SERPAPI_KEY accessed only via Deno.env; never in client bundle
  */
 
-// deno-lint-ignore-file
-// @ts-expect-error — resolved via supabase/functions/deno.json import map at Deno runtime
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+// @ts-expect-error — esm.sh URL import; resolved by Deno runtime, not Node TS server
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -110,9 +109,9 @@ const BACKOFF_BASE_MS = 1_000
 // ---------------------------------------------------------------------------
 
 function createServiceClient(): SupabaseClient {
-  // @ts-expect-error — Deno global is available in Edge Function runtime
+  // @ts-expect-error — Deno global provided by Edge Function runtime
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  // @ts-expect-error — Deno global is available in Edge Function runtime
+  // @ts-expect-error — Deno global provided by Edge Function runtime
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -544,7 +543,7 @@ async function runForProfile(
 // Main handler
 // ---------------------------------------------------------------------------
 
-// @ts-expect-error — Deno global is available in Edge Function runtime
+// @ts-expect-error — Deno global provided by Edge Function runtime
 Deno.serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight — required for supabase.functions.invoke() from the browser
   if (req.method === 'OPTIONS') {
@@ -555,7 +554,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   console.log('prospector-cron: invoked')
 
-  // @ts-expect-error — Deno global is available in Edge Function runtime
+  // @ts-expect-error — Deno global provided by Edge Function runtime
   const serpApiKey = Deno.env.get('SERPAPI_KEY')
   if (!serpApiKey) {
     console.error('prospector-cron: SERPAPI_KEY env var is not set')

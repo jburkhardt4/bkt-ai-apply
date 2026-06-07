@@ -1,7 +1,7 @@
 ---
 name: Context-Keeper
 description: "Use when a session ends, a feature is confirmed PASS, or an escalation is resolved — to record outcomes and append ADR, business-rule, and lesson entries. Invoke directly at session close, post-release, or on escalation resolution."
-model: Claude Sonnet 4.6
+model: claude-sonnet-4-6
 tools: [read, glob, grep, edit, write]
 ---
 

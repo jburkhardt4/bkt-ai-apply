@@ -133,7 +133,7 @@ SerpApi call per profile by merging array values.
 | `job_titles text[]` | `q` (required, string) | First element used as the primary query term. If multiple titles exist, the Edge Function makes one SerpApi call per title to maximize coverage. |
 | `locations text[]` | `location` (optional, string) | First non-empty element used. SerpApi `location` accepts a city, state, or country string. |
 | `environments text[]` | appended to `q` | If `environments` contains `'remote'`, the string `"remote"` is appended to `q`. If `'hybrid'`, `"hybrid"` is appended. Multiple values each append a term. |
-| `keywords text[]` | appended to `q` | All elements joined with a space and appended to `q` after title and environment terms. |
+| `keywords text[]` | *(not sent to SerpApi)* | Keywords are stored for downstream RAG scoring but are **not** appended to `q` — doing so makes queries too specific and produces zero results for niche roles. |
 | `job_types text[]` | `chips` (optional) | Mapped to SerpApi `chips` date/filter parameter where applicable. `'full-time'` → `job_type:fulltime`, `'contract'` → `job_type:contract`, `'part-time'` → `job_type:parttime`. Multiple values are comma-separated in `chips`. |
 
 **Standard (fixed) parameters applied to every request:**
@@ -146,12 +146,12 @@ SerpApi call per profile by merging array values.
 | `hl` | `en` | Language: English |
 | `gl` | `us` | Country: United States |
 
-**Date filtering (optional):**
+**Date filtering:**
 
-The `chips` parameter also supports `date_posted` filtering. The prospector Edge Function may
-optionally pass `date_posted:week` to limit results to jobs posted within the last 7 days.
-This reduces duplicate ingestion across cron runs. Implementation detail: append
-`date_posted:week` to the `chips` value alongside any `job_type` filters, comma-separated.
+`date_posted` chip filtering is **not applied**. It was found to zero out results for niche
+role/location combinations (e.g. Salesforce roles in California). Duplicate ingestion is
+handled at the DB layer via `ON CONFLICT (source_url) DO NOTHING`, making a date filter
+redundant. `chips` is only set when `job_types` is non-empty.
 
 **Example constructed query (single profile with one title):**
 

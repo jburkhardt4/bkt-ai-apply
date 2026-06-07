@@ -133,11 +133,11 @@ function createServiceClient(): SupabaseClient {
  * Builds the SerpApi query string for a single job title + profile combination.
  *
  * Mapping (from docs/architecture.md §6.1):
- *   job_titles[0]   → q (required)
- *   environments[]  → appended to q ('remote', 'hybrid')
- *   keywords[]      → joined and appended to q
- *   locations[0]    → location parameter
- *   job_types[]     → chips parameter (job_type:fulltime etc.)
+ *   job_titles[i]   → q (one call per title)
+ *   environments[]  → 'remote' or 'hybrid' appended to q
+ *   keywords[]      → NOT in q (too specific; kills results for niche roles)
+ *   locations[0]    → location parameter (full name, e.g. "California, United States")
+ *   job_types[]     → chips parameter (job_type:fulltime etc.) — omitted when empty
  */
 function buildSerpApiUrl(
   jobTitle: string,
@@ -152,18 +152,15 @@ function buildSerpApiUrl(
   params.set('hl', 'en')
   params.set('gl', 'us')
 
-  // Build q: title + environment terms + keywords
+  // Keep q tight: title + work-mode modifier only.
+  // Keywords stuffed into q make the query too specific and produce zero results.
+  // Deduplication is handled by ON CONFLICT on source_url — no date filter needed.
   const qParts: string[] = [jobTitle]
 
   for (const env of profile.environments) {
     if (env === 'remote' || env === 'hybrid') {
       qParts.push(env)
     }
-    // 'in-office' has no useful Google Jobs keyword modifier; omit
-  }
-
-  if (profile.keywords.length > 0) {
-    qParts.push(profile.keywords.join(' '))
   }
 
   params.set('q', qParts.join(' '))
@@ -174,7 +171,8 @@ function buildSerpApiUrl(
     params.set('location', primaryLocation)
   }
 
-  // chips: job_type filters + date_posted:week to reduce duplicates across runs
+  // chips: job_type filters only. date_posted:week removed — it was zeroing out results
+  // for niche role/location combos. Source-url deduplication handles re-ingestion.
   const chipsparts: string[] = []
 
   const jobTypeMap: Record<string, string> = {
@@ -187,10 +185,9 @@ function buildSerpApiUrl(
     if (mapped) chipsparts.push(mapped)
   }
 
-  // Limit to recently posted to reduce redundant ingestion on recurring runs
-  chipsparts.push('date_posted:week')
-
-  params.set('chips', chipsparts.join(','))
+  if (chipsparts.length > 0) {
+    params.set('chips', chipsparts.join(','))
+  }
 
   return `${SERPAPI_BASE}?${params.toString()}`
 }

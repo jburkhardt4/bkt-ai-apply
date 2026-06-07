@@ -1,0 +1,1 @@
+- [Missing Convention Docs](project_missing_convention_docs.md) — component-patterns.md and golden-principles.md are listed in CLAUDE.md but do not exist on disk

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Bot, Menu } from 'lucide-react'
 import { AppSidebar } from './AppSidebar'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,34 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [chatMobileOpen, setChatMobileOpen] = useState(false)
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
+  const [sidebarWidth, setSidebarWidth] = useState<number>(320)
+  const [isDraggingState, setIsDraggingState] = useState<boolean>(false)
+  const startX = useRef<number>(0)
+  const startWidth = useRef<number>(320)
+
+  function handleResizeMouseDown(e: React.MouseEvent) {
+    setIsDraggingState(true)
+    startX.current = e.clientX
+    startWidth.current = sidebarWidth
+  }
+
+  useEffect(() => {
+    if (!isDraggingState) return
+    function handleMouseMove(e: MouseEvent) {
+      const newWidth = startWidth.current + (e.clientX - startX.current)
+      const clamped = Math.min(Math.max(newWidth, 320), window.innerWidth * 0.4)
+      setSidebarWidth(clamped)
+    }
+    function handleMouseUp() {
+      setIsDraggingState(false)
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDraggingState])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -77,7 +105,15 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         {/* Right chat sidebar — desktop only */}
-        <aside className="hidden w-80 shrink-0 flex-col border-l border-border md:flex">
+        <aside
+          className="hidden shrink-0 flex-row border-l border-border md:flex overflow-hidden"
+          style={{ width: sidebarWidth }}
+        >
+          <div
+            data-testid="chat-resize-handle"
+            className={`w-1 h-full cursor-col-resize transition-colors hover:bg-border${isDraggingState ? ' bg-accent' : ''}`}
+            onMouseDown={handleResizeMouseDown}
+          />
           <div className="flex flex-1 flex-col overflow-y-auto p-4">
             <ChatAssistantPanel selectedApplicationId={selectedApplicationId} />
           </div>

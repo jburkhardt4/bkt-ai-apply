@@ -30,8 +30,7 @@ export function ChatAssistantPanel({ selectedApplicationId = null }: ChatAssista
   const metadata = useMemo(() => (response ? buildChatAssistantMeta(response) : []), [response])
   const canSubmit = prompt.trim().length > 0 && !loading && !!user?.id
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function submitMessage() {
     const userId = user?.id
     const message = prompt.trim()
     if (!userId || !message) return
@@ -45,6 +44,18 @@ export function ChatAssistantPanel({ selectedApplicationId = null }: ChatAssista
       setError(err instanceof Error ? err.message : 'Failed to get assistant response')
     } finally {
       setLoading(false)
+    }
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    void submitMessage()
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault()
+      void submitMessage()
     }
   }
 
@@ -75,7 +86,8 @@ export function ChatAssistantPanel({ selectedApplicationId = null }: ChatAssista
             id="chat-prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g. Suggest filters to increase interview rate for SaaS platform roles."
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything… (Ctrl+Enter to send)"
             rows={4}
             className="resize-y text-sm"
           />

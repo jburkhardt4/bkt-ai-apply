@@ -1,1 +1,2 @@
 - [Missing Convention Docs](project_missing_convention_docs.md) — component-patterns.md and golden-principles.md are listed in CLAUDE.md but do not exist on disk
+- [SerpApi Integration](project_serpapi_integration.md) — SerpApi is the Prospector job discovery engine; prospector-cron Edge Function drafted and validated 2026-06-07

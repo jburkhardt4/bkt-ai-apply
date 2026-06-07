@@ -153,23 +153,17 @@ function buildSerpApiUrl(
 
   params.set('engine', 'google_jobs')
   params.set('api_key', serpApiKey)
+  params.set('google_domain', 'google.com')
   params.set('num', String(SERPAPI_RESULTS_PER_PAGE))
   params.set('hl', 'en')
   params.set('gl', 'us')
 
-  // q = "<title> [remote|hybrid]"
-  // Keep it clean — Google Jobs is a semantic engine. "job opening" suffix was
-  // confirmed to produce zero results (see saved search 6a25ca6e). Title alone
-  // (+ optional work-mode modifier) is the correct form.
-  const qParts: string[] = [jobTitle]
-
-  for (const env of profile.environments) {
-    if (env === 'remote' || env === 'hybrid') {
-      qParts.push(env)
-    }
-  }
-
-  params.set('q', qParts.join(' '))
+  // q = "{jobTitle}" or "{jobTitle} remote" or "{jobTitle} hybrid"
+  // Use only the first work-mode modifier — appending multiple breaks the query.
+  // No hardcoded suffixes: "job opening" was confirmed to produce zero results (6a25ca6e).
+  const envModifier = profile.environments.find((e) => e === 'remote' || e === 'hybrid')
+  const q = envModifier ? `${jobTitle} ${envModifier}` : jobTitle
+  params.set('q', q)
 
   // location: use first non-empty element
   const primaryLocation = profile.locations.find((l) => l.trim().length > 0)
@@ -397,18 +391,45 @@ function parsePostedAt(postedAt: string | undefined): string | null {
 
 /**
  * Maps a SerpApi job result to a JobInsert row.
- * Returns null if the result lacks both a title and a source_url (not ingestable).
+ * Returns null if the result is not ingestable or is filtered out by salary requirements.
+ *
+ * Salary filter rule (bulletproof null handling):
+ *   - If minSalary is set AND the job explicitly lists a salary AND the highest
+ *     listed value is strictly less than minSalary → discard.
+ *   - If the job has NO salary data (null/undefined) → RETAIN regardless of minSalary.
+ *     Absence of salary data ≠ paying below threshold.
  */
 async function mapJobResult(
   result: SerpApiJobResult,
   userId: string,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  minSalary: number | null
 ): Promise<JobInsert | null> {
   const title = result.title?.trim()
   if (!title) return null
 
   const sourceUrl = extractSourceUrl(result)
   if (!sourceUrl) return null
+
+  // Salary filter — only applied when profile has a minimum and the job lists a salary.
+  if (minSalary != null) {
+    const listedMax = result.detected_extensions?.salary_max
+    const listedMin = result.detected_extensions?.salary_min
+    const hasSalaryData = listedMax != null || listedMin != null
+
+    if (hasSalaryData) {
+      // Use highest listed figure for comparison. ?? -Infinity so a missing side
+      // never wins over a present one, and never accidentally passes a threshold.
+      const highestListed = Math.max(
+        listedMax != null ? listedMax : -Infinity,
+        listedMin != null ? listedMin : -Infinity,
+      )
+      if (highestListed < minSalary) {
+        return null // Explicitly listed below minimum — discard
+      }
+    }
+    // hasSalaryData === false → no listed salary → retain (do not discard)
+  }
 
   const companyId = await upsertCompany(supabase, result.company_name)
 
@@ -484,7 +505,7 @@ async function runForProfile(
       let mappingFailed = false
 
       try {
-        mappedJob = await mapJobResult(result, profile.user_id, supabase)
+        mappedJob = await mapJobResult(result, profile.user_id, supabase, profile.min_salary)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error(`prospector-cron: job mapping failed for profile ${profile.id}: ${msg}`)

@@ -6,9 +6,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ProspectorToggle } from './components/ProspectorToggle'
 import { ProspectorProfileForm, type ProspectorFormValues } from './components/ProspectorProfileForm'
 import { ProspectorRunStatus } from './components/ProspectorRunStatus'
+import { ProspectorSearchResults } from './components/ProspectorSearchResults'
 import { ProspectorReadyQueue } from './components/ProspectorReadyQueue'
 import { useProspectorProfile } from './hooks/useProspectorProfile'
 import { useProspectingRuns } from './hooks/useProspectingRuns'
+import { useProspectorSearchResults } from './hooks/useProspectorSearchResults'
 import { useProspectorReadyQueue } from './hooks/useProspectorReadyQueue'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
@@ -32,6 +34,12 @@ export function ProspectorDashboard() {
     loading: runsLoading,
     refetch: refetchRuns,
   } = useProspectingRuns()
+
+  const {
+    jobs: searchResults,
+    loading: searchLoading,
+    refetch: refetchSearchResults,
+  } = useProspectorSearchResults()
 
   const {
     jobs: queuedJobs,
@@ -88,12 +96,13 @@ export function ProspectorDashboard() {
       } else {
         toast.success('Jobs fetched successfully')
         refetchRuns()
+        refetchSearchResults()
         refetchQueue()
       }
     } finally {
       setIsRunning(false)
     }
-  }, [user, profile, isRunning, refetchRuns, refetchQueue])
+  }, [user, profile, isRunning, refetchRuns, refetchSearchResults, refetchQueue])
 
   // ── Loading skeleton ─────────────────────────────────────────
 
@@ -189,6 +198,24 @@ export function ProspectorDashboard() {
             nextRunAt={nextRunAt}
             isRunning={isRunning}
             onRunNow={handleRunNow}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Job Search Results card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle
+            className="text-base"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Job Search Results
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProspectorSearchResults
+            jobs={searchResults}
+            isLoading={searchLoading}
           />
         </CardContent>
       </Card>

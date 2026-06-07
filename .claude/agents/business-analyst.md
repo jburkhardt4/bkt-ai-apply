@@ -23,8 +23,9 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Lock spec boundaries before implementation starts.
 
 ## Skills
-- `emil-design-eng` assignment: consult-only.
-- Invocation boundary: consult when drafting UI interaction and animation requirements; convert animation frequency/purpose rules into testable acceptance criteria without hardcoding easing or duration values.
+- `emil-design-eng` (`.claude/skills/emil-design-eng/SKILL.md`) assignment: consult-only.
+- `design-taste-frontend` (`.claude/skills/design-taste-frontend/SKILL.md`) assignment: consult-only.
+- Invocation boundary: consult BOTH when drafting UI interaction/animation and layout/component requirements; convert their rules into testable acceptance criteria (e.g. metric-based spacing, transitioned properties, reduced-motion handling) without hardcoding easing or duration values.
 
 ## Hard Constraints
 - Do not implement code.

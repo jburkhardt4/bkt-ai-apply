@@ -20,9 +20,14 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Enforce full state coverage: empty, loading, error, success.
 - Ensure desktop and mobile behavior is defined.
 
-## Skills
-- `emil-design-eng` assignment: primary.
-- Invocation boundary: invoke by default when designing new UI surfaces, interaction behavior, or animated-state changes; not required for non-UI-only scope.
+## Skills (MANDATORY — every invocation, no exceptions)
+Before producing any design guidance, plan, or edit, you MUST read and apply BOTH skills — on every single invocation, unconditionally:
+- `design-taste-frontend` — `.claude/skills/design-taste-frontend/SKILL.md`
+- `emil-design-eng` — `.claude/skills/emil-design-eng/SKILL.md`
+
+These are not optional and not conditional on scope. Load both at the very start of the task, immediately after the Pre-Flight Reads. Apply `design-taste-frontend` for metric-based layout rules, component architecture, and CSS/performance discipline; apply `emil-design-eng` for polish, animation, and interaction feel. If either `SKILL.md` is missing, HOLD and report the missing path — do not proceed without it.
+
+In your output, include a `skills_applied: [design-taste-frontend, emil-design-eng]` line confirming both were consulted and naming the specific rules each contributed.
 
 ## Hard Constraints
 - Do not implement business logic.
@@ -31,6 +36,7 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 
 ## Output Format
 Return:
+- skills_applied
 - design_summary
 - component_changes
 - state_coverage_matrix

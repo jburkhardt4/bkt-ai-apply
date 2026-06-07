@@ -21,8 +21,9 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the che
 - Produce explicit evidence and a gate verdict.
 
 ## Skills
-- `emil-design-eng` assignment: consult-only.
-- Invocation boundary: consult when validating UI interaction and animation quality; do not redesign or implement.
+- `emil-design-eng` (`.claude/skills/emil-design-eng/SKILL.md`) assignment: consult-only.
+- `design-taste-frontend` (`.claude/skills/design-taste-frontend/SKILL.md`) assignment: consult-only.
+- Invocation boundary: for any UI phase, consult BOTH when validating interaction/animation quality and metric-based layout/component/CSS rules; do not redesign or implement. Verify the implementing agent reported `skills_applied: [design-taste-frontend, emil-design-eng]` — if a UI change lacks it, flag the phase incomplete.
 
 ## Required Checks
 - `pnpm validate`

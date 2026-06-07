@@ -20,9 +20,14 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Produce a concise pre-edit execution plan.
 - Validate changes and package evidence for Qa-Uat.
 
-## Skills
-- `emil-design-eng` assignment: secondary.
-- Invocation boundary: consult when implementing or modifying UI interaction and animation behavior after Ui-Ux guidance exists.
+## Skills (MANDATORY for any frontend/UI work)
+For ANY task that creates, edits, or deletes frontend/UI code — `.tsx`/`.jsx` components, pages, styling, Tailwind classes, or animation/interaction behavior — you MUST read and apply BOTH skills before writing code, every time, no exceptions:
+- `design-taste-frontend` — `.claude/skills/design-taste-frontend/SKILL.md`
+- `emil-design-eng` — `.claude/skills/emil-design-eng/SKILL.md`
+
+Load both during your Pre-Edit Plan, before the first edit. `design-taste-frontend` governs metric-based layout, component architecture, and CSS/performance; `emil-design-eng` governs polish, animation, and interaction feel. If either `SKILL.md` is missing, HOLD and report the missing path.
+
+For backend-only tasks (SQL, Edge Functions, `ai-router` logic, types, non-visual hooks) these UI skills do not apply — record `skills_applied: [] (backend-only)` and proceed. Report `skills_applied` in the Completion Packet either way.
 
 ## Required Pre-Edit Plan
 Before editing, provide:
@@ -42,6 +47,7 @@ Before editing, provide:
 
 ## Completion Packet (for Qa-Uat)
 Return:
+- skills_applied
 - implementation_summary
 - changed_files
 - tests_run

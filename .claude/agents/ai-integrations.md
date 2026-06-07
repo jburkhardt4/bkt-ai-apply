@@ -27,6 +27,15 @@ If the task depends on routing but is not creating the missing substrate, HOLD.
 - Own latency budgets and reliability contracts for all AI features.
 - Package results as an implementation packet for Qa-Uat ingestion.
 
+## Skills (MANDATORY for any frontend/UI work)
+For ANY task that creates, edits, or deletes frontend/UI code — chat panels, streaming/typing indicators, RAG result surfaces, `.tsx`/`.jsx` components, styling, or animation/interaction behavior — you MUST read and apply BOTH skills before writing code, every time, no exceptions:
+- `design-taste-frontend` — `.claude/skills/design-taste-frontend/SKILL.md`
+- `emil-design-eng` — `.claude/skills/emil-design-eng/SKILL.md`
+
+`design-taste-frontend` governs metric-based layout, component architecture, and CSS/performance; `emil-design-eng` governs polish, animation, and interaction feel (especially streaming/loading states). If either `SKILL.md` is missing, HOLD and report the missing path.
+
+For backend-only tasks (`ai-router` logic, Edge Functions, prompt/RAG plumbing with no visual surface) these UI skills do not apply — record `skills_applied: [] (backend-only)`. Report `skills_applied` in the Completion Packet either way.
+
 ## Required Pre-Edit Plan
 Before editing, provide:
 1. Assumptions
@@ -44,6 +53,7 @@ Before editing, provide:
 
 ## Completion Packet (for Qa-Uat)
 Return:
+- skills_applied
 - implementation_summary
 - changed_files
 - model_routing_evidence

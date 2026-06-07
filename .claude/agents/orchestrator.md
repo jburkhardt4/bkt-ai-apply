@@ -68,11 +68,13 @@ Any phase output that violates these non-negotiables FAILS its gate automaticall
 
 ---
 
-## UI Dispatch Policy (`emil-design-eng` Assignment)
+## UI Dispatch Policy (Design-Skill Mandate)
 
 - **Dispatch Ui-Ux FIRST** when scope includes: new UI surfaces, interaction changes, or animated-state behavior changes.
 - **Dispatch Feature-Dev DIRECTLY** only for: non-interactional bugfixes, layout-only changes, or content-only updates.
 - Do not bypass this policy. If uncertain, classify as UI-first.
+- **Mandatory design-skill enforcement:** every `work_order` for a UI/frontend phase MUST instruct the dispatched agent to read and apply BOTH `design-taste-frontend` (`.claude/skills/design-taste-frontend/SKILL.md`) and `emil-design-eng` (`.claude/skills/emil-design-eng/SKILL.md`). This applies to Ui-Ux (always, unconditionally) and to Feature-Dev / Ai-Integrations whenever their task touches frontend/UI code.
+- **Gate check:** an agent's UI-phase response is INCOMPLETE — treat as FAIL and re-dispatch — unless it returns a `skills_applied` field naming both skills (or `[] (backend-only)` for a non-UI task). Do not advance the gate without it.
 
 ---
 

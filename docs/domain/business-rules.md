@@ -2,7 +2,7 @@
 
 **task_id:** BKT-AIAPPLY-PHASE1-REQS-LOCK-002
 **status:** LIVING DOCUMENT — append only; never delete rules; supersede with new rule ID
-**last_updated:** 2026-06-05
+**last_updated:** 2026-06-07
 
 ---
 
@@ -117,3 +117,18 @@
 | BR-090 | `application_events` list endpoints and UI audit-log views MUST sort by `created_at DESC` (newest first); ascending sort is not a valid default for event timelines | D-003 |
 | BR-091 | Pipeline board cards MUST surface the `last_event` summary: actor, event type, and timestamp of the most-recent `application_events` row for that application | D-002 |
 | BR-092 | Pipeline board MUST maintain a Supabase Realtime subscription on `applications` and `application_events`; stage updates do NOT require a manual page refresh | D-001 |
+
+---
+
+## Prospector Rules
+
+| ID | Rule | Source |
+| --- | --- | --- |
+| BR-100 | Prospector cron runs at most twice per 24-hour period per active profile; additional triggers within the same period are treated as no-ops | F-017, US-017 |
+| BR-101 | A `prospecting_profiles` row may only exist where `user_id = auth.uid()`; RLS enforces this at the database layer — no exceptions and no service-role bypass in client code | BR-001, BR-005, SEC-001 |
+| BR-102 | Prospector-ingested jobs are deduplicated by `source_url` before insert; a duplicate URL is silently skipped (no error raised, no duplicate row created) — this is the prospector-specific application of BR-063 | BR-063, AC-018-02 |
+| BR-103 | All AI scoring initiated by a prospector run must route through `src/lib/ai-router.ts` using task type `match_scoring` (Claude Opus 4.6); usage must be logged to `ai_model_usage` per AI-RULE-002 and BR-054 | AI-RULE-001, AI-RULE-002, BR-054 |
+| BR-104 | Prospector AI scoring runs count against the $75/month cap (BR-050); when the cap is reached, the prospector scoring run is queued — not cancelled — and resumes at the next billing period or on JB manual override | BR-050, BR-052, AC-018-06 |
+| BR-105 | The "Ready to Apply" queue surfaces jobs with `match_score >= 60` (BR-020) whose `source` column on the `jobs` table equals `'prospector'`; jobs below this threshold remain in `discovery` stage | BR-020, BR-022, AC-018-07 |
+| BR-106 | When a prospector run produces zero results, no error is raised; the run is logged to `prospecting_runs` with `jobs_found = 0`, `jobs_queued = 0`, and `status = 'empty'` | AC-018-03 |
+| BR-107 | Setting `prospecting_profiles.is_active = false` halts all cron-triggered runs for that profile immediately; it does NOT prevent JB from manually triggering a single prospector run | AC-017-02, AC-017-03 |

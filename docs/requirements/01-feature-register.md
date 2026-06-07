@@ -26,6 +26,7 @@
 | F-014 | Document Storage | Supabase Storage for resumes and cover letters; immutable after linking | P0 |
 | F-015 | Notification System | In-app alerts for stage changes, approvals needed, AI signals | P1 |
 | F-016 | Analytics Reports | Conversion rate by board, interview rate by industry, score vs outcome | P1 |
+| F-017 | Automated Job Prospector | Autonomous background pipeline: saved search profile → cron scrape (twice daily) → AI scoring → Ready to Apply queue (match_score >= 60, BR-020) | P1 |
 
 ---
 
@@ -58,3 +59,4 @@
 | F-011 | US-013 | BR-014 |
 | F-012 | US-014 | BR-015 |
 | F-013 | US-003 | BR-005, BR-006 |
+| F-017 | US-016, US-017, US-018 | BR-001, BR-004, BR-005, BR-020, BR-050, BR-051, BR-052, BR-053, BR-054, BR-063, BR-100, BR-101, BR-102, BR-103, BR-104, BR-105, BR-106, BR-107 |

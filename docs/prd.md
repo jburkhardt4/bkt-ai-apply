@@ -577,6 +577,119 @@ Excludes:
 
 ---
 
+# 23b. Epic — Automated Job Prospector
+
+## Feature Definition and Goals
+
+The Automated Job Prospector is an autonomous background pipeline that discovers, scrapes, scores, and queues job openings without requiring manual ingestion. It operates against a saved configuration profile owned by JB, runs on a scheduled cron cadence, and surfaces matched jobs in a "Ready to Apply" queue inside the application pipeline.
+
+Goals:
+- Eliminate manual job search by continuously sourcing leads from approved channels
+- Surface only high-signal matches (score >= 60, per BR-020) to JB's active queue
+- Operate within the existing $75/month AI cost ceiling (BR-050, BR-051, BR-052, BR-053)
+- Maintain full auditability via the `prospecting_runs` log table
+
+---
+
+## Configuration Parameters
+
+Each user maintains a single `prospecting_profiles` record that governs the prospector's search behavior.
+
+| Parameter | Type | Constraints | Required |
+| --- | --- | --- | --- |
+| `job_title` | text | Non-empty string | Yes |
+| `location` | text | Free-form string | No |
+| `job_type` | enum | `full-time`, `contract`, `part-time` | Yes |
+| `environment` | enum | `remote`, `hybrid`, `in-office` | Yes |
+| `salary_min` | integer | Must be ≤ `salary_max` when both are provided; ≥ 0 | No |
+| `salary_max` | integer | Must be ≥ `salary_min` when both are provided; ≥ 0 | No |
+| `skills` | text[] | Maximum 20 tags; each tag ≤ 50 characters | No |
+| `is_active` | boolean | `false` by default; toggling to `true` enables cron; toggling to `false` halts cron immediately (BR-107) | Yes |
+
+---
+
+## Execution Frequency and Cost Ceiling
+
+The prospector cron runs at most **twice per 24-hour period** per active profile (BR-100). Extra cron triggers within the same period are treated as no-ops.
+
+AI scoring during prospector runs uses the `match_scoring` task type, routed to Claude Opus 4.6 via `src/lib/ai-router.ts` (per model-routing.md). All scoring calls log to `ai_model_usage` and count against the $75/month cap (BR-050). When the cap is reached, prospector scoring runs are queued rather than cancelled (BR-104); critical pipeline operations are never blocked (BR-053).
+
+Cost ceiling enforcement summary:
+- BR-050: $75/month hard cap across all providers
+- BR-051: At 90% of cap ($67.50), JB notification is sent
+- BR-052: At hard cap, non-critical AI calls are blocked/queued
+- BR-053: Critical pipeline calls are never blocked
+- BR-104: Prospector scoring queued (not cancelled) when cap is reached
+
+---
+
+## Workflow
+
+```text
+Cron trigger (twice daily, every 12 hours, while is_active = true)
+  ↓
+Read prospecting_profiles for this user (user_id = auth.uid())
+  ↓
+Scrape / ingest job listings from approved sources using profile parameters
+  ↓
+Deduplicate by source_url (BR-102, BR-063) — silently skip duplicates
+  ↓
+Insert new jobs into jobs table with source = 'prospector'
+  ↓
+AI scoring pipeline (match_scoring task type → Claude Opus 4.6 via ai-router.ts)
+  - Stage transitions from prospector go through public.transition_stage RPC (BR-004, LSN-004)
+  - Score stored in ai_scores with reasoning_trace (BR-103, AI-RULE-009)
+  ↓
+Jobs with match_score >= 60 (BR-020, BR-105) surface in "Ready to Apply" queue
+Jobs with match_score < 60 stay in discovery stage with Reject recommendation (BR-022)
+  ↓
+Prospecting run logged to prospecting_runs (id, profile_id, user_id, run_at, jobs_found, jobs_queued, status)
+  - If zero results: status = 'empty', jobs_found = 0, no error raised (BR-106)
+```
+
+---
+
+## Acceptance Criteria
+
+### US-016 — Prospector Profile Configuration
+**As** JB,
+**I want** to save a search configuration profile for the prospector,
+**so that** the system knows what kinds of jobs to search for on my behalf.
+
+- AC-016-01: JB can create or update a single prospecting profile with all configuration parameters
+- AC-016-02: Profile validates that `salary_min` ≤ `salary_max` when both fields are populated
+- AC-016-03: `skills` array is limited to 20 tags; tags exceeding this limit are rejected with an error message
+- AC-016-04: Profile is scoped to `user_id = auth.uid()` and is not visible to or writable by any other user (BR-101, BR-001)
+- AC-016-05: Profile save writes to `prospecting_profiles` via the single Supabase client (BR-004)
+
+### US-017 — Prospector Enable/Disable Toggle
+**As** JB,
+**I want** to toggle the prospector on and off,
+**so that** I can pause automated discovery without deleting my configuration.
+
+- AC-017-01: Toggling `is_active = true` schedules cron-triggered runs at the configured frequency (BR-100)
+- AC-017-02: Toggling `is_active = false` halts cron-triggered runs immediately; in-flight runs complete but no new runs are triggered (BR-107)
+- AC-017-03: JB can still manually trigger a single prospector run when `is_active = false` (BR-107)
+- AC-017-04: Toggle state change is reflected in the UI without a page refresh
+
+### US-018 — Prospector Run and Queue
+**As** JB,
+**I want** the prospector to automatically find, score, and queue matching jobs,
+**so that** I have a ready pool of high-fit leads without manual searching.
+
+- AC-018-01: Prospector runs twice daily when `is_active = true` (BR-100)
+- AC-018-02: Duplicate jobs by `source_url` are silently skipped — not inserted twice (BR-102, BR-063)
+- AC-018-03: Empty run results (zero jobs found) are logged with `status = 'empty'` and no error is raised (BR-106)
+- AC-018-04: AI scoring for prospector jobs uses `match_scoring` task type routed via `src/lib/ai-router.ts` (BR-103)
+- AC-018-05: All AI scoring calls are logged to `ai_model_usage` and counted against the monthly cap (BR-050, BR-054)
+- AC-018-06: When the $75/month cap is reached, prospector scoring runs are queued, not cancelled (BR-104)
+- AC-018-07: Jobs with `match_score >= 60` are surfaced in the "Ready to Apply" queue (BR-105, BR-020)
+- AC-018-08: Stage transitions triggered by the prospector pipeline go through the `public.transition_stage` RPC to ensure atomicity (LSN-004)
+- AC-018-09: Each prospector run produces a `prospecting_runs` row with: `profile_id`, `user_id`, `run_at`, `jobs_found`, `jobs_queued`, `status`, and any `error` detail
+- AC-018-10: "Last run" timestamp and "Next scheduled run" are visible on the Prospector dashboard
+
+---
+
 # 27. Open Questions
 
 1. Which job boards provide official APIs at required scale?

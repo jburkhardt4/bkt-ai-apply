@@ -101,7 +101,7 @@ function parseSalary(salaryStr: string | undefined): ParsedSalary {
 
   // Range: "73K–97K" / "73K-97K" — any unicode dash variant
   const rangeMatch = cleaned.match(
-    /^(\d+(?:\.\d+)?[KkMm]?)\s*[–—\-]\s*(\d+(?:\.\d+)?[KkMm]?)/
+    /^(\d+(?:\.\d+)?[KkMm]?)\s*[–—-]\s*(\d+(?:\.\d+)?[KkMm]?)/
   )
   if (rangeMatch) {
     return { min: parseValue(rangeMatch[1]), max: parseValue(rangeMatch[2]) }
@@ -464,24 +464,29 @@ async function mapJobResult(
   const sourceUrl = extractSourceUrl(result)
   if (!sourceUrl) return null
 
+  // Parse salary string → integers before filter and DB insert.
+  // Postgres compensation_min / compensation_max are int4 — never insert the raw string.
+  const { min: compensationMin, max: compensationMax } = parseSalary(
+    result.detected_extensions?.salary
+  )
+
   // Salary filter — only applied when profile has a minimum and the job lists a salary.
+  // Jobs with NO salary data (null) are always retained.
   if (minSalary != null) {
-    const listedMax = result.detected_extensions?.salary_max
-    const listedMin = result.detected_extensions?.salary_min
-    const hasSalaryData = listedMax != null || listedMin != null
+    const hasSalaryData = compensationMin != null || compensationMax != null
 
     if (hasSalaryData) {
-      // Use highest listed figure for comparison. ?? -Infinity so a missing side
-      // never wins over a present one, and never accidentally passes a threshold.
+      // Use highest listed figure. Explicit null checks ensure a missing side
+      // contributes -Infinity and never accidentally passes the threshold.
       const highestListed = Math.max(
-        listedMax != null ? listedMax : -Infinity,
-        listedMin != null ? listedMin : -Infinity,
+        compensationMax != null ? compensationMax : -Infinity,
+        compensationMin != null ? compensationMin : -Infinity,
       )
       if (highestListed < minSalary) {
-        return null // Explicitly listed below minimum — discard
+        return null // Salary explicitly listed below minimum — discard
       }
     }
-    // hasSalaryData === false → no listed salary → retain (do not discard)
+    // hasSalaryData === false → no salary listed → retain
   }
 
   const companyId = await upsertCompany(supabase, result.company_name)
@@ -496,10 +501,10 @@ async function mapJobResult(
     source: SOURCE_LABEL,
     source_url: sourceUrl,
     company_id: companyId,
-    compensation_min: result.detected_extensions?.salary_min ?? null,
-    compensation_max: result.detected_extensions?.salary_max ?? null,
+    compensation_min: compensationMin,
+    compensation_max: compensationMax,
     posted_at: parsePostedAt(result.detected_extensions?.posted_at),
-    application_method: null, // Cannot be determined from SerpApi results
+    application_method: null,
   }
 }
 

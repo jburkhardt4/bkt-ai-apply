@@ -34,7 +34,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     if (!isDraggingState) return
     function handleMouseMove(e: MouseEvent) {
-      const newWidth = startWidth.current + (e.clientX - startX.current)
+      const newWidth = startWidth.current - (e.clientX - startX.current)
       const clamped = Math.min(Math.max(newWidth, 320), window.innerWidth * 0.4)
       setSidebarWidth(clamped)
     }

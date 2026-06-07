@@ -19,7 +19,9 @@
  * - INT-RULE-006: SERPAPI_KEY accessed only via Deno.env; never in client bundle
  */
 
-import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+// deno-lint-ignore-file
+// @ts-expect-error — resolved via supabase/functions/deno.json import map at Deno runtime
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -53,9 +55,11 @@ interface SerpApiJobResult {
   detected_extensions?: {
     posted_at?: string
     schedule_type?: string
+    work_from_home?: boolean
     salary_min?: number
     salary_max?: number
   }
+  apply_options?: Array<{ title?: string; link?: string }>
   related_links?: Array<{ link?: string; text?: string }>
   link?: string
   job_id?: string
@@ -106,7 +110,9 @@ const BACKOFF_BASE_MS = 1_000
 // ---------------------------------------------------------------------------
 
 function createServiceClient(): SupabaseClient {
+  // @ts-expect-error — Deno global is available in Edge Function runtime
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  // @ts-expect-error — Deno global is available in Edge Function runtime
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -152,8 +158,10 @@ function buildSerpApiUrl(
   params.set('hl', 'en')
   params.set('gl', 'us')
 
-  // q = "<title> [remote|hybrid] job opening"
-  // "job opening" signals active listings to Google Jobs; keeps query broad enough to return results.
+  // q = "<title> [remote|hybrid]"
+  // Keep it clean — Google Jobs is a semantic engine. "job opening" suffix was
+  // confirmed to produce zero results (see saved search 6a25ca6e). Title alone
+  // (+ optional work-mode modifier) is the correct form.
   const qParts: string[] = [jobTitle]
 
   for (const env of profile.environments) {
@@ -161,8 +169,6 @@ function buildSerpApiUrl(
       qParts.push(env)
     }
   }
-
-  qParts.push('job opening')
 
   params.set('q', qParts.join(' '))
 
@@ -291,14 +297,16 @@ async function upsertCompany(
 /**
  * Extracts a stable source_url from a SerpApi job result.
  *
- * Priority:
- *   1. result.link (direct apply / job page URL)
- *   2. result.related_links[0].link
- *   3. Fallback constructed from job_id — stable but not a real URL
- *
- * The fallback ensures every result has a unique source_url for deduplication (BR-063, BR-102).
+ * Priority (corrected per SerpApi docs — apply links live in apply_options, not result.link):
+ *   1. apply_options[0].link — the canonical apply URL returned by Google Jobs
+ *   2. result.link — present on some results as a fallback
+ *   3. related_links[0].link
+ *   4. Stable fallback from job_id — not a real apply URL but guarantees deduplication
  */
 function extractSourceUrl(result: SerpApiJobResult): string | null {
+  const applyLink = result.apply_options?.[0]?.link
+  if (applyLink) return applyLink
+
   if (result.link) return result.link
 
   const firstRelated = result.related_links?.[0]?.link
@@ -316,23 +324,18 @@ function extractSourceUrl(result: SerpApiJobResult): string | null {
  * Maps to jobs.remote_type enum: 'remote' | 'hybrid' | 'onsite'
  */
 function inferRemoteType(result: SerpApiJobResult): string | null {
+  // work_from_home is the canonical boolean Google Jobs returns for remote roles
+  if (result.detected_extensions?.work_from_home === true) return 'remote'
+
   const scheduleType = result.detected_extensions?.schedule_type?.toLowerCase() ?? ''
   const location = result.location?.toLowerCase() ?? ''
   const title = result.title?.toLowerCase() ?? ''
 
-  if (
-    scheduleType.includes('remote') ||
-    location.includes('remote') ||
-    title.includes('remote')
-  ) {
+  if (scheduleType.includes('remote') || location.includes('remote') || title.includes('remote')) {
     return 'remote'
   }
 
-  if (
-    scheduleType.includes('hybrid') ||
-    location.includes('hybrid') ||
-    title.includes('hybrid')
-  ) {
+  if (scheduleType.includes('hybrid') || location.includes('hybrid') || title.includes('hybrid')) {
     return 'hybrid'
   }
 
@@ -541,7 +544,8 @@ async function runForProfile(
 // Main handler
 // ---------------------------------------------------------------------------
 
-Deno.serve(async (req): Promise<Response> => {
+// @ts-expect-error — Deno global is available in Edge Function runtime
+Deno.serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight — required for supabase.functions.invoke() from the browser
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
@@ -551,6 +555,7 @@ Deno.serve(async (req): Promise<Response> => {
 
   console.log('prospector-cron: invoked')
 
+  // @ts-expect-error — Deno global is available in Edge Function runtime
   const serpApiKey = Deno.env.get('SERPAPI_KEY')
   if (!serpApiKey) {
     console.error('prospector-cron: SERPAPI_KEY env var is not set')

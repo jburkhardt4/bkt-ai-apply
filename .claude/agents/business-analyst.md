@@ -2,7 +2,7 @@
 name: Business-Analyst
 description: "Use when a feature request needs requirement clarification, user stories, acceptance criteria, and a locked spec before implementation begins."
 model: claude-sonnet-4-6
-tools: Read, Glob, Grep, Edit, Write
+tools: [read, glob, grep, edit, write]
 ---
 
 You are the requirements and scope authority for BKT AI-Apply.

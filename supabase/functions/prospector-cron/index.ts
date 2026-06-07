@@ -55,13 +55,66 @@ interface SerpApiJobResult {
     posted_at?: string
     schedule_type?: string
     work_from_home?: boolean
-    salary_min?: number
-    salary_max?: number
+    // SerpApi returns salary as a single formatted string, e.g. "73K–97K a year"
+    salary?: string
   }
   apply_options?: Array<{ title?: string; link?: string }>
   related_links?: Array<{ link?: string; text?: string }>
   link?: string
   job_id?: string
+}
+
+/** Parsed min/max integers from a SerpApi salary string. */
+interface ParsedSalary {
+  min: number | null
+  max: number | null
+}
+
+/**
+ * Parses a SerpApi salary string into integer min/max values for int4 Postgres columns.
+ *
+ * Handles:
+ *   "73K–97K a year"     → { min: 73000,  max: 97000  }
+ *   "77K–138K a year"    → { min: 77000,  max: 138000 }
+ *   "$100,000 a year"    → { min: 100000, max: 100000 }
+ *   "1.5M–2M a year"     → { min: 1500000, max: 2000000 }
+ *   "unparseable string" → { min: null,   max: null   }
+ *
+ * Unicode dashes handled: en dash (–, U+2013), em dash (—, U+2014), hyphen-minus (-).
+ * "K" suffix multiplied by 1,000. "M" suffix multiplied by 1,000,000.
+ */
+function parseSalary(salaryStr: string | undefined): ParsedSalary {
+  if (!salaryStr) return { min: null, max: null }
+
+  // Strip currency symbols and thousands-separator commas
+  const cleaned = salaryStr.replace(/[$,]/g, '')
+
+  const parseValue = (raw: string): number | null => {
+    const match = raw.trim().match(/^(\d+(?:\.\d+)?)\s*([KkMm]?)/)
+    if (!match) return null
+    const num = parseFloat(match[1])
+    const suffix = match[2].toUpperCase()
+    if (suffix === 'K') return Math.round(num * 1_000)
+    if (suffix === 'M') return Math.round(num * 1_000_000)
+    return Math.round(num)
+  }
+
+  // Range: "73K–97K" / "73K-97K" — any unicode dash variant
+  const rangeMatch = cleaned.match(
+    /^(\d+(?:\.\d+)?[KkMm]?)\s*[–—\-]\s*(\d+(?:\.\d+)?[KkMm]?)/
+  )
+  if (rangeMatch) {
+    return { min: parseValue(rangeMatch[1]), max: parseValue(rangeMatch[2]) }
+  }
+
+  // Single value: "100K a year" → min === max
+  const singleMatch = cleaned.match(/^(\d+(?:\.\d+)?[KkMm]?)/)
+  if (singleMatch) {
+    const val = parseValue(singleMatch[1])
+    return { min: val, max: val }
+  }
+
+  return { min: null, max: null }
 }
 
 /** Mapped job row ready to upsert into the jobs table. */

@@ -7,13 +7,13 @@ import type { CandidateProfile, ParsedJobDescription } from '../../../types/pipe
 //
 // The first four buckets use Expected-Target scoring:
 //   Math.min(Math.round((matched / expectedTarget) * weight), weight)
-// where expectedTarget is a fixed constant (skills=3, domain=2, seniority=2,
+// where expectedTarget is a fixed constant (skills=4, domain=2, seniority=2,
 // tools=2), NOT the length of the master-profile keyword list.
 // Matching at or above the target awards the full bucket weight; exceeding it
 // is capped at the weight (Math.min). Below-target results are proportional.
 //
 // Canonical bucket values:
-//   Skills  (target 3, weight 35): 0→0, 1→12, 2→23, 3→35, 4+→35 (capped)
+//   Skills  (target 4, weight 35): 0→0, 1→9, 2→18, 3→26, 4→35, 5+→35 (capped)
 //   Domain  (target 2, weight 20): 0→0, 1→10, 2→20, 3+→20
 //   Seniority (target 2, weight 20): same as Domain
 //   Tools   (target 2, weight 15): 0→0, 1→8,  2→15, 3+→15
@@ -60,7 +60,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
   // (a) Below-target proportional cases
   // -------------------------------------------------------------------------
 
-  it('Skills below target: 1 of 3 expected → round(1/3 * 35) = 12', () => {
+  it('Skills below target: 1 of 4 expected → round(1/4 * 35) = 9', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -70,15 +70,15 @@ describe('scoreJobFit — Expected-Target scoring', () => {
 
     const result = scoreJobFit(parsed, profile)
 
-    expect(result.breakdown.skills).toBe(12)
+    expect(result.breakdown.skills).toBe(9)
     expect(result.breakdown.domain).toBe(0)
     expect(result.breakdown.seniority).toBe(0)
     expect(result.breakdown.tools).toBe(0)
     expect(result.breakdown.locationAuth).toBe(2)
-    expect(result.overall).toBe(14)
+    expect(result.overall).toBe(11)
   })
 
-  it('Skills below target: 2 of 3 expected → round(2/3 * 35) = 23', () => {
+  it('Skills below target: 2 of 4 expected → round(2/4 * 35) = 18', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -88,7 +88,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
 
     const result = scoreJobFit(parsed, profile)
 
-    expect(result.breakdown.skills).toBe(23)
+    expect(result.breakdown.skills).toBe(18)
   })
 
   it('Domain below target: 1 of 2 expected → round(1/2 * 20) = 10', () => {
@@ -121,11 +121,11 @@ describe('scoreJobFit — Expected-Target scoring', () => {
   // (b) At-target = full-weight cases
   // -------------------------------------------------------------------------
 
-  it('Skills at target: 3 of 3 expected → full weight 35', () => {
+  it('Skills at target: 4 of 4 expected → full weight 35', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
-        { text: 'React, typescript, and node experience required', bucket: 'must_have', matchedKeywords: [] },
+        { text: 'React, typescript, node, and graphql experience required', bucket: 'must_have', matchedKeywords: [] },
       ],
     })
 
@@ -158,7 +158,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
   // (c) Over-target cases — Math.min cap ensures bucket cannot exceed weight
   // -------------------------------------------------------------------------
 
-  it('Skills over target: 5 matches against target 3 → still capped at 35', () => {
+  it('Skills over target: 5 matches against target 4 → still capped at 35', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -254,7 +254,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
     // Profile keywords: at least one per bucket category that will appear in
     // the JD, ensuring matched >= expectedTarget for each bucket.
     const profile = buildProfile({
-      skillKeywords: ['salesforce', 'mulesoft', 'apex'],
+      skillKeywords: ['salesforce', 'mulesoft', 'apex', 'lightning'],
       domainKeywords: ['insurance', 'reinsurance'],
       seniorityKeywords: ['director', 'vp'],
       toolingKeywords: ['tableau', 'powerbi'],
@@ -268,7 +268,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
           matchedKeywords: [],
         },
         {
-          text: 'Salesforce, mulesoft, and apex required. Tableau and powerbi a plus.',
+          text: 'Salesforce, mulesoft, apex, and lightning required. Tableau and powerbi a plus.',
           bucket: 'must_have',
           matchedKeywords: [],
         },

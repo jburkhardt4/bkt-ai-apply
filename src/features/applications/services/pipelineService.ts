@@ -25,7 +25,7 @@ function extractKeywords(content: string, keywords: string[]): string[] {
 }
 
 const SCORE_TARGETS = {
-  skills: 3,
+  skills: 4,
   domain: 2,
   seniority: 2,
   tools: 2,

@@ -5,7 +5,7 @@
  * Responsibilities:
  *   - Defines the canonical column-definition model (ColumnDef)
  *   - Owns the default column order
- *   - Persists order to localStorage (key: prospector_column_order_v1)
+ *   - Persists order to localStorage (key: prospector_column_order_v2)
  *   - Falls back to in-memory default if localStorage is unavailable or stale
  *   - Provides moveColumn (drag/keyboard reorder) and resetOrder actions
  *
@@ -30,6 +30,7 @@ export type ColumnId =
   | 'environment'
   | 'salary'
   | 'posted'
+  | 'dateCreated'
 
 export type FilterType = 'text' | 'select' | 'salary-range' | 'score' | 'none'
 
@@ -103,29 +104,38 @@ export const COLUMN_DEFS: Record<ColumnId, ColumnDef> = {
   },
   posted: {
     id: 'posted',
-    label: 'Posted',
+    label: 'Date Posted',
     sortKey: 'posted_at',
+    widthClass: 'w-1/12',
+    filterType: 'none',
+  },
+  dateCreated: {
+    id: 'dateCreated',
+    label: 'Date Created',
+    sortKey: 'created_at',
     widthClass: 'w-1/12',
     filterType: 'none',
   },
 }
 
 // ── Default column order (AC §2) ──────────────────────────────────────────────
-// Exact order: Company, Job Title, Match Score, Job Type, Environment, Salary, Posted
+// Exact order: Job Title, Company, Match Score, Job Type, Environment, Salary,
+// Date Posted, Date Created
 
 export const DEFAULT_COLUMN_ORDER: ColumnId[] = [
-  'company',
   'title',
+  'company',
   'matchScore',
   'jobType',
   'environment',
   'salary',
   'posted',
+  'dateCreated',
 ]
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 
-const LS_KEY = 'prospector_column_order_v1'
+const LS_KEY = 'prospector_column_order_v2'
 
 function readFromStorage(): ColumnId[] | null {
   try {

@@ -29,6 +29,7 @@ export type SortKey =
   | 'compensation_min'
   | 'posted_at'
   | 'match_score'
+  | 'created_at'
 
 export type SortDir = 'asc' | 'desc'
 
@@ -197,6 +198,10 @@ function compareRows(
       // Compare as epoch ms so date strings sort correctly without locale issues.
       av = a.posted_at ? new Date(a.posted_at).getTime() : null
       bv = b.posted_at ? new Date(b.posted_at).getTime() : null
+      break
+    case 'created_at':
+      av = a.created_at ? new Date(a.created_at).getTime() : null
+      bv = b.created_at ? new Date(b.created_at).getTime() : null
       break
   }
 

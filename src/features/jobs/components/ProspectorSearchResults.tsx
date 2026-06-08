@@ -169,7 +169,6 @@ function ProspectorRowStyles() {
       }
       .prospector-thead-dragging * {
         cursor: grabbing !important;
-        pointer-events: none;
       }
 
       /* ── Draggable header: grab cursor on hover (pointer devices) ──── */
@@ -302,19 +301,20 @@ function TableLoadingSkeletons() {
   return (
     <table className="w-full table-fixed border-separate border-spacing-0">
       <colgroup>
-        <col className="w-1/6" />
         <col className="w-1/4" />
+        <col className="w-1/6" />
         <col className="w-1/12" />
         <col className="w-1/12" />
         <col className="w-1/12" />
         <col className="w-1/6" />
+        <col className="w-1/12" />
         <col className="w-1/12" />
         <col className="w-9" />
         <col className="w-9" />
       </colgroup>
       <thead>
         <tr>
-          {[60, 80, 48, 48, 48, 60, 44, 28, 28].map((w, i) => (
+          {[80, 60, 48, 48, 48, 60, 44, 44, 28, 28].map((w, i) => (
             <th key={i} className="px-3 pb-2 pt-1">
               <Skeleton className="h-3" style={{ width: `${w}%` }} />
             </th>
@@ -324,30 +324,43 @@ function TableLoadingSkeletons() {
       <tbody>
         {[...Array(4)].map((_, row) => (
           <tr key={row}>
-            <td className="px-3 py-3">
-              <Skeleton className="h-3 w-3/4" />
-            </td>
+            {/* Job Title */}
             <td className="px-3 py-3">
               <Skeleton className="h-4 w-4/5" />
             </td>
+            {/* Company */}
+            <td className="px-3 py-3">
+              <Skeleton className="h-3 w-3/4" />
+            </td>
+            {/* Match Score */}
             <td className="px-3 py-3">
               <Skeleton className="h-5 w-10 rounded-full" />
             </td>
+            {/* Job Type */}
             <td className="px-3 py-3">
               <Skeleton className="h-5 w-14 rounded-full" />
             </td>
+            {/* Environment */}
             <td className="px-3 py-3">
               <Skeleton className="h-5 w-16 rounded-full" />
             </td>
+            {/* Salary */}
             <td className="px-3 py-3">
               <Skeleton className="h-3 w-4/5" />
             </td>
+            {/* Date Posted */}
             <td className="px-3 py-3">
               <Skeleton className="h-3 w-3/5" />
             </td>
+            {/* Date Created */}
+            <td className="px-3 py-3">
+              <Skeleton className="h-3 w-3/5" />
+            </td>
+            {/* Link */}
             <td className="px-3 py-3">
               <Skeleton className="h-7 w-7 rounded-md" />
             </td>
+            {/* Dismiss */}
             <td className="px-3 py-3">
               <Skeleton className="h-7 w-7 rounded-md" />
             </td>
@@ -548,6 +561,12 @@ function JobCell({ col, job }: CellProps) {
           {formatRelativeDate(job.posted_at)}
         </td>
       )
+    case 'dateCreated':
+      return (
+        <td className={cn(tdClass, 'whitespace-nowrap text-sm text-muted-foreground')}>
+          {formatRelativeDate(job.created_at)}
+        </td>
+      )
     case 'matchScore':
       return (
         <td className={cn(tdClass, 'whitespace-nowrap')}>
@@ -652,7 +671,7 @@ interface DraggableSortableHeaderProps {
   onMoveColumn: (fromIndex: number, toIndex: number) => void
   // DnD shared state passed down from parent (stored in refs — not state)
   dragState: React.MutableRefObject<DragState>
-  onDragStartCol: (index: number) => void
+  onDragStartCol: (e: React.DragEvent<HTMLTableCellElement>, index: number) => void
   onDragOverCol: (e: React.DragEvent<HTMLTableCellElement>, index: number) => void
   onDropCol: (e: React.DragEvent<HTMLTableCellElement>, index: number) => void
   onDragEndCol: () => void
@@ -742,7 +761,7 @@ function DraggableSortableHeader({
         isDropRight && 'prospector-drop-right',
       )}
       draggable
-      onDragStart={() => onDragStartCol(colIndex)}
+      onDragStart={(e) => onDragStartCol(e, colIndex)}
       onDragOver={(e) => onDragOverCol(e, colIndex)}
       onDrop={(e) => onDropCol(e, colIndex)}
       onDragEnd={onDragEndCol}
@@ -1125,14 +1144,22 @@ function useColumnDnD(
   // Track which column indices have the snap class applied post-drop
   const [snappingCols, setSnappingCols] = useState<Set<number>>(new Set())
 
-  const onDragStartCol = useCallback((index: number) => {
-    dragState.current = { dragging: true, sourceIndex: index }
-    setIsThDragging(true)
-  }, [])
+  const onDragStartCol = useCallback(
+    (e: React.DragEvent<HTMLTableCellElement>, index: number) => {
+      dragState.current = { dragging: true, sourceIndex: index }
+      setIsThDragging(true)
+      // Required for a valid HTML5 drag across browsers — Firefox will not fire
+      // drop without dataTransfer data; 'move' yields the correct drop cursor.
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', String(index))
+    },
+    [],
+  )
 
   const onDragOverCol = useCallback(
     (e: React.DragEvent<HTMLTableCellElement>, index: number) => {
       e.preventDefault() // required to allow drop
+      e.dataTransfer.dropEffect = 'move'
       const source = dragState.current.sourceIndex
       if (source === null || source === index) {
         setDropIndicator(null)

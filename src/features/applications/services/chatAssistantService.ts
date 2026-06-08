@@ -183,7 +183,7 @@ function summarizePipelineContext(
   }
 }
 
-async function getPipelineContextSummary(userId: string): Promise<PipelineContextSummary> {
+export async function getPipelineContextSummary(userId: string): Promise<PipelineContextSummary> {
   const supabase = getSupabaseClient()
 
   const applicationsQuery = supabase

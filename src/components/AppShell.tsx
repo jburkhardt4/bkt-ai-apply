@@ -4,7 +4,7 @@ import { AppSidebar } from './AppSidebar'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useAuth } from '@/contexts/auth-context'
-import { ChatAssistantPanel } from '@/features/applications/components/ChatAssistantPanel'
+import { AiAssistantPanel } from '@/features/ai-agent/components/AiAssistantPanel'
 import { SelectedApplicationContext } from '@/contexts/selected-application-context'
 
 interface AppShellProps {
@@ -122,8 +122,8 @@ export function AppShell({ children }: AppShellProps) {
             className={`w-1 h-full cursor-col-resize transition-colors hover:bg-border${isDraggingState ? ' bg-accent' : ''}`}
             onMouseDown={handleResizeMouseDown}
           />
-          <div className="flex flex-1 flex-col overflow-y-auto p-4">
-            <ChatAssistantPanel selectedApplicationId={selectedApplicationId} />
+          <div className="flex flex-1 flex-col overflow-hidden p-4">
+            <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
           </div>
         </aside>
       </div>
@@ -131,8 +131,8 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile chat via Sheet — triggered by topbar Bot button */}
       <Sheet open={chatMobileOpen} onOpenChange={setChatMobileOpen}>
         <SheetContent side="right" className="w-80 p-0">
-          <div className="flex h-full flex-col overflow-y-auto p-4">
-            <ChatAssistantPanel selectedApplicationId={selectedApplicationId} />
+          <div className="flex h-full flex-col overflow-hidden p-4">
+            <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
           </div>
         </SheetContent>
       </Sheet>

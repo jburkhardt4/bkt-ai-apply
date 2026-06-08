@@ -24,12 +24,19 @@ function extractKeywords(content: string, keywords: string[]): string[] {
   return keywords.filter((keyword) => normalized.includes(keyword.toLowerCase()))
 }
 
-function scoreBucket(matched: number, total: number, weight: number): number {
-  if (total === 0) {
+const SCORE_TARGETS = {
+  skills: 3,
+  domain: 2,
+  seniority: 2,
+  tools: 2,
+} as const
+
+function scoreBucket(matched: number, expectedTarget: number, weight: number): number {
+  if (expectedTarget <= 0) {
     return 0
   }
 
-  return Math.round((matched / total) * weight)
+  return Math.min(Math.round((matched / expectedTarget) * weight), weight)
 }
 
 export function parseJobDescription(rawText: string, profile: CandidateProfile): ParsedJobDescription {
@@ -101,10 +108,10 @@ export function scoreJobFit(parsed: ParsedJobDescription, profile: CandidateProf
   )
 
   const breakdown = {
-    skills: scoreBucket(skillsMatched, profile.skillKeywords.length, 35),
-    domain: scoreBucket(domainsMatched, profile.domainKeywords.length, 20),
-    seniority: scoreBucket(seniorityMatched, profile.seniorityKeywords.length, 20),
-    tools: scoreBucket(toolsMatched, profile.toolingKeywords.length, 15),
+    skills: scoreBucket(skillsMatched, SCORE_TARGETS.skills, 35),
+    domain: scoreBucket(domainsMatched, SCORE_TARGETS.domain, 20),
+    seniority: scoreBucket(seniorityMatched, SCORE_TARGETS.seniority, 20),
+    tools: scoreBucket(toolsMatched, SCORE_TARGETS.tools, 15),
     locationAuth: locationMatched > 0 ? 10 : 2,
   }
 

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,6 +14,8 @@ import { useProspectorSearchResults } from './hooks/useProspectorSearchResults'
 import { useProspectorReadyQueue } from './hooks/useProspectorReadyQueue'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { cn } from '@/lib/utils'
+import { runScoreForJob } from '@/features/applications/services/ingestionService'
 import {
   summarizeRunResults,
   type ProspectorRunResponse,
@@ -158,6 +160,59 @@ export function ProspectorDashboard() {
     }
   }, [user, profile, isRunning, refetchRuns, refetchSearchResults, refetchQueue])
 
+  // ── Score unscored prospector jobs ───────────────────────────
+  // Prospector jobs are inserted by the prospector-cron Edge Function but are
+  // not scored there. This reuses the existing ingestion scoring pipeline
+  // (pipelineService.scoreJobFit → aiScoringService.persistAiScore) for any
+  // prospector job lacking an ai_scores row. Cost-cap is respected per job
+  // (persistAiScore returns status 'queued' when the monthly cap is hit).
+
+  const [isScoring, setIsScoring] = useState(false)
+
+  const unscoredCount = searchResults.filter((job) => job.match_score === null).length
+
+  const handleScoreJobs = useCallback(async () => {
+    if (!user || isScoring) return
+    const unscored = searchResults.filter((job) => job.match_score === null)
+    if (unscored.length === 0) return
+
+    setIsScoring(true)
+    const toastId = toast.loading(
+      `Scoring ${unscored.length} ${unscored.length === 1 ? 'job' : 'jobs'}…`,
+    )
+
+    const settled = await Promise.allSettled(
+      unscored.map((job) => runScoreForJob({ userId: user.id, jobId: job.id })),
+    )
+
+    let saved = 0
+    let queued = 0
+    let failed = 0
+    for (const outcome of settled) {
+      if (outcome.status === 'rejected') failed += 1
+      else if (outcome.value.status === 'queued') queued += 1
+      else saved += 1
+    }
+
+    // Scoring writes ai_scores (search results) and may update
+    // applications.match_score (ready queue) — refresh both.
+    refetchSearchResults()
+    refetchQueue()
+
+    const parts = [`${saved} scored`]
+    if (queued > 0) parts.push(`${queued} queued (cost cap)`)
+    if (failed > 0) parts.push(`${failed} failed`)
+    const summary = parts.join(' · ')
+
+    if (saved === 0 && failed > 0) {
+      toast.error(`Scoring failed — ${summary}`, { id: toastId })
+    } else {
+      toast.success(`Scoring complete — ${summary}`, { id: toastId })
+    }
+
+    setIsScoring(false)
+  }, [user, isScoring, searchResults, refetchSearchResults, refetchQueue])
+
   // ── Loading skeleton ─────────────────────────────────────────
 
   const isInitialLoading = profileLoading && runsLoading
@@ -258,13 +313,35 @@ export function ProspectorDashboard() {
 
       {/* Job Search Results card */}
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
           <CardTitle
             className="text-base"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Job Search Results
           </CardTitle>
+          {unscoredCount > 0 && (
+            <button
+              type="button"
+              onClick={handleScoreJobs}
+              disabled={isScoring || !user}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5',
+                'border border-input bg-background text-xs font-medium text-muted-foreground',
+                'transition-all duration-150',
+                'hover:bg-muted/60 hover:text-foreground',
+                'active:scale-95',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
+              )}
+              aria-label={`Score ${unscoredCount} unscored ${unscoredCount === 1 ? 'job' : 'jobs'}`}
+            >
+              <Sparkles className={cn('h-3.5 w-3.5', isScoring && 'animate-pulse')} />
+              {isScoring
+                ? 'Scoring…'
+                : `Score ${unscoredCount} ${unscoredCount === 1 ? 'job' : 'jobs'}`}
+            </button>
+          )}
         </CardHeader>
         <CardContent>
           <ProspectorSearchResults

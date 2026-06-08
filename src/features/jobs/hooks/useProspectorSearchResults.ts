@@ -28,6 +28,7 @@ export interface ProspectorSearchResult {
   compensation_max: number | null
   description: string | null
   posted_at: string | null
+  match_score: number | null
   source_url: string
   created_at: string
 }
@@ -70,6 +71,10 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           created_at,
           companies (
             name
+          ),
+          ai_scores (
+            overall_score,
+            scored_at
           )
           `,
         )
@@ -93,6 +98,16 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
                 ? ((companiesRaw as { name?: string }).name ?? null)
                 : null
 
+            // Match score lives in ai_scores (versioned per job); take the most
+            // recently scored row. Embedded ai_scores are RLS-scoped to the user.
+            const scoresRaw = row.ai_scores as unknown
+            let matchScore: number | null = null
+            if (Array.isArray(scoresRaw) && scoresRaw.length > 0) {
+              const scores = scoresRaw as { overall_score: number; scored_at: string }[]
+              const latest = scores.reduce((a, b) => (b.scored_at > a.scored_at ? b : a))
+              matchScore = latest.overall_score
+            }
+
             return {
               id: row.id,
               title: row.title,
@@ -104,6 +119,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
               compensation_max: row.compensation_max,
               description: row.description,
               posted_at: row.posted_at,
+              match_score: matchScore,
               source_url: row.source_url,
               created_at: row.created_at,
             }

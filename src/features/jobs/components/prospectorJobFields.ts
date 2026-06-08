@@ -41,6 +41,15 @@ export function formatRelativeDate(iso: string | null): string {
 }
 
 /**
+ * Formats a job_type string for display, capitalizing the first letter.
+ * Returns null when the input is null (callers render "—" or "Not Disclosed").
+ */
+export function formatJobType(type: string | null): string | null {
+  if (!type) return null
+  return type.charAt(0).toUpperCase() + type.slice(1)
+}
+
+/**
  * Derives a short display label from a source URL hostname.
  * dice.com → "Dice", linkedin.com → "LinkedIn", etc.
  * Falls back to "Apply Now" when the hostname can't be parsed.

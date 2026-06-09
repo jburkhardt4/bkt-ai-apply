@@ -42,7 +42,7 @@ export const openaiProvider: LlmProvider = {
       },
       body: JSON.stringify({
         model: this.resolveModelId(request.model),
-        max_completion_tokens: request.maxTokens,
+        max_tokens: request.maxTokens,
         messages,
       }),
     })

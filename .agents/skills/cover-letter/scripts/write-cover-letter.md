@@ -33,7 +33,7 @@ You will receive:
 - **Rhythm**: Deliberately mix short, direct statements with more detailed explanations. Never repeat sentence patterns.
 - **Language**: Clear, specific, and human. Use language you'd actually say in a professional conversation.
 
-**CRITICAL: Review each sentence individually for natural flow and varied structure**
+### CRITICAL: Review each sentence individually for natural flow and varied structure
 
 **Avoid these artificial phrases:**
 

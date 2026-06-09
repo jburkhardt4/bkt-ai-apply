@@ -17,6 +17,7 @@ See `shared/references/fit-scoring.md` for canonical definitions.
 ## Notes Format
 
 Keep notes brief and actionable:
+
 - "Strong match - [key reasons]"
 - "Comp below target"
 - "Agency - dealbreaker"

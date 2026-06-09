@@ -23,6 +23,7 @@ Comprehensive work history compiled from resume + interview. This is the raw mat
 **Team**: [Direct reports, total org size]
 
 ### Mandate
+
 [What were they hired to do? What was the state of things when they arrived?]
 
 ### Key Accomplishments
@@ -56,11 +57,12 @@ Comprehensive work history compiled from resume + interview. This is the raw mat
 - [What was hard, what didn't work, how they adapted]
 
 ### Why They Left
+
 [Context for the transition]
 
 ---
 
-*Repeat for each role*
+## Repeat for each role
 
 ---
 
@@ -81,6 +83,7 @@ Capture the candidate's own words for compelling resume bullets:
 ## Metrics Bank
 
 Quick reference for all quantified achievements:
-| Metric | Value | Context | Role |
-|--------|-------|---------|------|
+
+| Metric                 | Value                | Context         | Role      |
+| ---------------------- | -------------------- | --------------- | --------- |
 | [e.g., Revenue growth] | [e.g., $50M → $200M] | [e.g., 3 years] | [Company] |

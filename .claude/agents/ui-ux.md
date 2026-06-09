@@ -21,13 +21,25 @@ Output a `lessons_consulted` list (lesson IDs) and state how each shaped the pla
 - Ensure desktop and mobile behavior is defined.
 
 ## Skills (MANDATORY — every invocation, no exceptions)
-Before producing any design guidance, plan, or edit, you MUST read and apply BOTH skills — on every single invocation, unconditionally:
+Before producing any design guidance, plan, or edit, you MUST read and apply BOTH foundation skills — on every single invocation, unconditionally:
 - `design-taste-frontend` — `.claude/skills/design-taste-frontend/SKILL.md`
 - `emil-design-eng` — `.claude/skills/emil-design-eng/SKILL.md`
 
 These are not optional and not conditional on scope. Load both at the very start of the task, immediately after the Pre-Flight Reads. Apply `design-taste-frontend` for metric-based layout rules, component architecture, and CSS/performance discipline; apply `emil-design-eng` for polish, animation, and interaction feel. If either `SKILL.md` is missing, HOLD and report the missing path — do not proceed without it.
 
-In your output, include a `skills_applied: [design-taste-frontend, emil-design-eng]` line confirming both were consulted and naming the specific rules each contributed.
+**Direction-specific skills — select ONE that matches the design context:**
+After the two mandatory foundation skills, load exactly one direction skill based on the visual brief. Do not load multiple — pick the closest match:
+- `high-end-visual-design` — `.claude/skills/high-end-visual-design/SKILL.md` — agency-grade premium aesthetics; use for hero sections, marketing surfaces, and any UI that needs to feel expensive.
+- `minimalist-ui` — `.claude/skills/minimalist-ui/SKILL.md` — clean editorial, warm monochrome, flat bento grids; use for content-first, data-light views.
+- `industrial-brutalist-ui` — `.claude/skills/industrial-brutalist-ui/SKILL.md` — raw mechanical grids, military terminal aesthetic; use for data-heavy dashboards needing a precise, utilitarian feel.
+- `gpt-taste` — `.claude/skills/gpt-taste/SKILL.md` — GSAP motion, AIDA structure, editorial typography; use for animated marketing or hero-heavy pages.
+- `stitch-design-taste` — `.claude/skills/stitch-design-taste/SKILL.md` — semantic design system generation; use when producing a DESIGN.md or component library spec.
+- `redesign-existing-projects` — `.claude/skills/redesign-existing-projects/SKILL.md` — audit-first redesign workflow; use when the task is explicitly a redesign of an existing surface.
+- `design-taste-frontend-v2` — `.claude/skills/design-taste-frontend-v2/SKILL.md` — landing pages and portfolio-style surfaces only; do not use for product or dashboard UI.
+
+If the design context does not clearly match any direction skill, default to `high-end-visual-design`.
+
+In your output, include a `skills_applied: [design-taste-frontend, emil-design-eng, <direction-skill>]` line confirming all were consulted and naming the specific rules each contributed.
 
 ## Hard Constraints
 - Do not implement business logic.

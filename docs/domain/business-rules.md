@@ -2,7 +2,7 @@
 
 **task_id:** BKT-AIAPPLY-PHASE1-REQS-LOCK-002
 **status:** LIVING DOCUMENT — append only; never delete rules; supersede with new rule ID
-**last_updated:** 2026-06-07
+**last_updated:** 2026-06-09
 
 ---
 
@@ -144,3 +144,16 @@
 | BR-112 | Chat completions route through `src/lib/ai-router.ts` task type `general_qa` (Claude Sonnet 4.6); real token usage is logged to `ai_model_usage` (AI-RULE-002, BR-054) and gated by the $75/month cap — a capped turn persists a `deferred` assistant message instead of calling the model | AI-RULE-002, BR-050, BR-052, ADR-003 |
 | BR-113 | Long-term memory (`chat_memory`) is user-scoped, injected into the assistant system prompt, and written when the model emits a `MEMORY:` directive (deduped, case-insensitive); users may delete memory items | AI-RULE-008, ADR-003 |
 | BR-114 | Deleting a `chat_conversations` row cascades to its `chat_messages`; `chat_memory.source_conversation_id` is set NULL on conversation delete so memory survives chat deletion | ADR-003 |
+
+---
+
+## Model Provider & Integrations Rules
+
+| ID | Rule | Source |
+| --- | --- | --- |
+| BR-120 | The AI Assistant supports user-selectable chat models across three providers (Anthropic / OpenAI / Google). The effective model is resolved from `CHAT_MODEL_CATALOG` in `src/lib/ai-router.ts`; an unknown name falls back to the `general_qa` default and is never forwarded to a provider | ADR-005, AI-RULE-001 |
+| BR-121 | Selecting a non-default chat model is a JB manual override (AI-RULE-001), confirmed by the act of choosing it in the AI Assistant UI; the chosen provider + model are logged to `ai_model_usage` with cost priced by `getModelPricing` | ADR-005, AI-RULE-002, BR-054 |
+| BR-122 | Provider API keys (`ANTHROPIC_KEY`, `OPENAI_KEY`, `GEMINI_KEY`) are project-level Supabase Edge Function secrets, read only via `Deno.env` in `_shared/llm/factory.ts`; they are never shipped in the client bundle. Supersedes the single-provider scope of BR-111 | ADR-005, INT-RULE-006, SEC-004 |
+| BR-123 | The `provider-status` Edge Function returns booleans only (which providers are configured); it never returns key material and requires a valid Supabase JWT | ADR-005, SEC-004 |
+| BR-124 | `ai-chat` is provider-agnostic via the `_shared/llm` factory; provider errors are normalized to `{ error, code, provider }` with a user-facing message that never leaks key material. The request defaults to `anthropic` when no provider is given (backward compatible) | ADR-005 |
+| BR-125 | The model selector disables (greys out) any model whose provider key is not configured, per `provider-status`; configuration is global because keys are shared project secrets | ADR-005 |

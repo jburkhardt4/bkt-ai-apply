@@ -40,16 +40,19 @@ Comprehensive work history compiled from resume + interview. This is the raw mat
    - Skills demonstrated: [Relevant skills]
 
 ### Technical & Strategic Detail
+
 - Tools/platforms: [What they used]
 - Methodologies: [Frameworks, approaches]
 - Key decisions: [Strategic choices they made and why]
 
 ### Leadership & Team Building
+
 - [How they built, managed, and grew their team]
 - [Cross-functional collaboration details]
 - [Key hires and their impact]
 
 ### Challenges
+
 - [What was hard, what didn't work, how they adapted]
 
 ### Why They Left
@@ -71,6 +74,7 @@ Comprehensive work history compiled from resume + interview. This is the raw mat
 ## Notable Quotes
 
 Capture the candidate's own words for compelling resume bullets:
+
 - "[Direct quote about an accomplishment]" (re: [Company/Role])
 - "[Direct quote about approach]" (re: [Company/Role])
 

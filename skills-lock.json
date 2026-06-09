@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "cover-letter": {
+      "source": "proficientlyjobs/proficiently-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/cover-letter/SKILL.md",
+      "computedHash": "6e3b1ca7d55eb699e9d6ea0b59796bf53c3f8c1679c9b94a7ec7e294a6a3251d"
+    },
     "design-taste-frontend": {
       "source": "bnd-1/taste-skill",
       "sourceType": "github",
@@ -13,6 +19,24 @@
       "skillPath": "skills/emil-design-eng/SKILL.md",
       "computedHash": "8bdf9e4e6de7a4969147bf4828a4ad2c5aacd9fba4b690b250a85e0467ca387d"
     },
+    "job-search": {
+      "source": "proficientlyjobs/proficiently-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/job-search/SKILL.md",
+      "computedHash": "3663fea016b350e34f014764436d6a3e267249108d79358f7cc60b6a603e72e9"
+    },
+    "network-scan": {
+      "source": "proficientlyjobs/proficiently-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/network-scan/SKILL.md",
+      "computedHash": "587de3b0c45989e1861b4e31dde95d55176ea5038b888695fd85c0f9d0c81d21"
+    },
+    "setup": {
+      "source": "proficientlyjobs/proficiently-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/setup/SKILL.md",
+      "computedHash": "7c633332c942e1108cc2c97efdbdb96bb471c99dc6b69b108772129e622527b6"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
@@ -24,6 +48,12 @@
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
       "computedHash": "0d2c4857a7d6fdcd3fbc46e458fa4c497f029cab89a01548b3defce203003932"
+    },
+    "tailor-resume": {
+      "source": "proficientlyjobs/proficiently-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tailor-resume/SKILL.md",
+      "computedHash": "aece3520f4c708131ab3a2dd6f10129ba1bf7718ab0bcdee0137212098544131"
     }
   }
 }

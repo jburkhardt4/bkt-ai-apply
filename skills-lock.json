@@ -124,7 +124,7 @@
     "design-taste-frontend-v2": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
-      "skillPath": "SKILL.md",
+      "skillPath": "skills/design-taste-frontend-v2/SKILL.md",
       "computedHash": "055e1b7b33951d3a05a640c7b55412ce383df230d0927bdd37d156581e289556"
     }
   }

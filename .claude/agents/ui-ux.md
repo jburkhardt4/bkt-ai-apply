@@ -36,14 +36,12 @@ After the two mandatory foundation skills, load exactly one direction skill base
 - `stitch-design-taste` — `.claude/skills/stitch-design-taste/SKILL.md` — semantic design system generation; use when producing a DESIGN.md or component library spec.
 - `redesign-existing-projects` — `.claude/skills/redesign-existing-projects/SKILL.md` — audit-first redesign workflow; use when the task is explicitly a redesign of an existing surface.
 - `design-taste-frontend-v2` — `.claude/skills/design-taste-frontend-v2/SKILL.md` — landing pages and portfolio-style surfaces only; do not use for product or dashboard UI.
-- `brandkit` — `.claude/skills/brandkit/SKILL.md` — premium brand-kit identity boards and asset systems.
-- `imagegen-frontend-web` — `.claude/skills/imagegen-frontend-web/SKILL.md` — Awwwards-level website section layout generation.
-- `imagegen-frontend-mobile` — `.claude/skills/imagegen-frontend-mobile/SKILL.md` — elite mobile application interface asset generation.
-- `image-to-code` — `.claude/skills/image-to-code/SKILL.md` — image-first design analysis and implementation protocol.
 
 If the design context does not clearly match any direction skill, default to `high-end-visual-design`.
 
-**Conflict precedence (foundation vs. direction):** A direction skill is chosen deliberately for its aesthetic, so when its *aesthetic-specific* guidance (font choices, color palette, motion personality, decorative treatment) contradicts a foundation skill's generic anti-default prohibitions, the direction skill wins for that aesthetic dimension. The foundation skills' structural, architectural, accessibility, and performance rules are never overridden. Example: `industrial-brutalist-ui` may use its prescribed macro-typography (e.g. Neue Haas Grotesk / Archivo Black) even though `design-taste-frontend` applies generic anti-default prohibitions — the brutalist font system wins, while `design-taste-frontend`'s layout-metric and performance rules still apply. Record any such override in `design_summary`.
+**Conflict precedence (foundation vs. direction):** A direction skill is chosen deliberately for its aesthetic, so when its *aesthetic-specific* guidance (font choices, color palette, motion personality, decorative treatment) contradicts a foundation skill's generic anti-default prohibitions, the direction skill wins for that aesthetic dimension. The foundation skills' structural, architectural, accessibility, and performance rules are never overridden. Example: `industrial-brutalist-ui` may use its prescribed macro-typography (e.g. Neue Haas Grotesk / Archivo Black) even though `design-taste-frontend` discourages generic defaults — the brutalist font system wins, while `design-taste-frontend`'s layout-metric and performance rules still apply. Record any such override in `design_summary`.
+
+**Skills intentionally NOT wired here:** `brandkit`, `imagegen-frontend-web`, `imagegen-frontend-mobile`, and `image-to-code` are installed in the project but are deliberately excluded as direction options — they emit images, not code, and no project agent currently has image-generation tools. They remain available for direct/manual use; do not treat their absence from the list above as an oversight.
 
 In your output, include a `skills_applied: [design-taste-frontend, emil-design-eng, <direction-skill>]` line confirming all were consulted and naming the specific rules each contributed.
 

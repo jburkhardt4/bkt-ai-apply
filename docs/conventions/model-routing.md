@@ -57,3 +57,34 @@ Use these pinned model names exactly through src/lib/ai-router.ts.
 - No model names are hardcoded outside src/lib/ai-router.ts.
 - Cost-cap checks execute before dispatch.
 - Usage logging executes after dispatch.
+
+---
+
+## Multi-Provider Execution (ADR-005)
+
+- The conversational assistant (general_qa) supports a user-selectable model via
+  `CHAT_MODEL_CATALOG` in `src/lib/ai-router.ts`. Selecting a non-default model is
+  a JB manual override (AI-RULE-001), confirmed by the UI selection. The catalog
+  is the single source of truth for selectable model display names.
+- The `ai-chat` Edge Function is provider-agnostic. It accepts `{ provider, model,
+  system, messages, maxTokens }`, routes through `_shared/llm/factory.ts` to the
+  matching provider client (Anthropic / OpenAI / Gemini), and returns
+  `{ text, usage }` or a normalized error `{ error, code, provider }`.
+- Provider keys are project-level Supabase Edge Function secrets read only via
+  `Deno.env`: `ANTHROPIC_KEY` (legacy fallback `ANTHROPIC_API_KEY`), `OPENAI_KEY`,
+  `GEMINI_KEY`. Never shipped to the client.
+- The `provider-status` Edge Function reports which providers are configured
+  (booleans only). The model selector greys out models whose provider key is
+  missing.
+- Cost is still gated by the $75/month cap and logged to `ai_model_usage`; the
+  logged provider/model is the one that actually ran, priced via `getModelPricing`.
+
+### Selectable chat model catalog
+
+| Model | Provider |
+| --- | --- |
+| Claude Sonnet 4.6 (default) | anthropic |
+| Claude Opus 4.6 | anthropic |
+| GPT-5 | openai |
+| GPT-4o | openai |
+| Gemini 2.5 Pro | google |

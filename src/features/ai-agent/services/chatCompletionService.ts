@@ -13,7 +13,7 @@
  */
 
 import { getSupabaseClient } from '@/lib/supabase'
-import { logAiUsage, routeAiTask } from '@/lib/ai-router'
+import { getModelPricing, logAiUsage, resolveChatModel, routeAiTask } from '@/lib/ai-router'
 import {
   classifyChatIntent,
   getPipelineContextSummary,
@@ -31,10 +31,6 @@ import type { ChatMessage } from '../types'
 const CHAT_TASK_TYPE = 'general_qa' as const
 const HISTORY_LIMIT = 20
 const MAX_OUTPUT_TOKENS = 1024
-// Estimated Claude Sonnet pricing (USD per token). Cost is logged for the $75/mo
-// cap (AI-RULE-002); refine if the chat task routes to a different model.
-const INPUT_USD_PER_TOKEN = 3 / 1_000_000
-const OUTPUT_USD_PER_TOKEN = 15 / 1_000_000
 
 interface EdgeChatResponse {
   text: string
@@ -46,6 +42,8 @@ export interface SendChatInput {
   message: string
   conversationId?: string | null
   applicationId?: string | null
+  /** Optional user-selected model (a JB manual override of the general_qa default). */
+  modelName?: string | null
 }
 
 export interface SendChatResult {
@@ -125,12 +123,15 @@ export async function sendChatMessage(input: SendChatInput): Promise<SendChatRes
   const intent = classifyChatIntent(message)
 
   // 3. Cost gate — defer (without an LLM call) when the monthly cap is hit.
+  // Cost policy keys off the general_qa task; the model that actually runs is
+  // the user's selection (or the general_qa default) resolved from the catalog.
   const route = await routeAiTask({ userId: input.userId, taskType: CHAT_TASK_TYPE })
+  const chosen = resolveChatModel(input.modelName)
   if (route.costDecision.shouldBlock) {
     await logAiUsage({
       user_id: input.userId,
-      model_provider: route.modelProvider,
-      model_name: route.modelName,
+      model_provider: chosen.modelProvider,
+      model_name: chosen.modelName,
       task_type: route.taskType,
       tokens_in: 0,
       tokens_out: 0,
@@ -166,11 +167,13 @@ export async function sendChatMessage(input: SendChatInput): Promise<SendChatRes
     .slice(-HISTORY_LIMIT)
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
-  // 5. Call the ai-chat Edge Function (server-side Anthropic call).
+  // 5. Call the ai-chat Edge Function (server-side, provider-agnostic). The
+  // function routes to the chosen provider and holds the key (never the client).
   const supabase = getSupabaseClient()
   const { data, error } = await supabase.functions.invoke<EdgeChatResponse>('ai-chat', {
     body: {
-      model: route.modelName,
+      provider: chosen.modelProvider,
+      model: chosen.modelName,
       system,
       messages: priorTurns,
       maxTokens: MAX_OUTPUT_TOKENS,
@@ -185,8 +188,9 @@ export async function sendChatMessage(input: SendChatInput): Promise<SendChatRes
   const replyText = cleaned.length > 0 ? cleaned : data.text.trim()
   const tokensIn = data.usage.input_tokens
   const tokensOut = data.usage.output_tokens
+  const pricing = getModelPricing(chosen.modelName)
   const estimatedCostUsd = Number(
-    (tokensIn * INPUT_USD_PER_TOKEN + tokensOut * OUTPUT_USD_PER_TOKEN).toFixed(6),
+    (tokensIn * pricing.inputUsdPerToken + tokensOut * pricing.outputUsdPerToken).toFixed(6),
   )
 
   const assistantMessage = await appendMessage({
@@ -197,8 +201,8 @@ export async function sendChatMessage(input: SendChatInput): Promise<SendChatRes
     metadata: {
       status: 'answered',
       intent,
-      model: route.modelName,
-      provider: route.modelProvider,
+      model: chosen.modelName,
+      provider: chosen.modelProvider,
       tokensIn,
       tokensOut,
       estimatedCostUsd,
@@ -208,8 +212,8 @@ export async function sendChatMessage(input: SendChatInput): Promise<SendChatRes
   // 7. Log real usage (AI-RULE-002) and persist new long-term memories.
   await logAiUsage({
     user_id: input.userId,
-    model_provider: route.modelProvider,
-    model_name: route.modelName,
+    model_provider: chosen.modelProvider,
+    model_name: chosen.modelName,
     task_type: route.taskType,
     tokens_in: tokensIn,
     tokens_out: tokensOut,

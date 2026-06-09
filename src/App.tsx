@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import IngestionPage from './pages/IngestionPage'
 import PipelinePage from './pages/PipelinePage'
 import ProspectorPage from './pages/ProspectorPage'
+import SettingsPage from './pages/SettingsPage'
 import { AppShell } from './components/AppShell'
 
 export default function App() {
@@ -24,6 +25,8 @@ export default function App() {
           <IngestionPage />
         ) : path === '/prospector' ? (
           <ProspectorPage />
+        ) : path === '/settings' ? (
+          <SettingsPage />
         ) : (
           <PipelinePage />
         )}

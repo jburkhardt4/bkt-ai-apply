@@ -1,4 +1,4 @@
-import { LayoutDashboard, Upload, Search, LogOut, Zap } from 'lucide-react'
+import { LayoutDashboard, Upload, Search, LogOut, Zap, Plug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,11 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Prospector',
     href: '/prospector',
     icon: <Search className="h-4 w-4" />,
+  },
+  {
+    label: 'Integrations',
+    href: '/settings',
+    icon: <Plug className="h-4 w-4" />,
   },
 ]
 

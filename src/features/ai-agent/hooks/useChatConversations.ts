@@ -35,7 +35,10 @@ export interface UseChatConversations {
   remove: (id: string) => Promise<void>
 }
 
-export function useChatConversations(applicationId?: string | null): UseChatConversations {
+export function useChatConversations(
+  applicationId?: string | null,
+  modelName?: string | null,
+): UseChatConversations {
   const { user } = useAuth()
   const userId = user?.id ?? null
 
@@ -110,6 +113,7 @@ export function useChatConversations(applicationId?: string | null): UseChatConv
           message,
           conversationId: activeId,
           applicationId: applicationId ?? undefined,
+          modelName: modelName ?? undefined,
         })
         const [freshMessages, freshList] = await Promise.all([
           getMessages(result.conversationId),
@@ -125,7 +129,7 @@ export function useChatConversations(applicationId?: string | null): UseChatConv
         setSending(false)
       }
     },
-    [userId, activeId, applicationId],
+    [userId, activeId, applicationId, modelName],
   )
 
   const startNewConversation = useCallback(() => {

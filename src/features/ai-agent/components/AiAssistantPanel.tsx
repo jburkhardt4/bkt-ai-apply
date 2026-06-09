@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useChatConversations } from '../hooks/useChatConversations'
+import { useSelectedModel } from '../hooks/useSelectedModel'
+import { ModelSelector } from './ModelSelector'
+import { useProviderStatus } from '@/features/settings/hooks/useProviderStatus'
 import type { ChatMessage } from '../types'
 
 interface AiAssistantPanelProps {
@@ -34,7 +37,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 export function AiAssistantPanel({ selectedApplicationId = null }: AiAssistantPanelProps) {
-  const chat = useChatConversations(selectedApplicationId)
+  const { selectedModel, setSelectedModel } = useSelectedModel()
+  const providerStatus = useProviderStatus()
+  const chat = useChatConversations(selectedApplicationId, selectedModel)
   const [prompt, setPrompt] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
@@ -98,6 +103,22 @@ export function AiAssistantPanel({ selectedApplicationId = null }: AiAssistantPa
         >
           <Plus className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Model selector */}
+      <div className="flex items-center gap-2 border-b border-border py-2">
+        <span className="shrink-0 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
+          Model
+        </span>
+        <div className="min-w-0 flex-1">
+          <ModelSelector
+            value={selectedModel}
+            onValueChange={setSelectedModel}
+            status={providerStatus.status}
+            loading={providerStatus.loading}
+            disabled={chat.sending}
+          />
+        </div>
       </div>
 
       {/* Conversation history */}

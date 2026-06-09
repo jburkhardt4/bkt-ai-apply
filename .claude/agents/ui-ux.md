@@ -39,6 +39,10 @@ After the two mandatory foundation skills, load exactly one direction skill base
 
 If the design context does not clearly match any direction skill, default to `high-end-visual-design`.
 
+**Conflict precedence (foundation vs. direction):** A direction skill is chosen deliberately for its aesthetic, so when its *aesthetic-specific* guidance (font choices, color palette, motion personality, decorative treatment) contradicts a foundation skill's generic anti-default prohibitions, the direction skill wins for that aesthetic dimension. The foundation skills' structural, architectural, accessibility, and performance rules are never overridden. Example: `industrial-brutalist-ui` may use its prescribed macro-typography (e.g. Neue Haas Grotesk / Archivo Black / Inter) even though `design-taste-frontend` discourages Inter as a generic default — the brutalist font system wins, while `design-taste-frontend`'s layout-metric and performance rules still apply. Record any such override in `design_summary`.
+
+**Skills intentionally NOT wired here:** `brandkit`, `imagegen-frontend-web`, `imagegen-frontend-mobile`, and `image-to-code` are installed in the project but are deliberately excluded as direction options — they emit images, not code, and no project agent currently has image-generation tools. They remain available for direct/manual use; do not treat their absence from the list above as an oversight.
+
 In your output, include a `skills_applied: [design-taste-frontend, emil-design-eng, <direction-skill>]` line confirming all were consulted and naming the specific rules each contributed.
 
 ## Hard Constraints

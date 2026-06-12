@@ -255,6 +255,8 @@ const MODEL_PRICING_BY_NAME: Record<string, ModelPricing> = {
   'GPT-5': { inputUsdPerToken: 5 / 1_000_000, outputUsdPerToken: 15 / 1_000_000 },
   'GPT-4o': { inputUsdPerToken: 2.5 / 1_000_000, outputUsdPerToken: 10 / 1_000_000 },
   'Gemini 2.5 Pro': { inputUsdPerToken: 1.25 / 1_000_000, outputUsdPerToken: 5 / 1_000_000 },
+  // Mirrored in supabase/functions/gmail-sync/logic.ts (server-side classification logging)
+  'Gemini 2.5 Flash': { inputUsdPerToken: 0.3 / 1_000_000, outputUsdPerToken: 2.5 / 1_000_000 },
 }
 
 const FALLBACK_PRICING: ModelPricing = {

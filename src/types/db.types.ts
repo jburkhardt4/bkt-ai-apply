@@ -233,6 +233,66 @@ export type Database = {
           },
         ]
       }
+      application_queue: {
+        Row: {
+          application_id: string
+          attempts: number
+          channel: string | null
+          created_at: string
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          queued_by: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          attempts?: number
+          channel?: string | null
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          queued_by: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          attempts?: number
+          channel?: string | null
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          queued_by?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_queue_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           created_at: string
@@ -535,6 +595,47 @@ export type Database = {
             foreignKeyName: "emails_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gmail_sync_state: {
+        Row: {
+          created_at: string
+          history_id: string | null
+          last_error: string | null
+          last_status: string | null
+          last_synced_at: string | null
+          updated_at: string
+          user_id: string
+          watch_expiration: string | null
+        }
+        Insert: {
+          created_at?: string
+          history_id?: string | null
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+          user_id: string
+          watch_expiration?: string | null
+        }
+        Update: {
+          created_at?: string
+          history_id?: string | null
+          last_error?: string | null
+          last_status?: string | null
+          last_synced_at?: string | null
+          updated_at?: string
+          user_id?: string
+          watch_expiration?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gmail_sync_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -884,6 +985,89 @@ export type Database = {
             foreignKeyName: "roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_jobs: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_settings: {
+        Row: {
+          auto_submit_score_threshold: number
+          created_at: string
+          credits: number
+          daily_submission_cap: number
+          last_target_job: Json | null
+          monthly_budget_usd: number
+          paused: boolean
+          review_mode: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_submit_score_threshold?: number
+          created_at?: string
+          credits?: number
+          daily_submission_cap?: number
+          last_target_job?: Json | null
+          monthly_budget_usd?: number
+          paused?: boolean
+          review_mode?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_submit_score_threshold?: number
+          created_at?: string
+          credits?: number
+          daily_submission_cap?: number
+          last_target_job?: Json | null
+          monthly_budget_usd?: number
+          paused?: boolean
+          review_mode?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },

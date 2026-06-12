@@ -53,6 +53,8 @@
 | BR-032 | No CAPTCHA bypass under any circumstances | INT-RULE-002 |
 | BR-033 | No circumvention of rate limits; exponential backoff required | INT-RULE-003 |
 | BR-034 | No scraping behind authentication walls without an approved API | INT-RULE-001 |
+| BR-035 | gmail-sync persists only job-relevant email: classification ≠ `unknown`, or sender matched to a tracked application's company; all other mail is never stored | gmail-sync Edge Function |
+| BR-036 | Gmail ingestion is incremental via `gmail_sync_state.history_id` (cursor held back when a run truncates) and deduplicated by `emails UNIQUE (user_id, gmail_message_id)`; the Gmail scope is read-only (`gmail.readonly`) | gmail-sync Edge Function, docs/deploy/gmail-sync-setup.md |
 
 ---
 
@@ -60,8 +62,8 @@
 
 | ID | Rule | Source |
 | --- | --- | --- |
-| BR-040 | MVP submission requires JB explicit approval; no autonomous submission in MVP | SIGN-OFF-004 |
-| BR-041 | Stagehand browser automation deferred to Post-MVP | SIGN-OFF-004 |
+| BR-040 | ~~MVP submission requires JB explicit approval; no autonomous submission in MVP~~ — **superseded by ADR-006** (BR-130: approval requirement now depends on review mode) | SIGN-OFF-004, ADR-006 |
+| BR-041 | ~~Stagehand browser automation deferred to Post-MVP~~ — **superseded by ADR-006** (BR-134: Browserbase + Stagehand is the browser submission channel) | SIGN-OFF-004, ADR-006 |
 | BR-042 | System must query JB for approval before any external platform account creation or configuration | SIGN-OFF-003 |
 | BR-043 | Preferred account email for all external registrations: [john@bktadvisory.com](mailto:john@bktadvisory.com) | SIGN-OFF-003 |
 
@@ -157,3 +159,17 @@
 | BR-123 | The `provider-status` Edge Function returns booleans only (which providers are configured); it never returns key material and requires a valid Supabase JWT | ADR-005, SEC-004 |
 | BR-124 | `ai-chat` is provider-agnostic via the `_shared/llm` factory; provider errors are normalized to `{ error, code, provider }` with a user-facing message that never leaks key material. The request defaults to `anthropic` when no provider is given (backward compatible) | ADR-005 |
 | BR-125 | The model selector disables (greys out) any model whose provider key is not configured, per `provider-status`; configuration is global because keys are shared project secrets | ADR-005 |
+
+---
+
+## Auto-Submission Rules (ADR-006)
+
+| ID | Rule | Source |
+| --- | --- | --- |
+| BR-130 | Submission autonomy follows `user_settings.review_mode`: `review` = explicit JB approval per application; `assist` = scores ≥ threshold auto-queue as approved; `auto` = scores ≥ threshold submit autonomously within guardrails | ADR-006 |
+| BR-131 | All autonomy guardrails (score threshold, credits/budget, daily cap, pause) are enforced server-side in the submission worker from `user_settings`; client state is never trusted for submission decisions | ADR-006 |
+| BR-132 | `user_settings.paused = true` is an immediate kill switch: the worker submits nothing for that user while set | ADR-006 |
+| BR-133 | Submission workflow state lives in `application_queue` (one row per application, `UNIQUE (application_id)`); every attempt and outcome also writes an `application_events` row — the event log remains the source of truth | ADR-006, BR-004 |
+| BR-134 | Submission is API-first (`application_method` `api`/`ats` → ATS endpoint adapters); browser-channel postings submit via Browserbase + Stagehand. BR-032/033/034 remain binding — postings that cannot be submitted within those rules fail to manual with a recorded reason | ADR-006, BR-032, BR-033, BR-034 |
+| BR-135 | An application transitions `discovery → applied` only on confirmed successful submission (or explicit JB manual action); queueing alone never changes stage | ADR-006, BR-004 |
+| BR-136 | Each submission decrements `user_settings.credits` atomically; zero credits or exhausted monthly budget halts assist/auto queueing and submission until replenished | ADR-006 |

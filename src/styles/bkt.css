@@ -1,0 +1,525 @@
+/* ============================================================
+   BKT AI-Apply — Design tokens + base (ported from the BKT
+   AI-Apply design system project, v2). Single-file port of
+   styles.css → tokens/{fonts,colors,typography,spacing,base}.css
+   Imported by src/index.css. Do not hand-edit scales here without
+   updating the design-system source of truth.
+   ============================================================ */
+
+/* ==== tokens/fonts.css ==== */
+/* ============================================================
+   BKT AI-Apply — Webfonts  (v2)
+   Geist + Geist Mono (Vercel's open-source family, via Google
+   Fonts). Deterministic, high-end, no Inter. Consuming projects
+   pick these up through the styles.css @import closure.
+   ============================================================ */
+
+/* Webfonts (Geist + Geist Mono) are loaded via <link> in index.html —
+   a remote @import nested inside the CSS bundle would land mid-sheet
+   and be ignored by browsers. */
+
+
+/* ==== tokens/colors.css ==== */
+/* ============================================================
+   BKT AI-Apply — Color Tokens  (v2 · production overhaul)
+   Absolute neutral base (zinc) + ONE high-contrast brand accent:
+   BKT royal blue, sampled from the shield logo. No pure black.
+   Status colors are functional only (Apply / Decline / score).
+   ============================================================ */
+
+:root {
+  /* ---- Brand Blue (royal navy, sampled from the BKT shield) ---- */
+  --bkt-blue-50:  #eef3fc;
+  --bkt-blue-100: #dbe5f8;
+  --bkt-blue-200: #b9caee;
+  --bkt-blue-300: #8da7e0;
+  --bkt-blue-400: #5b7ed0;
+  --bkt-blue-500: #2f59be;
+  --bkt-blue-600: #1a47a8;  /* PRIMARY — the shield's royal blue */
+  --bkt-blue-700: #163a89;
+  --bkt-blue-800: #122d68;
+  --bkt-blue-900: #0d2049;
+  --bkt-navy-950: #001848;  /* deepest shield navy — logo/brand moments only */
+  --bkt-navy-980: #000f30;
+
+  /* ---- Neutral base — absolute zinc (no blue cast, no pure black) ---- */
+  --bkt-zinc-50:  #fafafa;
+  --bkt-zinc-100: #f4f4f5;
+  --bkt-zinc-200: #e4e4e7;
+  --bkt-zinc-300: #d4d4d8;
+  --bkt-zinc-400: #a1a1aa;
+  --bkt-zinc-500: #71717a;
+  --bkt-zinc-600: #52525b;
+  --bkt-zinc-700: #3f3f46;
+  --bkt-zinc-800: #27272a;
+  --bkt-zinc-900: #18181b;
+  --bkt-zinc-950: #101013;  /* ink — deliberately NOT #000 */
+  --bkt-white: #ffffff;
+
+  /* Legacy aliases (v1 used a slate scale; existing surfaces keep working) */
+  --bkt-slate-50:  var(--bkt-zinc-50);
+  --bkt-slate-100: var(--bkt-zinc-100);
+  --bkt-slate-200: var(--bkt-zinc-200);
+  --bkt-slate-300: var(--bkt-zinc-300);
+  --bkt-slate-400: var(--bkt-zinc-400);
+  --bkt-slate-500: var(--bkt-zinc-500);
+  --bkt-slate-600: var(--bkt-zinc-600);
+  --bkt-slate-700: var(--bkt-zinc-700);
+  --bkt-slate-800: var(--bkt-zinc-800);
+  --bkt-slate-900: var(--bkt-zinc-900);
+
+  /* ---- Silver / Platinum (logo metallics — sparing, decorative only) ---- */
+  --bkt-silver-50:  #f4f5f7;
+  --bkt-silver-100: #e6e8ec;
+  --bkt-silver-200: #d4d7dd;
+  --bkt-silver-300: #b7bcc6;
+  --bkt-silver-400: #969cab;
+  --bkt-silver-500: #6f7686;
+  --bkt-platinum:   #c9c7ba;
+
+  /* ---- Status / Semantic accents (functional, not decorative) ---- */
+  --bkt-success:      #16a34a;
+  --bkt-success-soft: #e3f6ea;
+  --bkt-success-ink:  #15803d;
+  --bkt-danger:       #e5484d;
+  --bkt-danger-soft:  #fdeaea;
+  --bkt-danger-ink:   #c0383c;
+  --bkt-warning:      #d97706;
+  --bkt-warning-soft: #fdf0dc;
+  --bkt-warning-ink:  #b45309;
+  --bkt-info:         #2563eb;
+  --bkt-info-soft:    #e3edfe;
+
+  /* ---- Match-score tiers ---- */
+  --bkt-score-high: var(--bkt-success);  /* 80+  */
+  --bkt-score-good: var(--bkt-blue-600); /* 65–79 */
+  --bkt-score-mid:  var(--bkt-warning);  /* 50–64 */
+
+  /* ============================================================
+     SEMANTIC ALIASES — light theme
+     ============================================================ */
+  --background:           var(--bkt-zinc-50);
+  --foreground:           var(--bkt-zinc-950);
+  --surface:              var(--bkt-white);
+  --surface-card:         var(--bkt-white);
+  --surface-muted:        var(--bkt-zinc-100);
+  --surface-raised:       var(--bkt-white);
+
+  --card:                 var(--bkt-white);
+  --card-foreground:      var(--bkt-zinc-950);
+  --popover:              var(--bkt-white);
+  --popover-foreground:   var(--bkt-zinc-950);
+
+  --primary:              var(--bkt-blue-600);
+  --primary-hover:        var(--bkt-blue-700);
+  --primary-foreground:   var(--bkt-white);
+
+  --secondary:            var(--bkt-zinc-100);
+  --secondary-foreground: var(--bkt-zinc-800);
+  --muted:                var(--bkt-zinc-100);
+  --muted-foreground:     var(--bkt-zinc-500);
+  --accent:               var(--bkt-blue-50);
+  --accent-foreground:    var(--bkt-blue-700);
+  --destructive:          var(--bkt-danger);
+  --destructive-foreground: var(--bkt-white);
+
+  --border:               var(--bkt-zinc-200);
+  --border-strong:        var(--bkt-zinc-300);
+  --input:                var(--bkt-zinc-200);
+  --ring:                 var(--bkt-blue-600);
+
+  /* Text roles */
+  --text-strong:  var(--bkt-zinc-950);
+  --text-body:    var(--bkt-zinc-700);
+  --text-muted:   var(--bkt-zinc-500);
+  --text-subtle:  var(--bkt-zinc-400);
+  --text-onbrand: var(--bkt-white);
+  --text-link:    var(--bkt-blue-600);
+
+  /* Sidebar (light shell) */
+  --sidebar:                    var(--bkt-white);
+  --sidebar-foreground:         var(--bkt-zinc-600);
+  --sidebar-primary:            var(--bkt-blue-600);
+  --sidebar-primary-foreground: var(--bkt-white);
+  --sidebar-accent:             var(--bkt-blue-50);
+  --sidebar-accent-foreground:  var(--bkt-blue-700);
+  --sidebar-border:             var(--bkt-zinc-200);
+
+  /* Brand gradients (shield) — logo, splash, auth, dark shells ONLY */
+  --bkt-gradient-shield: linear-gradient(145deg, #2f59be 0%, #1a47a8 42%, #0d2049 100%); /* @kind color */
+  --bkt-gradient-deep:   linear-gradient(160deg, #122d68 0%, #001848 100%); /* @kind color */
+  --bkt-gradient-silver: linear-gradient(135deg, #f4f5f7 0%, #b7bcc6 45%, #6f7686 100%); /* @kind color */
+}
+
+/* ============================================================
+   DARK THEME — zinc shell, same single blue accent
+   Apply via <html data-theme="dark"> or .theme-dark
+   ============================================================ */
+[data-theme="dark"],
+.theme-dark {
+  --background:           #0c0c0e;
+  --foreground:           var(--bkt-zinc-100);
+  --surface:              #131316;
+  --surface-card:         #161619;
+  --surface-muted:        #1b1b1f;
+  --surface-raised:       #1e1e23;
+
+  --card:                 #161619;
+  --card-foreground:      var(--bkt-zinc-100);
+  --popover:              #161619;
+  --popover-foreground:   var(--bkt-zinc-100);
+
+  --primary:              var(--bkt-blue-500);
+  --primary-hover:        var(--bkt-blue-400);
+  --primary-foreground:   var(--bkt-white);
+
+  --secondary:            #1b1b1f;
+  --secondary-foreground: var(--bkt-zinc-200);
+  --muted:                #1b1b1f;
+  --muted-foreground:     var(--bkt-zinc-400);
+  --accent:               #131c33;
+  --accent-foreground:    var(--bkt-blue-300);
+  --destructive:          var(--bkt-danger);
+  --destructive-foreground: var(--bkt-white);
+
+  --border:               #26262b;
+  --border-strong:        #38383f;
+  --input:                #26262b;
+  --ring:                 var(--bkt-blue-400);
+
+  --text-strong:  var(--bkt-white);
+  --text-body:    var(--bkt-zinc-200);
+  --text-muted:   var(--bkt-zinc-400);
+  --text-subtle:  var(--bkt-zinc-500);
+  --text-link:    var(--bkt-blue-300);
+
+  --sidebar:                    #101013;
+  --sidebar-foreground:         var(--bkt-zinc-300);
+  --sidebar-primary:            var(--bkt-blue-500);
+  --sidebar-primary-foreground: var(--bkt-white);
+  --sidebar-accent:             #131c33;
+  --sidebar-accent-foreground:  var(--bkt-blue-200);
+  --sidebar-border:             #1f1f24;
+}
+
+
+/* ==== tokens/typography.css ==== */
+/* ============================================================
+   BKT AI-Apply — Typography Tokens  (v2 · production overhaul)
+   One deterministic family: Geist (display + UI) · Geist Mono.
+   No Inter, no Roboto, no oversized screaming H1s.
+   Brand wordmark serif lives only inside the logo artwork.
+   ============================================================ */
+
+:root {
+  /* ---- Font families ---- */
+  --font-display: 'Geist', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-body:    'Geist', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:    'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-sans:    var(--font-body);
+
+  /* ---- Type scale (rem, 16px base) — calm, dense, SaaS-grade ---- */
+  --text-2xs:  0.6875rem;  /* 11px — micro labels, badges */
+  --text-xs:   0.75rem;    /* 12px — meta, captions */
+  --text-sm:   0.8125rem;  /* 13px — secondary UI text */
+  --text-base: 0.875rem;   /* 14px — default app body */
+  --text-md:   1rem;       /* 16px — comfortable body */
+  --text-lg:   1.125rem;   /* 18px — card titles */
+  --text-xl:   1.375rem;   /* 22px — section headers */
+  --text-2xl:  1.625rem;   /* 26px — page titles (restrained, never screaming) */
+  --text-3xl:  2rem;       /* 32px — stat figures */
+  --text-4xl:  2.5rem;     /* 40px — marketing display */
+  --text-5xl:  3.25rem;    /* 52px — large hero (marketing only) */
+
+  /* ---- Weights ---- */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ---- Line heights ---- */
+  --leading-tight:   1.15;
+  --leading-snug:    1.3;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* ---- Letter spacing ---- */
+  --tracking-tighter: -0.025em;  /* large display headings */
+  --tracking-tight:   -0.01em;   /* titles */
+  --tracking-normal:  0;
+  --tracking-wide:    0.04em;
+  --tracking-widest:  0.12em;    /* uppercase eyebrows / nav-group labels */
+
+  /* ---- Semantic text presets ---- */
+  --display-font:   var(--font-display);
+  --display-weight: var(--weight-semibold);
+  --display-tracking: var(--tracking-tighter);
+
+  --heading-font:   var(--font-display);
+  --heading-weight: var(--weight-semibold);
+
+  --body-font:   var(--font-body);
+  --body-weight: var(--weight-regular);
+
+  --eyebrow-transform: uppercase; /* @kind other */
+  --eyebrow-tracking:  var(--tracking-widest);
+  --eyebrow-weight:    var(--weight-semibold);
+  --eyebrow-size:      var(--text-2xs);
+
+  /* Tabular numerals for scores/stats — apply via font-feature */
+  --numeric-features: 'tnum' 1, 'cv01' 1; /* @kind other */
+}
+
+
+/* ==== tokens/spacing.css ==== */
+/* ============================================================
+   BKT AI-Apply — Spacing, Radius, Shadow, Motion Tokens  (v2)
+   Motion contract (emil-design-eng):
+   · custom easing curves only (never ease-in)
+   · all UI animations ≤ 300ms
+   · entrances start at opacity 0 + scale ≥ 0.95 / ≤ 8px translate
+   · press feedback: scale(0.97)
+   · hardware-accelerated props only (transform, opacity, filter)
+   ============================================================ */
+
+:root {
+  /* ---- Spacing scale (4px base grid) ---- */
+  --space-0:  0;
+  --space-1:  0.25rem;   /* 4  */
+  --space-2:  0.5rem;    /* 8  */
+  --space-3:  0.75rem;   /* 12 */
+  --space-4:  1rem;      /* 16 */
+  --space-5:  1.25rem;   /* 20 */
+  --space-6:  1.5rem;    /* 24 */
+  --space-8:  2rem;      /* 32 */
+  --space-10: 2.5rem;    /* 40 */
+  --space-12: 3rem;      /* 48 */
+  --space-16: 4rem;      /* 64 */
+  --space-20: 5rem;      /* 80 */
+
+  /* ---- Radius ---- */
+  --radius: 0.625rem;                       /* 10px base (app default) */
+  --radius-sm:  calc(var(--radius) - 4px);  /* 6  — chips, small inputs */
+  --radius-md:  calc(var(--radius) - 2px);  /* 8  — buttons, inputs */
+  --radius-lg:  var(--radius);              /* 10 — cards */
+  --radius-xl:  calc(var(--radius) + 6px);  /* 16 — panels, modals */
+  --radius-2xl: calc(var(--radius) + 14px); /* 24 — hero / review cards */
+  --radius-pill: 999px;                     /* badges, segmented toggles */
+
+  /* ---- Shadows (soft, neutral-ink tint — premium SaaS depth) ---- */
+  --shadow-xs:   0 1px 2px rgba(16, 16, 19, 0.05);
+  --shadow-sm:   0 1px 3px rgba(16, 16, 19, 0.06), 0 1px 2px rgba(16, 16, 19, 0.04);
+  --shadow-md:   0 4px 12px rgba(16, 16, 19, 0.07), 0 2px 4px rgba(16, 16, 19, 0.04);
+  --shadow-lg:   0 12px 28px rgba(16, 16, 19, 0.09), 0 4px 10px rgba(16, 16, 19, 0.05);
+  --shadow-xl:   0 24px 56px rgba(16, 16, 19, 0.13), 0 8px 20px rgba(16, 16, 19, 0.06);
+  --shadow-brand: 0 6px 16px rgba(26, 71, 168, 0.26);  /* primary CTA bloom */
+  --shadow-brand-hover: 0 10px 24px rgba(26, 71, 168, 0.34); /* hover shadow bloom */
+  --shadow-focus: 0 0 0 3px rgba(26, 71, 168, 0.20);   /* focus ring halo */
+
+  /* ---- Borders ---- */
+  --border-width: 1px;
+  --border-width-strong: 1.5px;
+
+  /* ---- Motion · easing (custom curves only — never ease-in) ----
+     standard: default decel · out: entrances · exit: exits only (≤150ms)
+     spring: press release · emphasis: slight overshoot */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* @kind other */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1); /* @kind other */
+  --ease-exit:     cubic-bezier(0.4, 0, 1, 1); /* @kind other */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* @kind other */
+  --ease-emphasis: cubic-bezier(0.2, 0, 0, 1.2); /* @kind other */
+
+  /* ---- Motion · duration (UI animations capped at 300ms) ----
+     fast: hover color/press · base: most transitions
+     medium: panels/crossfades · slow: page-level enter (cap) */
+  --dur-fast:   120ms; /* @kind other */
+  --dur-base:   180ms; /* @kind other */
+  --dur-medium: 240ms; /* @kind other */
+  --dur-slow:   300ms; /* @kind other */
+
+  /* ---- Motion · choreography ----
+     stagger-step: delay between staggered children
+     enter-distance/scale: entrance start offsets (never below 0.95)
+     press-scale: :active tactile feedback · blur-mask: crossfade blur */
+  --stagger-step: 40ms; /* @kind other */
+  --enter-distance: 8px; /* @kind spacing */
+  --enter-scale: 0.97; /* @kind other */
+  --press-scale: 0.97; /* @kind other */
+  --blur-mask: 6px; /* @kind other */
+
+  /* ---- Layout ---- */
+  --sidebar-width: 224px;
+  --chat-width: 320px;
+  --content-max: 1240px;
+}
+
+
+/* ==== tokens/base.css ==== */
+/* ============================================================
+   BKT AI-Apply — Base element styling + motion utilities (v2)
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-body);
+  background-color: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  color: var(--text-strong);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  margin: 0;
+}
+
+p { margin: 0; }
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+a:hover { color: var(--primary-hover); }
+
+code, kbd, pre, samp { font-family: var(--font-mono); }
+
+::selection {
+  background: var(--bkt-blue-200);
+  color: var(--bkt-zinc-950);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+/* ---- Eyebrow / nav-group label ---- */
+.bkt-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--eyebrow-size);
+  font-weight: var(--eyebrow-weight);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+/* ---- Display heading helper ---- */
+.bkt-display {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tighter);
+  line-height: var(--leading-tight);
+  color: var(--text-strong);
+}
+
+/* ---- Tabular numerals (scores, stats, credits) ---- */
+.bkt-num { font-feature-settings: var(--numeric-features); }
+
+/* ---- Scrollbar (subtle) ---- */
+.bkt-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.bkt-scroll::-webkit-scrollbar-thumb {
+  background: var(--bkt-zinc-300);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+.bkt-scroll::-webkit-scrollbar-thumb:hover { background: var(--bkt-zinc-400); background-clip: content-box; }
+.bkt-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   MOTION UTILITIES — emil-design-eng contract
+   GPU-accelerated props only (transform / opacity / filter).
+   ============================================================ */
+
+/* ---- Tactile press: every clickable gets scale(0.97) on :active ---- */
+.bkt-press {
+  transition: transform var(--dur-fast) var(--ease-spring),
+              box-shadow var(--dur-fast) var(--ease-standard),
+              background var(--dur-fast) var(--ease-standard);
+  will-change: transform;
+}
+.bkt-press:active { transform: scale(var(--press-scale)); }
+
+/* ---- Entrance: fade-up (opacity 0 → 1, 8px rise, never scale(0)) ---- */
+@keyframes bkt-enter {
+  from { opacity: 0; transform: translateY(var(--enter-distance)) scale(var(--enter-scale)); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.bkt-enter { animation: bkt-enter var(--dur-medium) var(--ease-out) both; }
+
+/* ---- Blur-mask crossfade entrance (page/screen-level) ---- */
+@keyframes bkt-blur-in {
+  from { opacity: 0; transform: translateY(var(--enter-distance)); filter: blur(var(--blur-mask)); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.bkt-blur-in { animation: bkt-blur-in var(--dur-slow) var(--ease-out) both; }
+
+/* ---- Staggered children: subtle cascade, capped at 8 items ---- */
+.bkt-stagger > * { animation: bkt-enter var(--dur-medium) var(--ease-out) both; }
+.bkt-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.bkt-stagger > *:nth-child(2) { animation-delay: calc(var(--stagger-step) * 1); }
+.bkt-stagger > *:nth-child(3) { animation-delay: calc(var(--stagger-step) * 2); }
+.bkt-stagger > *:nth-child(4) { animation-delay: calc(var(--stagger-step) * 3); }
+.bkt-stagger > *:nth-child(5) { animation-delay: calc(var(--stagger-step) * 4); }
+.bkt-stagger > *:nth-child(6) { animation-delay: calc(var(--stagger-step) * 5); }
+.bkt-stagger > *:nth-child(7) { animation-delay: calc(var(--stagger-step) * 6); }
+.bkt-stagger > *:nth-child(n+8) { animation-delay: calc(var(--stagger-step) * 7); }
+
+/* ---- Row-level stagger for tables/lists (faster, tighter) ---- */
+.bkt-stagger-rows > * { animation: bkt-enter var(--dur-base) var(--ease-out) both; }
+.bkt-stagger-rows > *:nth-child(1)  { animation-delay: 0ms; }
+.bkt-stagger-rows > *:nth-child(2)  { animation-delay: 24ms; }
+.bkt-stagger-rows > *:nth-child(3)  { animation-delay: 48ms; }
+.bkt-stagger-rows > *:nth-child(4)  { animation-delay: 72ms; }
+.bkt-stagger-rows > *:nth-child(5)  { animation-delay: 96ms; }
+.bkt-stagger-rows > *:nth-child(6)  { animation-delay: 120ms; }
+.bkt-stagger-rows > *:nth-child(7)  { animation-delay: 144ms; }
+.bkt-stagger-rows > *:nth-child(8)  { animation-delay: 168ms; }
+.bkt-stagger-rows > *:nth-child(n+9) { animation-delay: 190ms; }
+
+/* ---- Hover lift for cards (shadow bloom + 1px raise) ---- */
+.bkt-lift {
+  transition: transform var(--dur-base) var(--ease-standard),
+              box-shadow var(--dur-base) var(--ease-standard);
+  will-change: transform;
+}
+.bkt-lift:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+/* ---- Keyframes used by components ---- */
+@keyframes bkt-spin { to { transform: rotate(360deg); } }
+@keyframes bkt-ping {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes bkt-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bkt-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ---- Reduced motion: collapse to instant, keep end states ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

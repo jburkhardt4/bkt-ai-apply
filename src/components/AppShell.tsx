@@ -1,57 +1,47 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bot, Menu } from 'lucide-react'
-import { AppSidebar } from './AppSidebar'
-import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+// BKT AI-Apply — application shell, redesigned to the BKT design system
+// (ui_kits/ai-apply). Left: design-system sidebar (Auto Apply / Documents /
+// Interview / Platform groups + user footer). Main: the routed page.
+// The AI chat agent from the previous shell is preserved as a right-hand
+// slide-over, launched from the sidebar's "AI Assistant" item.
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { AiAssistantPanel } from '@/features/ai-agent/components/AiAssistantPanel'
 import { SelectedApplicationContext } from '@/contexts/selected-application-context'
+import { BktToastProvider } from '@/components/bkt/toast'
+import { Icon } from '@/components/bkt/Icon'
+import { BktButton } from '@/components/bkt/BktButton'
+import { AutoApplySidebar } from '@/features/auto-apply/components/AutoApplySidebar'
+import { navigate, useNavKey } from '@/features/auto-apply/router'
+import { fetchInbox, fetchJobMatches } from '@/features/auto-apply/services/autoApplyService'
+import type { NavKey } from '@/features/auto-apply/types'
 
 interface AppShellProps {
   children: ReactNode
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { loading, user } = useAuth()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [chatMobileOpen, setChatMobileOpen] = useState(false)
+  const { loading, user, signOut } = useAuth()
+  const navKey = useNavKey()
+  const [assistantOpen, setAssistantOpen] = useState(false)
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
-  const [sidebarWidth, setSidebarWidth] = useState<number>(320)
-  const [isDraggingState, setIsDraggingState] = useState<boolean>(false)
-  const startX = useRef<number>(0)
-  const startWidth = useRef<number>(320)
+  const [badges, setBadges] = useState<Partial<Record<NavKey, number>>>({})
 
-  function handleResizeMouseDown(e: React.MouseEvent) {
-    // Prevent the initial focus/selection trigger and suppress page-wide
-    // text selection for the duration of the drag.
-    e.preventDefault()
-    document.body.style.userSelect = 'none'
-    setIsDraggingState(true)
-    startX.current = e.clientX
-    startWidth.current = sidebarWidth
-  }
-
+  // Lightweight nav badges: review-queue size + unread inbox count.
   useEffect(() => {
-    if (!isDraggingState) return
-    function handleMouseMove(e: MouseEvent) {
-      const newWidth = startWidth.current - (e.clientX - startX.current)
-      const clamped = Math.min(Math.max(newWidth, 320), window.innerWidth * 0.4)
-      setSidebarWidth(clamped)
-    }
-    function handleMouseUp() {
-      document.body.style.userSelect = ''
-      setIsDraggingState(false)
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
+    let alive = true
+    const userId = user?.id ?? null
+    Promise.all([fetchJobMatches(userId), fetchInbox(userId)]).then(([jm, ib]) => {
+      if (!alive) return
+      setBadges({
+        dashboard: jm.jobs.filter((j) => j.status === 'Review').length,
+        inbox: ib.inbox.emails.filter((e) => e.unread).length,
+      })
+    })
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-      // Revert in case the component unmounts mid-drag so the body style
-      // is never left stuck in a non-selectable state.
-      document.body.style.userSelect = ''
+      alive = false
     }
-  }, [isDraggingState])
+  }, [user?.id])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,81 +51,86 @@ export function AppShell({ children }: AppShellProps) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-svh items-center justify-center">
-        <span className="animate-pulse text-sm text-muted-foreground">Loading…</span>
+      <div style={{ display: 'flex', minHeight: '100svh', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ font: '400 var(--text-sm)/1 var(--font-body)', color: 'var(--text-muted)', animation: 'bkt-fade-up 1s var(--ease-out) infinite alternate' }}>
+          Loading…
+        </span>
       </div>
     )
   }
 
+  const userName = (user.user_metadata?.full_name as string | undefined) ?? user.email ?? 'Account'
+
+  const handleSignOut = async () => {
+    await signOut()
+    window.location.assign('/login')
+  }
+
   return (
     <SelectedApplicationContext.Provider value={{ selectedApplicationId, setSelectedApplicationId }}>
-      <div className="flex h-screen overflow-hidden bg-background">
-        {/* Desktop left nav sidebar */}
-        <aside className="hidden w-56 shrink-0 border-r border-sidebar-border md:flex md:flex-col">
-          <AppSidebar className="flex-1" />
-        </aside>
-
-        {/* Mobile left nav via Sheet */}
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-56 p-0">
-            <AppSidebar onNavigate={() => setMobileOpen(false)} />
-          </SheetContent>
-        </Sheet>
-
-        {/* Main content */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Mobile topbar */}
-          <header className="flex items-center gap-3 border-b border-border px-4 py-3 md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <span className="flex-1 text-sm font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
-              BKT AI-Apply
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setChatMobileOpen(true)}
-              aria-label="Open AI chat"
-            >
-              <Bot className="h-5 w-5" />
-            </Button>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-6 md:p-8">
+      <BktToastProvider>
+        <div style={{ display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', background: 'var(--background)' }}>
+          <AutoApplySidebar
+            active={navKey}
+            onNavigate={navigate}
+            userName={userName}
+            userEmail={user.email}
+            badges={badges}
+            onSignOut={() => void handleSignOut()}
+            onOpenAssistant={() => setAssistantOpen(true)}
+          />
+          <main className="bkt-scroll" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
             {children}
           </main>
         </div>
 
-        {/* Right chat sidebar — desktop only */}
-        <aside
-          className="hidden shrink-0 flex-row border-l border-border md:flex overflow-hidden"
-          style={{ width: sidebarWidth }}
-        >
-          <div
-            data-testid="chat-resize-handle"
-            className={`w-1 h-full cursor-col-resize transition-colors hover:bg-border${isDraggingState ? ' bg-accent' : ''}`}
-            onMouseDown={handleResizeMouseDown}
-          />
-          <div className="flex flex-1 flex-col overflow-hidden p-4">
-            <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
+        {/* AI assistant slide-over (platform chat agent) */}
+        {assistantOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', justifyContent: 'flex-end' }}>
+            <div
+              onClick={() => setAssistantOpen(false)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0, 24, 72, 0.18)', animation: 'bkt-fade-up 0.2s var(--ease-out) both' }}
+            ></div>
+            <section
+              style={{
+                position: 'relative',
+                width: 'min(420px, 92vw)',
+                height: '100%',
+                background: 'var(--surface)',
+                boxShadow: 'var(--shadow-xl)',
+                display: 'flex',
+                flexDirection: 'column',
+                animation: 'bkt-jd-slide-in var(--dur-medium) var(--ease-out) both',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32,
+                    background: 'var(--bkt-gradient-shield, var(--primary))',
+                    borderRadius: 'var(--radius-lg)',
+                    color: '#fff',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon name="bot" size={16} />
+                </span>
+                <span style={{ flex: 1, font: '700 var(--text-sm)/1.2 var(--font-display)', color: 'var(--text-strong)' }}>AI Assistant</span>
+                <BktButton variant="ghost" size="icon" aria-label="Close assistant" onClick={() => setAssistantOpen(false)}>
+                  <Icon name="x" size={16} />
+                </BktButton>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 16 }}>
+                <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
+              </div>
+            </section>
           </div>
-        </aside>
-      </div>
-
-      {/* Mobile chat via Sheet — triggered by topbar Bot button */}
-      <Sheet open={chatMobileOpen} onOpenChange={setChatMobileOpen}>
-        <SheetContent side="right" className="w-80 p-0">
-          <div className="flex h-full flex-col overflow-hidden p-4">
-            <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
-          </div>
-        </SheetContent>
-      </Sheet>
+        )}
+      </BktToastProvider>
     </SelectedApplicationContext.Provider>
   )
 }

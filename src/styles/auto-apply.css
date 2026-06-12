@@ -1,0 +1,24 @@
+/* BKT AI-Apply — app-level animations for the redesigned surface
+   (ported from the UI kit's index.html <style> block). */
+
+@keyframes bkt-jd-slide-in {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bkt-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

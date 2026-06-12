@@ -1,7 +1,7 @@
 # Component Patterns
 
 **status:** LIVING DOCUMENT — append patterns; do not delete
-**last_updated:** 2026-06-09
+**last_updated:** 2026-06-12
 
 Conventions for building UI in BKT AI-Apply. These encode the source-directory
 contract in CLAUDE.md (`components/` presentational only; data lives in
@@ -70,3 +70,54 @@ Tailwind v4 with the OKLCH semantic tokens in `src/index.css`
 (`bg-background`, `text-muted-foreground`, `bg-primary`, …). No arbitrary color
 values without an ADR. Use `cn()` for conditional classes and `lucide-react`
 for icons. Toasts via `sonner` (`toast.loading` → replace by `id`).
+
+---
+
+## BKT design-system surface (redesign, 2026-06)
+
+The redesigned Auto-Apply surface (`src/features/auto-apply/` +
+`src/components/bkt/`) is a 1:1 port of the `ui_kits/ai-apply` design system:
+
+- **Primitives** live in `src/components/bkt/` (BktButton, BktCard, JobRow,
+  MatchScore, toast…). Presentational only — same contract as
+  `src/components/ui/`.
+- **Tokens** come from `src/styles/bkt.css` (navy/zinc palette, Geist, radii,
+  shadows, motion); `src/index.css` maps them into the Tailwind `@theme`, so
+  legacy Tailwind pages inherit the rebrand without edits.
+- The ported screens style via **inline `style` objects referencing the CSS
+  custom properties** (`var(--text-sm)`, `var(--radius-pill)`) — not Tailwind
+  utilities — to stay diffable against the upstream kit. New non-ported UI
+  should keep using Tailwind tokens.
+- Toasts on this surface use `useBktToast()` from
+  `src/components/bkt/toast-context.ts` (design-system capsules); legacy pages
+  keep `sonner`.
+
+---
+
+## Non-component exports live in sibling files
+
+`react-refresh/only-export-components` (error level) forbids exporting
+constants, helpers, or hooks from a file that exports a component. Split them
+into a sibling non-component module, mirroring `auth-context.ts` next to
+`AuthContext.tsx`: e.g. `bkt/format.ts` (companyLogo/formatStamp),
+`bkt/toast-context.ts` (context + hook), `auto-apply/reviewModes.ts`
+(REVIEW_MODES). Type-only re-exports from the component file are fine.
+
+---
+
+## Resetting state without effects
+
+`react-hooks/set-state-in-effect` (error level) bans synchronous `setState` in
+effect bodies. Approved alternatives, all used in `features/auto-apply/`:
+
+- **Reset-on-open**: mount the stateful content only while open and initialize
+  in `useState` (`BudgetModal` → `BudgetModalContent`, `FilterPanel`).
+- **Adjust-state-during-render**: compare against a `prev` state value and set
+  during render, guarded so it can't loop (`JDSidebar` tab reset,
+  `InboxScreen` re-seed). The linter accepts this guarded form.
+- **DOM measurement**: mutate the target element's style via a ref inside
+  `useLayoutEffect` instead of storing measurements in state (`ModeTabs`
+  underline).
+- **Async loaders**: start `loading` true in `useState`; lower it in promise
+  callbacks; re-raise it in the action callback that triggers the refetch
+  (`useAsyncData.reload`), never in the effect body.

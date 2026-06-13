@@ -2,7 +2,7 @@
 
 **task_id:** BKT-AIAPPLY-PHASE1-REQS-LOCK-002
 **status:** LIVING DOCUMENT — append only; never delete rules; supersede with new rule ID
-**last_updated:** 2026-06-09
+**last_updated:** 2026-06-13
 
 ---
 
@@ -175,3 +175,16 @@
 | BR-134 | Submission is API-first (`application_method` `api`/`ats` → ATS endpoint adapters); browser-channel postings submit via Browserbase + Stagehand. BR-032/033/034 remain binding — postings that cannot be submitted within those rules fail to manual with a recorded reason | ADR-006, BR-032, BR-033, BR-034 |
 | BR-135 | An application transitions `discovery → applied` only on confirmed successful submission (or explicit JB manual action); queueing alone never changes stage | ADR-006, BR-004 |
 | BR-136 | Each submission decrements `user_settings.credits` atomically; zero credits or exhausted monthly budget halts assist/auto queueing and submission until replenished | ADR-006 |
+
+---
+
+## Server-Side AI Scoring & Generation (ADR-007 / ADR-008)
+
+| ID | Rule | Source |
+| --- | --- | --- |
+| BR-140 | Real match scoring runs through the thin `score-job-fit` Edge Function (routed `match_scoring` → Claude Opus 4.6 / anthropic). The function performs no DB writes and uses no service-role key; cost-gating, `ai_scores` persistence, and `ai_model_usage` logging stay client-side in `aiScoringService` | ADR-007, BR-103, BR-122 |
+| BR-141 | When `match_scoring` is blocked by the cost cap (BR-052) or the `score-job-fit` call errors, the deterministic heuristic (`pipelineService.scoreJobFit`) is persisted as the fallback, flagged in `ai_scores.reasoning_trace` with `source = 'heuristic_fallback'` and a `reason` (`cost_cap` / `edge_function_error`), so the dashboard always receives a score | ADR-007, BR-052, BR-024 |
+| BR-142 | The persisted recommendation is always derived from `overall_score` via the BR-020/021/022 thresholds (`getScoreLabel` / `toDbRecommendation`); the LLM's own recommendation is advisory only and is never persisted as-is — no threshold literals live outside `aiScoringService` | ADR-007, BR-020, BR-021, BR-022, AI-RULE-001 |
+| BR-143 | Document generation runs through the thin `generate-document` Edge Function (routed `cover_letter_generation` → anthropic Opus, `resume_rewriting` → openai GPT-5). The function performs no DB writes and uses no service-role key; cost-gating, persistence, and usage logging stay client-side in `documentGenerationService`. On any Edge error the deterministic template builder is the fallback, flagged `metadata.source = 'template_fallback'` | ADR-008, BR-122, BR-052 |
+| BR-144 | Generated documents are persisted to the `documents` table only when persistence is explicitly requested (the DocBuilder align path), reusing `documentStorageService.createDocumentVersion` (Storage + versioned row, content_hash, RLS, BR-070/071); the submission-packet flow persists and links separately, so generation never double-writes | ADR-008, BR-070, BR-071, BR-007 |
+| BR-145 | The auto-apply dashboard "Applications Submitted" stat is derived from `applications` DB truth — an application counts as submitted when `submitted_at` is set or its stage is a post-`discovery` happy-path stage (applied … hired) — never from client/localStorage state; demo mode shows a stable seed figure | BR-135, BR-013 |

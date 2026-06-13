@@ -6,6 +6,7 @@ import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import type { DocsData, JobMatch, SearchJob } from '../types'
 import type { DocType } from './DocPaper'
+import { askDocWriter } from '../services/docWriterService'
 
 const DA_CSS = `
 @keyframes da-dot { 0%, 60%, 100% { opacity: 0.25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
@@ -84,12 +85,14 @@ function DAMessage({ m, onPatch }: { m: Message; onPatch: (target: string | unde
 function DAChat({
   type,
   ai,
+  userId,
   lastJob,
   onPatch,
   compact = false,
 }: {
   type: DocType
   ai: DocsData['ai']
+  userId: string | null
   lastJob: AiTargetJob
   onPatch: (target: string | undefined, text: string) => void
   compact?: boolean
@@ -105,15 +108,19 @@ function DAChat({
   ])
   const [typing, setTyping] = useState(false)
   const [draft, setDraft] = useState('')
+  const convoRef = useRef<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const chips = ai.suggestions[type]
+  // Resume edits flow into the summary; letter edits into the first body para.
+  const patchTarget = type === 'resume' ? 'summary' : 'body0'
 
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [msgs, typing])
 
-  const reply = (key: string) => {
+  // Demo preview (no auth): pre-baked reply lookup. Live: real ai-chat turn.
+  const demoReply = (key: string) => {
     const r = ai.replies[type][key]
     setTyping(true)
     setTimeout(() => {
@@ -129,11 +136,46 @@ function DAChat({
       ])
     }, 950)
   }
+
+  const liveReply = async (text: string) => {
+    setTyping(true)
+    try {
+      const result = await askDocWriter({
+        userId: userId as string,
+        type,
+        lastJob,
+        conversationId: convoRef.current,
+        message: text,
+      })
+      convoRef.current = result.conversationId
+      setMsgs((ms) => [
+        ...ms,
+        {
+          who: 'ai',
+          text: result.text,
+          // Offer the reply as an applyable patch unless the model deferred.
+          patch: result.status === 'answered' ? result.text : undefined,
+          patchTarget: result.status === 'answered' ? patchTarget : undefined,
+          patchLabel: result.status === 'answered' ? 'Apply to document' : undefined,
+        },
+      ])
+    } catch (e: unknown) {
+      setMsgs((ms) => [
+        ...ms,
+        { who: 'ai', text: e instanceof Error ? `Sorry \u2014 ${e.message}` : 'Sorry, the writer is unavailable right now.' },
+      ])
+    } finally {
+      setTyping(false)
+    }
+  }
+
   const send = (text: string) => {
-    if (!text.trim() || typing) return
-    setMsgs((ms) => [...ms, { who: 'me', text: text.trim() }])
+    const trimmed = text.trim()
+    if (!trimmed || typing) return
+    setMsgs((ms) => [...ms, { who: 'me', text: trimmed }])
     setDraft('')
-    reply(text.trim())
+    if (userId) void liveReply(trimmed)
+    else demoReply(trimmed)
   }
 
   return (
@@ -249,12 +291,14 @@ export function DocAssistant({
   type,
   variant,
   ai,
+  userId,
   lastJob,
   onPatch,
 }: {
   type: DocType
   variant: 'rail' | 'floating'
   ai: DocsData['ai']
+  userId: string | null
   lastJob: AiTargetJob
   onPatch: (target: string | undefined, text: string) => void
 }) {
@@ -265,7 +309,7 @@ export function DocAssistant({
       <aside style={{ width: 332, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: '1px solid var(--border)', background: 'var(--surface)' }}>
         <style>{DA_CSS}</style>
         <DAHeader type={type} />
-        <DAChat type={type} ai={ai} lastJob={lastJob} onPatch={onPatch} />
+        <DAChat type={type} ai={ai} userId={userId} lastJob={lastJob} onPatch={onPatch} />
       </aside>
     )
   }
@@ -295,7 +339,7 @@ export function DocAssistant({
           }}
         >
           <DAHeader type={type} onClose={() => setOpen(false)} />
-          <DAChat type={type} ai={ai} lastJob={lastJob} onPatch={onPatch} compact />
+          <DAChat type={type} ai={ai} userId={userId} lastJob={lastJob} onPatch={onPatch} compact />
         </div>
       )}
       <button

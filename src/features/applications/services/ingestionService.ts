@@ -1,7 +1,7 @@
 import { getSupabaseClient } from '../../../lib/supabase'
 import { masterProfile } from '../data/masterProfile'
 import { parseJobDescription, scoreJobFit } from './pipelineService'
-import { persistAiScore, type PersistAiScoreInput } from './aiScoringService'
+import { scoreJobFitWithLlm } from './aiScoringService'
 import {
   dedupeBySourceUrl,
   parseIngestionCsv,
@@ -232,24 +232,26 @@ export async function runScoreForJob(params: {
 
   const textToScore = job.description?.trim() ? job.description : job.title
   const parsed = parseJobDescription(textToScore, masterProfile)
-  const match = scoreJobFit(parsed, masterProfile)
+  // Deterministic heuristic — kept as the explicit cost-cap / Edge-error
+  // fallback for the LLM scoring path (never removed).
+  const heuristicMatch = scoreJobFit(parsed, masterProfile)
 
-  const scoreInput: PersistAiScoreInput = {
+  // Prefer the routed LLM scorer (BR-103: match_scoring → score-job-fit Edge
+  // Function); it persists ai_scores via the same persistAiScore path and falls
+  // back to the heuristic above on cost cap or Edge error.
+  const persisted = await scoreJobFitWithLlm({
     userId: params.userId,
     jobId: params.jobId,
-    match,
-    reasoningTrace: buildReasoningTrace(job),
-    tokensIn: 0,
-    tokensOut: 0,
-    estimatedCostUsd: 0,
+    job: { id: job.id, title: job.title, source_url: job.source_url, description: job.description, text: textToScore },
+    profile: masterProfile,
+    heuristicMatch,
+    heuristicReasoningTrace: buildReasoningTrace(job),
     applicationId: params.applicationId,
-  }
-
-  const persisted = await persistAiScore(scoreInput)
+  })
 
   const { error: applicationUpdateError } = await supabase
     .from('applications')
-    .update({ match_score: match.overall })
+    .update({ match_score: persisted.overallScore })
     .eq('user_id', params.userId)
     .eq('job_id', params.jobId)
 
@@ -261,7 +263,7 @@ export async function runScoreForJob(params: {
     status: persisted.status,
     label: toLabelKey(persisted.decision.label),
     recommendation: persisted.decision.recommendation,
-    overallScore: match.overall,
+    overallScore: persisted.overallScore,
     message:
       persisted.status === 'queued'
         ? persisted.reason

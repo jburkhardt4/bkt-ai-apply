@@ -5,10 +5,13 @@ import {
   matchApplication,
   parseGeminiClassification,
   resolveAutoAction,
+  resolveLabelClassification,
   senderDomain,
   shouldStoreEmail,
+  GMAIL_LABEL_CONFIDENCE,
   type ApplicationCandidate,
   type EmailFacts,
+  type LabelMapEntry,
 } from './logic.ts'
 
 const facts = (overrides: Partial<EmailFacts> = {}): EmailFacts => ({
@@ -126,6 +129,40 @@ describe('shouldStoreEmail', () => {
   it('keeps every classified email', () => {
     const classified = { classification: 'rejection', confidence: 0.4, source: 'gemini' } as const
     expect(shouldStoreEmail(classified, null)).toBe(true)
+  })
+
+  it('keeps unknown unmatched mail when JB labeled it in Gmail (BR-035)', () => {
+    const unknown = { classification: 'unknown', confidence: 0.95, source: 'gmail_label' } as const
+    expect(shouldStoreEmail(unknown, null, true)).toBe(true)
+  })
+})
+
+describe('resolveLabelClassification (BR-037)', () => {
+  const map: LabelMapEntry[] = [
+    { gmailLabel: 'Interview Invite', classification: 'interview_invite', displayLabel: 'interview-inv' },
+    { gmailLabel: 'Rejected', classification: 'rejection', displayLabel: 'rejected' },
+    { gmailLabel: 'OTP', classification: 'unknown', displayLabel: 'otp' },
+  ]
+
+  it('matches case-insensitively and carries the display label', () => {
+    const result = resolveLabelClassification(['INBOX', 'interview invite'], map)
+    expect(result?.decision).toEqual({
+      classification: 'interview_invite',
+      confidence: GMAIL_LABEL_CONFIDENCE,
+      source: 'gmail_label',
+    })
+    expect(result?.displayLabel).toBe('interview-inv')
+  })
+
+  it('prefers the most consequential classification when several labels match', () => {
+    const result = resolveLabelClassification(['Interview Invite', 'Rejected'], map)
+    expect(result?.decision.classification).toBe('rejection')
+  })
+
+  it('returns null when no label is mapped', () => {
+    expect(resolveLabelClassification(['INBOX', 'Newsletters'], map)).toBeNull()
+    expect(resolveLabelClassification([], map)).toBeNull()
+    expect(resolveLabelClassification(['Rejected'], [])).toBeNull()
   })
 })
 

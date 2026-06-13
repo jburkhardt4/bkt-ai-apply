@@ -6,6 +6,7 @@ import { BktAvatar } from '@/components/bkt/BktAvatar'
 import { BktButton } from '@/components/bkt/BktButton'
 import { companyLogo, formatStamp } from '@/components/bkt/format'
 import type { ToastFn } from '@/components/bkt/toast'
+import { ComposeModal, type ComposeTarget } from '../components/ComposeModal'
 import type { EmailMessage, InboxData, InboxLabel } from '../types'
 
 function labelMeta(labels: InboxLabel[], id: string): InboxLabel {
@@ -187,9 +188,11 @@ export interface InboxScreenProps {
   onToast: ToastFn
   dateOrder?: 'dmy' | 'mdy'
   onRefresh?: () => void
+  /** True when rows come from the live emails table — enables real send. */
+  live?: boolean
 }
 
-export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh }: InboxScreenProps) {
+export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live = false }: InboxScreenProps) {
   const [folder, setFolder] = useState('inbox')
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [labelFilter, setLabelFilter] = useState('all')
@@ -198,6 +201,7 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh }: Inb
   const [selectedId, setSelectedId] = useState<EmailMessage['id'] | null>(data.emails[0]?.id ?? null)
   const [deletedIds, setDeletedIds] = useState<EmailMessage['id'][]>([])
   const [spinning, setSpinning] = useState(false)
+  const [composeTarget, setComposeTarget] = useState<ComposeTarget | null>(null)
 
   // Re-seed local state when a fresh dataset arrives (live reload) —
   // adjust-state-during-render keyed on the incoming dataset identity.
@@ -485,14 +489,27 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh }: Inb
                   >
                     Not this time
                   </BktButton>
-                  <BktButton variant="outline" size="sm" iconLeft={<Icon name="reply" size={14} />} onClick={() => onToast('Reply drafted', 'reply', 'var(--bkt-blue-300)')}>
+                  <BktButton
+                    variant="outline"
+                    size="sm"
+                    iconLeft={<Icon name="reply" size={14} />}
+                    onClick={() =>
+                      live
+                        ? setComposeTarget({ mode: 'reply', email: selected })
+                        : onToast('Reply drafted (demo)', 'reply', 'var(--bkt-blue-300)')
+                    }
+                  >
                     Reply
                   </BktButton>
                   <BktButton
                     variant="outline"
                     size="sm"
                     iconLeft={<Icon name="forward" size={14} />}
-                    onClick={() => onToast('Forwarding…', 'forward', 'var(--bkt-blue-300)')}
+                    onClick={() =>
+                      live
+                        ? setComposeTarget({ mode: 'forward', email: selected })
+                        : onToast('Forwarding… (demo)', 'forward', 'var(--bkt-blue-300)')
+                    }
                   >
                     Forward
                   </BktButton>
@@ -529,6 +546,8 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh }: Inb
           )}
         </div>
       </div>
+
+      <ComposeModal target={composeTarget} onClose={() => setComposeTarget(null)} onToast={onToast} />
     </div>
   )
 }

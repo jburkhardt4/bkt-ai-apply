@@ -7,20 +7,20 @@ import type { InboxData } from '../types'
 export const INBOX_SEED: InboxData = {
   account: 'john@bktadvisory.com',
   invitations: 10,
-  // Label taxonomy from the live capture, BKT-tinted.
+  // Consolidated label taxonomy (2026-06-13) — 1:1 with JB's renamed Gmail
+  // labels and the gmail_label_map seeds. 'Action Required' absorbs OTP/EEO;
+  // 'Interviewing' absorbs invite/follow-up/feedback; 'Assessment' absorbs
+  // invite/result.
   labels: [
-    { id: 'all',          name: 'All Labels',              icon: 'tag',          color: 'var(--bkt-zinc-500)' },
-    { id: 'app-confirm',  name: 'Application Confirmation', icon: 'circle-check', color: 'var(--bkt-blue-600)' },
-    { id: 'interview-inv',name: 'Interview Invite',         icon: 'calendar',     color: 'var(--bkt-success)' },
-    { id: 'interview-fu', name: 'Interview Follow-up',      icon: 'message-square',color:'var(--bkt-warning)' },
-    { id: 'interview-fb', name: 'Interview Feedback',       icon: 'message-square',color:'var(--bkt-warning)' },
-    { id: 'assess-inv',   name: 'Assessment Invite',        icon: 'clipboard-check',color:'var(--bkt-info)' },
-    { id: 'assess-res',   name: 'Assessment Result',        icon: 'file-text',    color: 'var(--bkt-info)' },
-    { id: 'rejected',     name: 'Not this time',            icon: 'circle-x',     color: 'var(--bkt-zinc-500)' },
-    { id: 'hired',        name: 'Hired',                    icon: 'award',        color: 'var(--bkt-success)' },
-    { id: 'otp',          name: 'OTP Verification',         icon: 'shield-check', color: 'var(--bkt-blue-600)' },
-    { id: 'eeo',          name: 'EEO Form',                 icon: 'file-text',    color: 'var(--bkt-zinc-500)' },
-    { id: 'other',        name: 'Other',                    icon: 'tag',          color: 'var(--bkt-zinc-500)' },
+    { id: 'all',             name: 'All Labels',      icon: 'tag',              color: 'var(--bkt-zinc-500)' },
+    { id: 'app-confirm',     name: 'App Confirmed',   icon: 'circle-check',     color: 'var(--bkt-blue-600)' },
+    { id: 'action-required', name: 'Action Required', icon: 'shield-check',     color: 'var(--bkt-warning)' },
+    { id: 'assessment',      name: 'Assessment',      icon: 'clipboard-check',  color: 'var(--bkt-info)' },
+    { id: 'interviewing',    name: 'Interviewing',    icon: 'calendar',         color: 'var(--bkt-success)' },
+    { id: 'offer',           name: 'Offer',           icon: 'badge-dollar-sign',color: 'var(--bkt-success)' },
+    { id: 'hired',           name: 'Hired',           icon: 'award',            color: 'var(--bkt-success)' },
+    { id: 'rejected',        name: 'Rejected',        icon: 'circle-x',         color: 'var(--bkt-zinc-500)' },
+    { id: 'other',           name: 'Other',           icon: 'tag',              color: 'var(--bkt-zinc-500)' },
   ],
   emails: [
     { id: 1, domain: 'zuora.com', from: 'reply-zuoracareers@zuora.com', sender: 'Zuora Recruiting Team',
@@ -59,7 +59,7 @@ export const INBOX_SEED: InboxData = {
       time: '6/9/2026 8:41:30 PM',
       body: ['Hi John,', "We've received your resume for the Operations role at one of our portfolio companies. Thank you for your interest in Bloom Equity Partners.", "We'll reach out if there's a strong match.", 'Best regards,', 'Bloom Equity Partners'] },
     { id: 8, domain: 'workable.com', from: 'Workable', sender: 'Workable',
-      subject: 'EEO survey for Advisory Services Practice Lead (Remote, United States)', label: 'eeo', priority: 'Low', unread: false,
+      subject: 'EEO survey for Advisory Services Practice Lead (Remote, United States)', label: 'action-required', priority: 'Low', unread: false,
       time: '6/9/2026 7:40:16 PM',
       body: ['Hi John,', 'As part of your application for Advisory Services Practice Lead, we invite you to complete a brief voluntary EEO survey.', 'Your responses are confidential and will not affect your candidacy.', 'Thank you,', 'Workable on behalf of the employer'] },
     { id: 9, domain: 'm-files.com', from: 'M-Files', sender: 'M-Files',
@@ -71,11 +71,11 @@ export const INBOX_SEED: InboxData = {
       time: '6/9/2026 7:27:37 PM',
       body: ['Hi John,', 'Thank you for your recent application for Salesforce Engineer (Req 63106) at Ford. This note confirms your application was submitted successfully.', 'We will review and follow up if there is a fit.', 'Sincerely,', 'Ford Careers Team'] },
     { id: 11, domain: 'calendly.com', from: 'talent@calendly.com', sender: 'Calendly Talent',
-      subject: 'Interview invitation: Senior Business Systems Analyst', label: 'interview-inv', priority: 'High', unread: true,
+      subject: 'Interview invitation: Senior Business Systems Analyst', label: 'interviewing', priority: 'High', unread: true,
       time: '6/9/2026 6:58:02 PM',
       body: ['Hi John,', "Great news — the hiring team would like to invite you to a first-round interview for the Senior Business Systems Analyst role.", 'Please use the link below to pick a 30-minute slot that works for you this week.', 'Looking forward to speaking,', 'The Recruiting Team'] },
     { id: 12, domain: 'hackerrank.com', from: 'assessments@hackerrank.com', sender: 'HackerRank',
-      subject: 'Your assessment for RevOps Admin is ready', label: 'assess-inv', priority: 'High', unread: true,
+      subject: 'Your assessment for RevOps Admin is ready', label: 'assessment', priority: 'High', unread: true,
       time: '6/9/2026 6:30:15 PM',
       body: ['Hi John,', 'As the next step for the RevOps Admin role, please complete a short skills assessment within the next 5 days.', 'The assessment takes approximately 45 minutes.', 'Good luck,', 'The Hiring Team'] },
   ],

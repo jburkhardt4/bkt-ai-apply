@@ -32,7 +32,15 @@ export function InboxRoute() {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const { data, reload } = useAsyncData(() => fetchInbox(userId), [userId])
-  return <InboxScreen data={data?.inbox ?? INBOX_SEED} onToast={toast} dateOrder="mdy" onRefresh={reload} />
+  return (
+    <InboxScreen
+      data={data?.inbox ?? INBOX_SEED}
+      onToast={toast}
+      dateOrder="mdy"
+      onRefresh={reload}
+      live={data?.source === 'live'}
+    />
+  )
 }
 
 /** Shared auto-apply action used by Search + Saved. */

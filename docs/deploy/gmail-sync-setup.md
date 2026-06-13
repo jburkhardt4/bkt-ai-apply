@@ -18,7 +18,9 @@ delete, or modify mail.
 2. **APIs & Services → Library** → enable **Gmail API**.
 3. **APIs & Services → OAuth consent screen**:
    - User type **External**, app name `BKT AI-Apply`, your email everywhere.
-   - Scopes: add `https://www.googleapis.com/auth/gmail.readonly`.
+   - Scopes: add `https://www.googleapis.com/auth/gmail.readonly` **and**
+     `https://www.googleapis.com/auth/gmail.send` (the second powers the
+     Inbox Reply/Forward via the `gmail-send` function, BR-038).
    - **Publishing status: click "Publish app" (In production).** This matters —
      refresh tokens minted while the app is in *Testing* expire after 7 days;
      published (even unverified) apps issue non-expiring refresh tokens. The
@@ -34,9 +36,11 @@ delete, or modify mail.
 1. Open [developers.google.com/oauthplayground](https://developers.google.com/oauthplayground).
 2. Gear icon (top right) → check **"Use your own OAuth credentials"** → paste
    the Client ID + Secret from step 1.
-3. Step 1 panel: enter scope `https://www.googleapis.com/auth/gmail.readonly`
+3. Step 1 panel: enter both scopes (space-separated)
+   `https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send`
    → **Authorize APIs** → sign in as **john@bktadvisory.com** → accept the
-   unverified-app warning.
+   unverified-app warning. (Already minted a readonly-only token? Re-do this
+   step with both scopes and update `GMAIL_REFRESH_TOKEN`.)
 4. Step 2 panel: **Exchange authorization code for tokens** → copy the
    **Refresh token**.
 

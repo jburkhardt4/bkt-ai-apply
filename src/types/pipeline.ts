@@ -76,6 +76,7 @@ export type AiTaskType =
   | 'browser_form_automation'
   | 'company_market_research'
   | 'email_classification'
+  | 'email_draft'
   | 'intent_routing'
   | 'general_qa'
 

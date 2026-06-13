@@ -58,6 +58,12 @@ const ROUTING_MATRIX: Record<AiTaskType, RoutingEntry> = {
     modelProvider: 'google',
     isCritical: true,
   },
+  email_draft: {
+    taskType: 'email_draft',
+    modelName: 'Gemini 2.5 Flash',
+    modelProvider: 'google',
+    isCritical: false,
+  },
   intent_routing: {
     taskType: 'intent_routing',
     modelName: 'Gemini 2.5 Flash',

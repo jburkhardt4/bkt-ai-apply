@@ -548,11 +548,13 @@ export type Database = {
           classification: string
           confidence: number
           from_address: string
+          gmail_labels: string[]
           gmail_message_id: string
           id: string
           processed_at: string | null
           received_at: string
           subject: string | null
+          thread_id: string | null
           user_id: string
         }
         Insert: {
@@ -562,11 +564,13 @@ export type Database = {
           classification: string
           confidence: number
           from_address: string
+          gmail_labels?: string[]
           gmail_message_id: string
           id?: string
           processed_at?: string | null
           received_at: string
           subject?: string | null
+          thread_id?: string | null
           user_id: string
         }
         Update: {
@@ -576,11 +580,13 @@ export type Database = {
           classification?: string
           confidence?: number
           from_address?: string
+          gmail_labels?: string[]
           gmail_message_id?: string
           id?: string
           processed_at?: string | null
           received_at?: string
           subject?: string | null
+          thread_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -593,6 +599,41 @@ export type Database = {
           },
           {
             foreignKeyName: "emails_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gmail_label_map: {
+        Row: {
+          classification: string
+          created_at: string
+          display_label: string
+          gmail_label: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          classification: string
+          created_at?: string
+          display_label: string
+          gmail_label: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          classification?: string
+          created_at?: string
+          display_label?: string
+          gmail_label?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gmail_label_map_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"

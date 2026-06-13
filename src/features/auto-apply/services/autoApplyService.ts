@@ -158,23 +158,27 @@ export async function declineJob(job: JobMatch, userId: string | null): Promise<
 
 /* ---------------- inbox / emails ---------------- */
 
+// Consolidated chip taxonomy (2026-06-13): Interviewing absorbs invite/
+// follow-up/feedback, Assessment absorbs invite/result, Action Required
+// absorbs OTP/EEO. Unlisted classifications (outreach, follow_up, unknown)
+// fall back to 'other'.
 const CLASSIFICATION_TO_LABEL: Record<string, string> = {
   application_confirmation: 'app-confirm',
   confirmation: 'app-confirm',
-  interview_invite: 'interview-inv',
-  interview_request: 'interview-inv',
-  interview_followup: 'interview-fu',
-  interview_feedback: 'interview-fb',
-  assessment_invite: 'assess-inv',
-  assessment: 'assess-inv',
-  assessment_result: 'assess-res',
+  interview_invite: 'interviewing',
+  interview_request: 'interviewing',
+  interview_followup: 'interviewing',
+  interview_feedback: 'interviewing',
+  assessment_invite: 'assessment',
+  assessment: 'assessment',
+  assessment_result: 'assessment',
   rejection: 'rejected',
-  offer: 'hired',
+  offer: 'offer',
   hired: 'hired',
-  otp: 'otp',
-  otp_verification: 'otp',
-  eeo: 'eeo',
-  eeo_form: 'eeo',
+  otp: 'action-required',
+  otp_verification: 'action-required',
+  eeo: 'action-required',
+  eeo_form: 'action-required',
 }
 
 interface LiveEmailRow {
@@ -185,12 +189,20 @@ interface LiveEmailRow {
   classification: string
   received_at: string
   processed_at: string | null
+  gmail_labels: string[] | null
 }
 
-function mapEmail(row: LiveEmailRow): EmailMessage {
+/** gmail_label_map rows: Gmail label name (lowercased) → inbox chip id. */
+type LabelDisplayMap = Map<string, string>
+
+function mapEmail(row: LiveEmailRow, labelDisplay: LabelDisplayMap): EmailMessage {
   const domain = row.from_address.split('@')[1] ?? undefined
   const senderName = (row.from_address.split('@')[0] ?? row.from_address).replace(/[._-]+/g, ' ')
-  const label = CLASSIFICATION_TO_LABEL[row.classification] ?? 'other'
+  // BR-037: JB's Gmail label drives the chip when mapped; classification fallback.
+  const labelFromGmail = (row.gmail_labels ?? [])
+    .map((name) => labelDisplay.get(name.trim().toLowerCase()))
+    .find((display) => display != null)
+  const label = labelFromGmail ?? CLASSIFICATION_TO_LABEL[row.classification] ?? 'other'
   return {
     id: row.id,
     domain,
@@ -198,7 +210,7 @@ function mapEmail(row: LiveEmailRow): EmailMessage {
     sender: senderName.replace(/\b\w/g, (c) => c.toUpperCase()),
     subject: row.subject ?? '(no subject)',
     label,
-    priority: label === 'interview-inv' || label === 'assess-inv' ? 'High' : 'Low',
+    priority: label === 'interviewing' || label === 'assessment' ? 'High' : 'Low',
     unread: row.processed_at == null,
     time: row.received_at,
     body: row.body_snippet ? [row.body_snippet] : ['(no preview available)'],
@@ -209,20 +221,29 @@ export async function fetchInbox(userId: string | null): Promise<{ source: DataS
   const supabase = getSupabaseClientSafe()
   if (!supabase || !userId) return { source: 'demo', inbox: INBOX_SEED }
   try {
-    const { data, error } = await supabase
-      .from('emails')
-      .select('id, from_address, subject, body_snippet, classification, received_at, processed_at')
-      .eq('user_id', userId)
-      .order('received_at', { ascending: false })
-      .limit(200)
-    if (error) throw new Error(error.message)
-    const rows = (data ?? []) as unknown as LiveEmailRow[]
+    const [emailsResult, labelMapResult] = await Promise.all([
+      supabase
+        .from('emails')
+        .select('id, from_address, subject, body_snippet, classification, received_at, processed_at, gmail_labels')
+        .eq('user_id', userId)
+        .order('received_at', { ascending: false })
+        .limit(200),
+      supabase.from('gmail_label_map').select('gmail_label, display_label').eq('user_id', userId),
+    ])
+    if (emailsResult.error) throw new Error(emailsResult.error.message)
+    const rows = (emailsResult.data ?? []) as unknown as LiveEmailRow[]
     if (rows.length === 0) return { source: 'demo', inbox: INBOX_SEED }
+
+    const labelDisplay: LabelDisplayMap = new Map(
+      ((labelMapResult.data ?? []) as { gmail_label: string; display_label: string }[]).map(
+        (entry) => [entry.gmail_label.trim().toLowerCase(), entry.display_label],
+      ),
+    )
     return {
       source: 'live',
       inbox: {
         ...INBOX_SEED,
-        emails: rows.map(mapEmail),
+        emails: rows.map((row) => mapEmail(row, labelDisplay)),
         total: rows.length,
       },
     }

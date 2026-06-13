@@ -7,34 +7,24 @@
  * this module can never send or mutate mail.
  */
 
-const TOKEN_URL = 'https://oauth2.googleapis.com/token'
+import { GmailApiError } from '../_shared/gmail-auth.ts'
+
 const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
 
 /** First-run bootstrap window and the per-run processing cap. */
 export const BOOTSTRAP_QUERY = 'newer_than:7d'
 export const MAX_MESSAGES_PER_RUN = 25
 
-export interface GmailCredentials {
-  clientId: string
-  clientSecret: string
-  refreshToken: string
-}
-
 export interface GmailMessageMeta {
   id: string
+  threadId: string | null
   historyId: string | null
   fromAddress: string
   subject: string | null
   snippet: string | null
   receivedAtIso: string
-}
-
-export class GmailApiError extends Error {
-  readonly status: number
-  constructor(status: number, message: string) {
-    super(message)
-    this.status = status
-  }
+  /** Raw Gmail label ids (e.g. "Label_12", "INBOX") — resolve via listLabels. */
+  labelIds: string[]
 }
 
 async function gmailFetch(path: string, accessToken: string): Promise<Record<string, unknown>> {
@@ -46,28 +36,6 @@ async function gmailFetch(path: string, accessToken: string): Promise<Record<str
     throw new GmailApiError(res.status, `Gmail API ${res.status} on ${path}: ${body.slice(0, 300)}`)
   }
   return (await res.json()) as Record<string, unknown>
-}
-
-export async function refreshAccessToken(credentials: GmailCredentials): Promise<string> {
-  const res = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: credentials.clientId,
-      client_secret: credentials.clientSecret,
-      refresh_token: credentials.refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new GmailApiError(res.status, `OAuth token refresh failed (${res.status}): ${body.slice(0, 300)}`)
-  }
-  const payload = (await res.json()) as { access_token?: string }
-  if (!payload.access_token) {
-    throw new GmailApiError(500, 'OAuth token refresh returned no access_token')
-  }
-  return payload.access_token
 }
 
 export interface NewMessagesResult {
@@ -181,10 +149,25 @@ export async function fetchMessageMeta(
 
   return {
     id: String(payload.id ?? messageId),
+    threadId: typeof payload.threadId === 'string' ? payload.threadId : null,
     historyId: typeof payload.historyId === 'string' ? payload.historyId : null,
     fromAddress,
     subject: header('Subject'),
     snippet: typeof payload.snippet === 'string' ? decodeSnippet(payload.snippet) : null,
     receivedAtIso,
+    labelIds: Array.isArray(payload.labelIds)
+      ? (payload.labelIds as unknown[]).filter((l): l is string => typeof l === 'string')
+      : [],
   }
+}
+
+/** Resolves Gmail label ids → display names (users.labels.list, one call/run). */
+export async function listLabelNames(accessToken: string): Promise<Record<string, string>> {
+  const payload = await gmailFetch('/labels', accessToken)
+  const labels = (payload.labels as Array<{ id?: string; name?: string }> | undefined) ?? []
+  const byId: Record<string, string> = {}
+  for (const label of labels) {
+    if (label.id && label.name) byId[label.id] = label.name
+  }
+  return byId
 }

@@ -24,12 +24,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CORS_HEADERS, json } from '../_shared/http.ts'
 import { getApiKeyForProvider, getProvider } from '../_shared/llm/factory.ts'
+import { readGmailCredentials, refreshAccessToken } from '../_shared/gmail-auth.ts'
 import {
   fetchMessageMeta,
+  listLabelNames,
   listNewMessageIds,
-  refreshAccessToken,
   MAX_MESSAGES_PER_RUN,
-  type GmailCredentials,
   type GmailMessageMeta,
 } from './gmail.ts'
 import {
@@ -39,11 +39,14 @@ import {
   matchApplication,
   parseGeminiClassification,
   resolveAutoAction,
+  resolveLabelClassification,
   shouldStoreEmail,
   GEMINI_SYSTEM_PROMPT,
   type ApplicationCandidate,
   type ClassificationDecision,
   type EmailFacts,
+  type GmailClassification,
+  type LabelMapEntry,
   type MatchResult,
   type PipelineStage,
 } from './logic.ts'
@@ -58,6 +61,8 @@ interface RunSummary {
   mode?: 'history' | 'bootstrap'
   fetched: number
   stored: number
+  /** Classified by a mapped Gmail label (BR-037) — no Gemini call made. */
+  labeled: number
   skipped_irrelevant: number
   auto_transitioned: number
   errors: string[]
@@ -72,14 +77,6 @@ function createServiceClient(): SupabaseClient {
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
-}
-
-function readGmailCredentials(): GmailCredentials | null {
-  const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID')
-  const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')
-  const refreshToken = Deno.env.get('GMAIL_REFRESH_TOKEN')
-  if (!clientId || !clientSecret || !refreshToken) return null
-  return { clientId, clientSecret, refreshToken }
 }
 
 /** The refresh token belongs to one Gmail account; resolve its app user. */
@@ -127,6 +124,22 @@ async function loadCandidates(
     companyName: row.jobs?.companies?.name ?? null,
     companyDomain: row.jobs?.companies?.domain ?? null,
     jobTitle: row.jobs?.title ?? null,
+  }))
+}
+
+async function loadLabelMap(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<LabelMapEntry[]> {
+  const { data, error } = await supabase
+    .from('gmail_label_map')
+    .select('gmail_label, classification, display_label')
+    .eq('user_id', userId)
+  if (error) throw new Error(`gmail_label_map lookup failed: ${error.message}`)
+  return (data ?? []).map((row) => ({
+    gmailLabel: row.gmail_label as string,
+    classification: row.classification as GmailClassification,
+    displayLabel: row.display_label as string,
   }))
 }
 
@@ -204,6 +217,8 @@ async function processMessage(
   supabase: SupabaseClient,
   userId: string,
   meta: GmailMessageMeta,
+  labelNames: string[],
+  labelMap: LabelMapEntry[],
   candidates: ApplicationCandidate[],
   summary: RunSummary,
 ): Promise<void> {
@@ -213,13 +228,16 @@ async function processMessage(
     snippet: meta.snippet,
   }
 
-  const decision = await classifyEmail(supabase, userId, facts)
+  // BR-037: a mapped Gmail label is authoritative — skip the Gemini call.
+  const labelResolution = resolveLabelClassification(labelNames, labelMap)
+  const decision = labelResolution?.decision ?? (await classifyEmail(supabase, userId, facts))
   const matched: MatchResult | null = matchApplication(facts, candidates)
 
-  if (!shouldStoreEmail(decision, matched)) {
+  if (!shouldStoreEmail(decision, matched, labelResolution !== null)) {
     summary.skipped_irrelevant += 1
     return
   }
+  if (labelResolution) summary.labeled += 1
 
   const plan = resolveAutoAction(decision, matched)
   let autoActioned = false
@@ -247,6 +265,8 @@ async function processMessage(
     user_id: userId,
     application_id: matched?.applicationId ?? null,
     gmail_message_id: meta.id,
+    thread_id: meta.threadId,
+    gmail_labels: labelNames,
     from_address: meta.fromAddress,
     subject: meta.subject,
     body_snippet: meta.snippet,
@@ -327,6 +347,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     status: 'success',
     fetched: 0,
     stored: 0,
+    labeled: 0,
     skipped_irrelevant: 0,
     auto_transitioned: 0,
     errors: [],
@@ -371,12 +392,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (toProcess.length > 0) {
       const candidates = await loadCandidates(supabase, userId)
+      const labelMap = await loadLabelMap(supabase, userId)
+      // One labels.list call per run resolves label ids → names (BR-037).
+      let labelNamesById: Record<string, string> = {}
+      if (labelMap.length > 0) {
+        try {
+          labelNamesById = await listLabelNames(accessToken)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          console.warn(`gmail-sync: labels.list failed — continuing without label mapping: ${msg}`)
+        }
+      }
 
       for (const messageId of toProcess) {
         try {
           const meta = await fetchMessageMeta(accessToken, messageId)
           if (!meta) continue
-          await processMessage(supabase, userId, meta, candidates, summary)
+          const labelNames = meta.labelIds
+            .map((id) => labelNamesById[id])
+            .filter((name): name is string => Boolean(name))
+          await processMessage(supabase, userId, meta, labelNames, labelMap, candidates, summary)
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           console.error(`gmail-sync: message ${messageId} failed: ${msg}`)
@@ -405,7 +440,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     console.log(
       `gmail-sync: done — status=${summary.status} mode=${summary.mode} fetched=${summary.fetched} ` +
-        `stored=${summary.stored} skipped=${summary.skipped_irrelevant} transitioned=${summary.auto_transitioned}`,
+        `stored=${summary.stored} labeled=${summary.labeled} skipped=${summary.skipped_irrelevant} ` +
+        `transitioned=${summary.auto_transitioned}`,
     )
     return json(summary, 200)
   } catch (err) {

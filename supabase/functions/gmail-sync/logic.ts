@@ -44,7 +44,7 @@ export interface ApplicationCandidate {
 export interface ClassificationDecision {
   classification: GmailClassification
   confidence: number
-  source: 'gemini' | 'keywords'
+  source: 'gemini' | 'keywords' | 'gmail_label'
 }
 
 export const AUTO_ACTION_CONFIDENCE_THRESHOLD = 0.7
@@ -296,18 +296,82 @@ export function matchApplication(
   return null
 }
 
+/* ---------------- Gmail label mapping (BR-037) ---------------- */
+
+export interface LabelMapEntry {
+  gmailLabel: string
+  classification: GmailClassification
+  displayLabel: string
+}
+
+export interface LabelResolution {
+  decision: ClassificationDecision
+  displayLabel: string
+  matchedLabel: string
+}
+
+/** Mapped-label confidence: JB's curation is authoritative (BR-037). */
+export const GMAIL_LABEL_CONFIDENCE = 0.95
+
+// When one message carries several mapped labels, act on the most consequential.
+const CLASSIFICATION_PRIORITY: GmailClassification[] = [
+  'offer',
+  'rejection',
+  'interview_invite',
+  'outreach',
+  'follow_up',
+  'unknown',
+]
+
+/**
+ * Resolves a message's Gmail label names against the user's gmail_label_map
+ * (case-insensitive). A hit overrides model classification entirely — the
+ * Gemini call is skipped for mapped mail.
+ */
+export function resolveLabelClassification(
+  labelNames: string[],
+  map: LabelMapEntry[],
+): LabelResolution | null {
+  if (labelNames.length === 0 || map.length === 0) return null
+
+  const byLower = new Map(map.map((entry) => [entry.gmailLabel.trim().toLowerCase(), entry]))
+  const hits: { entry: LabelMapEntry; name: string }[] = []
+  for (const name of labelNames) {
+    const entry = byLower.get(name.trim().toLowerCase())
+    if (entry) hits.push({ entry, name })
+  }
+  if (hits.length === 0) return null
+
+  hits.sort(
+    (a, b) =>
+      CLASSIFICATION_PRIORITY.indexOf(a.entry.classification) -
+      CLASSIFICATION_PRIORITY.indexOf(b.entry.classification),
+  )
+  const top = hits[0]
+  return {
+    decision: {
+      classification: top.entry.classification,
+      confidence: GMAIL_LABEL_CONFIDENCE,
+      source: 'gmail_label',
+    },
+    displayLabel: top.entry.displayLabel,
+    matchedLabel: top.entry.gmailLabel,
+  }
+}
+
 /* ---------------- storage + auto-action policy ---------------- */
 
 /**
  * Relevance gate: 'unknown' emails are noise (newsletters, receipts) unless
- * they came from a known application's company — those are kept for manual
- * review so a real signal is never dropped silently.
+ * they came from a known application's company, or JB labeled them in Gmail
+ * (BR-035) — both are kept so a curated signal is never dropped silently.
  */
 export function shouldStoreEmail(
   decision: ClassificationDecision,
   matched: MatchResult | null,
+  hasMappedLabel = false,
 ): boolean {
-  return decision.classification !== 'unknown' || matched !== null
+  return decision.classification !== 'unknown' || matched !== null || hasMappedLabel
 }
 
 const STAGE_BY_CLASSIFICATION: Partial<Record<GmailClassification, PipelineStage>> = {

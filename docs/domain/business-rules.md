@@ -53,8 +53,10 @@
 | BR-032 | No CAPTCHA bypass under any circumstances | INT-RULE-002 |
 | BR-033 | No circumvention of rate limits; exponential backoff required | INT-RULE-003 |
 | BR-034 | No scraping behind authentication walls without an approved API | INT-RULE-001 |
-| BR-035 | gmail-sync persists only job-relevant email: classification ≠ `unknown`, or sender matched to a tracked application's company; all other mail is never stored | gmail-sync Edge Function |
-| BR-036 | Gmail ingestion is incremental via `gmail_sync_state.history_id` (cursor held back when a run truncates) and deduplicated by `emails UNIQUE (user_id, gmail_message_id)`; the Gmail scope is read-only (`gmail.readonly`) | gmail-sync Edge Function, docs/deploy/gmail-sync-setup.md |
+| BR-035 | gmail-sync persists only job-relevant email: classification ≠ `unknown`, sender matched to a tracked application's company, **or the message carries a Gmail label mapped in `gmail_label_map`**; all other mail is never stored | gmail-sync Edge Function |
+| BR-036 | Gmail ingestion is incremental via `gmail_sync_state.history_id` (cursor held back when a run truncates) and deduplicated by `emails UNIQUE (user_id, gmail_message_id)`; ingestion uses `gmail.readonly` (sending is separately scoped, BR-038) | gmail-sync Edge Function, docs/deploy/gmail-sync-setup.md |
+| BR-037 | A Gmail label mapped in `gmail_label_map` is authoritative: it sets the classification at confidence 0.95 (`source = 'gmail_label'`), skips the Gemini call, and drives the inbox display chip. Gemini classifies only unlabeled mail; stage transitions still flow through the BR-030/031 machinery | gmail_label_map, gmail-sync Edge Function |
+| BR-038 | Email sending (`gmail-send`, scope `gmail.send`) is an explicit user action only — JWT-verified, never autonomous, max 10 sends per rolling minute, every send audited as a `notifications` row (`email_sent`). AI drafts (`email_draft` task, Gemini Flash) are always returned for human review and never sent automatically | gmail-send Edge Function, ComposeModal |
 
 ---
 

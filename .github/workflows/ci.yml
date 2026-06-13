@@ -30,10 +30,12 @@ jobs:
     name: e2e (Playwright)
     needs: validate
     runs-on: ubuntu-latest
-    # The SPA throws at init without Supabase env, so e2e only runs meaningfully
-    # once VITE_SUPABASE_* repo secrets are configured. Kept non-blocking until
-    # then so a missing-secret environment never red-gates a merge.
-    continue-on-error: true
+    # The SPA throws at init without Supabase env, so e2e can only run once the
+    # VITE_SUPABASE_* repo secrets exist. Gate the whole job on an opt-in repo
+    # variable (Settings → Secrets and variables → Actions → Variables →
+    # RUN_E2E=true) so it SKIPS (not fails) by default and reports real signal
+    # once the secrets + variable are configured.
+    if: ${{ vars.RUN_E2E == 'true' }}
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

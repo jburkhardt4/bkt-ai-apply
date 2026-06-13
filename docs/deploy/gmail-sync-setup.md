@@ -38,7 +38,7 @@ delete, or modify mail.
    the Client ID + Secret from step 1.
 3. Step 1 panel: enter both scopes (space-separated)
    `https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send`
-   → **Authorize APIs** → sign in as **john@bktadvisory.com** → accept the
+   → **Authorize APIs** → sign in as **<john@bktadvisory.com>** → accept the
    unverified-app warning. (Already minted a readonly-only token? Re-do this
    step with both scopes and update `GMAIL_REFRESH_TOKEN`.)
 4. Step 2 panel: **Exchange authorization code for tokens** → copy the

@@ -88,7 +88,7 @@ export async function alignDocumentToJob(params: {
 export function buildDocAssistantPrompt(type: DocType, lastJob: AiTargetJob): string {
   const noun = type === 'resume' ? 'resume' : 'cover letter'
   return [
-    `You are an expert ${noun} writer helping John Burkhardt tailor his ${noun}.`,
+    `You are an expert ${noun} writer helping the candidate tailor their ${noun}.`,
     `The target role is "${lastJob.title}" at ${lastJob.company}.`,
     lastJob.skills && lastJob.skills.length > 0
       ? `Relevant posting skills: ${lastJob.skills.join(', ')}.`

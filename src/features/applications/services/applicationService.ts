@@ -31,18 +31,50 @@ export async function fetchApplications(userId: string): Promise<ApplicationRow[
  * truth (Phase 2b dashboard honesty). Replaces the localStorage submitted
  * delta. Returns 0 on any error so the dashboard degrades gracefully rather
  * than throwing in the stat row.
+ *
+ * Terminal stages (rejected/ghosted) are ambiguous — `discovery → rejected` is a
+ * valid never-submitted dismissal and the live submission path does not stamp
+ * `submitted_at` — so they are resolved against the event log: such a row counts
+ * only when a `stage_transition` INTO `applied` exists for it (BR-133).
  */
 export async function fetchSubmittedCount(userId: string): Promise<number> {
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from('applications')
-    .select('stage, submitted_at')
+    .select('id, stage, submitted_at')
     .eq('user_id', userId)
 
-  if (error) throw new Error(error.message)
-  return deriveSubmittedCount(
-    (data ?? []) as { stage: string; submitted_at: string | null }[],
-  )
+  if (error) return 0
+
+  const apps = (data ?? []) as { id: string; stage: string; submitted_at: string | null }[]
+
+  // Resolve ambiguous terminals (rejected/ghosted with no submitted_at) against
+  // the event log so a submitted-then-rejected application still counts, while a
+  // dismissed-from-discovery one does not.
+  const ambiguousIds = apps
+    .filter((a) => a.submitted_at == null && (a.stage === 'rejected' || a.stage === 'ghosted'))
+    .map((a) => a.id)
+
+  let everSubmittedIds: Set<string> | undefined
+  if (ambiguousIds.length > 0) {
+    const { data: events, error: eventsError } = await supabase
+      .from('application_events')
+      .select('application_id')
+      .eq('user_id', userId)
+      .eq('event_type', 'stage_transition')
+      .eq('to_stage', 'applied')
+      .in('application_id', ambiguousIds)
+
+    if (!eventsError) {
+      everSubmittedIds = new Set(
+        (events ?? [])
+          .map((e) => e.application_id)
+          .filter((id): id is string => id != null),
+      )
+    }
+  }
+
+  return deriveSubmittedCount(apps, everSubmittedIds)
 }
 
 export async function transitionStage(params: {

@@ -13,6 +13,7 @@ import type { DocContent, DocType } from './DocPaper'
 import { DocAssistant } from './DocAssistant'
 import type { AiTargetJob } from './DocAssistant'
 import { alignDocumentToJob } from '../services/docWriterService'
+import { parseGeneratedLetter, parseGeneratedResume } from '../services/docContentParser'
 
 type Patch = Partial<ResumeContent> & Partial<LetterContent>
 
@@ -191,24 +192,22 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     saveT.current = setTimeout(() => setSaving(false), 900)
   }
 
-  // Drops aligned copy into the editable fields and flashes the aligned state.
+  // Maps the FULL generated document into the structured builder state (not a
+  // single field) so the paper reflects the whole document. The canonical
+  // full-text artifact is persisted separately to the `documents` table.
   const applyAligned = (text: string) => {
     if (type === 'resume') {
       const base = content as ResumeContent
-      set({
-        headline: lastJob.title,
-        summary: text,
-        skills: [...new Set([...(lastJob.skills ?? []), ...base.skills])].slice(0, 10),
-      })
+      set(
+        parseGeneratedResume(text, {
+          headline: lastJob.title,
+          jobSkills: lastJob.skills ?? [],
+          baseSkills: base.skills,
+          baseExperience: base.experience,
+        }),
+      )
     } else {
-      const base = content as LetterContent
-      set({
-        company: lastJob.company,
-        role: lastJob.title,
-        recipient: `${lastJob.company} Hiring Team`,
-        greeting: `Dear ${lastJob.company} Hiring Team,`,
-        body: [text, ...base.body.slice(1)],
-      })
+      set(parseGeneratedLetter(text, { company: lastJob.company, role: lastJob.title }))
     }
     setAligned(true)
     setTimeout(() => setAligned(false), 1800)

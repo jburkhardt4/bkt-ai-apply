@@ -183,17 +183,22 @@ export function ProspectorDashboard() {
       `Scoring ${unscored.length} ${unscored.length === 1 ? 'job' : 'jobs'}…`,
     )
 
-    const settled = await Promise.allSettled(
-      unscored.map((job) => runScoreForJob({ userId: user.id, jobId: job.id })),
-    )
-
+    // Score sequentially (not Promise.allSettled): each runScoreForJob re-reads
+    // the monthly AI spend via routeAiTask before its LLM call, so the $75 cost
+    // cap (BR-052 / BR-104) is enforced per job and later jobs queue once the cap
+    // is hit. Parallel dispatch would let every job read the same pre-call spend
+    // and overshoot the cap.
     let saved = 0
     let queued = 0
     let failed = 0
-    for (const outcome of settled) {
-      if (outcome.status === 'rejected') failed += 1
-      else if (outcome.value.status === 'queued') queued += 1
-      else saved += 1
+    for (const job of unscored) {
+      try {
+        const result = await runScoreForJob({ userId: user.id, jobId: job.id })
+        if (result.status === 'queued') queued += 1
+        else saved += 1
+      } catch {
+        failed += 1
+      }
     }
 
     // Scoring writes ai_scores (search results) and may update

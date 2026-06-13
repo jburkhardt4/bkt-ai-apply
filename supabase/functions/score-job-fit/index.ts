@@ -239,14 +239,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const score = parseJobFitScore(result.text)
   if (!score) {
-    // The model returned text we could not validate as a job-fit score.
+    // The model returned text we could not validate as a job-fit score. This is
+    // an unexpected upstream output rather than a malformed caller request, so
+    // surface it as 'unknown' (not 'bad_request').
     return json(
       {
-        error: clientMessageForCode('bad_request', providerId),
-        code: 'bad_request',
+        error: clientMessageForCode('unknown', providerId),
+        code: 'unknown',
         provider: providerId,
       },
-      502,
+      httpStatusForCode('unknown'),
     )
   }
 

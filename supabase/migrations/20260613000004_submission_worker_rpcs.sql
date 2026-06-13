@@ -9,8 +9,11 @@
 --            the ONLY trusted decision point for autonomy (BR-131):
 --            client state is never trusted for submission decisions.
 --
--- Additive only — does NOT alter RLS on any existing table and does
--- NOT weaken any existing constraint. RLS stays enabled everywhere.
+-- Mostly additive. The ONE existing-object change (FIX 2 / BR-005) is a
+-- DEFENSE-IN-DEPTH TIGHTENING: the application_queue INSERT policy is dropped
+-- and recreated identically PLUS a new WITH CHECK clause requiring the inserted
+-- application_id to belong to the caller — strictly narrowing, never widening.
+-- No constraint is weakened. RLS stays ENABLED on every table.
 --
 -- Access:    All three functions are SECURITY DEFINER, search_path
 --            pinned to (public, pg_temp), and EXECUTE is revoked from
@@ -39,17 +42,37 @@
 --    re-validating ALL autonomy guardrails server-side (BR-131) and
 --    charging one credit (BR-136). On any guardrail failure, returns
 --    { ok:false, reason:<code> } and either leaves the row 'approved'
---    (transient) or cancels it (terminal). On success, decrements the
---    credit and flips the row to 'submitting', then returns the payload
---    the worker needs to drive the channel adapter (BR-134).
+--    (transient — a later approval / window roll can authorize it) or
+--    cancels it (terminal). On success, decrements the credit and flips
+--    the row to 'submitting', then returns the payload the worker needs
+--    to drive the channel adapter (BR-134).
+--
+--    Authorization is SERVER-AUTHORITATIVE (BR-131/148): the right to
+--    submit is NEVER taken from the client-supplied queued_by (audit-only).
+--    A row may submit iff EITHER
+--      (a) an explicit human approval exists — an application_events row
+--          with event_type='approval' for (application_id,user_id),
+--          written by approvePreparedPacket; this authorizes ANY mode; OR
+--      (b) autonomous criteria hold — user_settings.review_mode IN
+--          ('assist','auto') AND match_score >= auto_submit_score_threshold.
+--    If neither holds the row is left 'approved' (transient) and awaits a
+--    future approval — it is NEVER cancelled for lacking authorization.
+--
+--    Ownership (FIX 2 / BR-005): the application must belong to the queue
+--    row's user_id; a mismatch returns 'not_owned' (no submit, no charge).
+--
+--    Concurrency (FIX 3 / BR-136): a per-user advisory xact lock serializes
+--    concurrent claims for one user, and the daily-cap count includes
+--    in-flight 'submitting' rows so overlapping runs cannot exceed the cap.
 --
 --    Reason codes returned (ok:false):
 --      not_claimable      row missing or not in 'approved' (no mutation)
+--      not_owned          application not owned by queue row's user (no mutation) BR-005
 --      paused             user_settings.paused = true       (stays approved) BR-132
 --      no_credits         credits < 1                        (stays approved) BR-136
---      daily_cap          >= daily_submission_cap submitted in last 24h (stays approved)
+--      daily_cap          >= daily_submission_cap submitted+in-flight in 24h (stays approved)
 --      already_submitted  applications.submitted_at set      (-> cancelled)  BR-135
---      below_threshold    autonomous + score < threshold     (-> cancelled)  BR-131
+--      awaiting_approval  no approval event AND not autonomously eligible (stays approved) BR-130/131
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.claim_submission(p_queue_id uuid)
   RETURNS jsonb
@@ -67,6 +90,7 @@ DECLARE
   v_credits        integer;
   v_daily_cap      integer;
   v_threshold      integer;
+  v_review_mode    text;
 
   v_match_score    integer;
   v_submitted_at   timestamptz;
@@ -76,6 +100,9 @@ DECLARE
   v_job_id         uuid;
 
   v_submitted_24h  integer;
+
+  v_has_approval   boolean;
+  v_autonomous_ok  boolean;
 BEGIN
   -- Lock the queue row so two worker invocations cannot double-claim it.
   SELECT *
@@ -91,11 +118,18 @@ BEGIN
 
   v_user_id        := v_queue.user_id;
   v_application_id := v_queue.application_id;
-  v_queued_by      := v_queue.queued_by;
+  v_queued_by      := v_queue.queued_by;  -- audit-only; never an authorization input (BR-131/148)
 
-  -- Load server-authoritative guardrail settings (BR-131).
-  SELECT us.paused, us.credits, us.daily_submission_cap, us.auto_submit_score_threshold
-    INTO v_paused, v_credits, v_daily_cap, v_threshold
+  -- FIX 3 / BR-136: serialize concurrent claims for THIS user so two
+  -- overlapping worker runs cannot both pass the daily-cap / credit checks
+  -- against the same balance. Transaction-scoped: released at COMMIT/ROLLBACK.
+  PERFORM pg_advisory_xact_lock(hashtext('submission_claim:' || v_user_id::text));
+
+  -- Load server-authoritative guardrail settings (BR-131), including the
+  -- authoritative autonomy level (review_mode) — never trust the client.
+  SELECT us.paused, us.credits, us.daily_submission_cap,
+         us.auto_submit_score_threshold, us.review_mode
+    INTO v_paused, v_credits, v_daily_cap, v_threshold, v_review_mode
     FROM public.user_settings us
    WHERE us.user_id = v_user_id;
 
@@ -105,15 +139,18 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_claimable');
   END IF;
 
-  -- Load application + its job for threshold/dedup checks and channel routing.
+  -- FIX 2 / BR-005: load application + its job, ENFORCING ownership — the
+  -- application must belong to the queue row's user_id. A mismatch (or a
+  -- missing application) is never submitted and never charged.
   SELECT a.match_score, a.submitted_at, a.job_id, j.application_method, j.source_url
     INTO v_match_score, v_submitted_at, v_job_id, v_application_method, v_source_url
     FROM public.applications a
     JOIN public.jobs j ON j.id = a.job_id
-   WHERE a.id = v_application_id;
+   WHERE a.id = v_application_id
+     AND a.user_id = v_user_id;
 
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'not_claimable');
+    RETURN jsonb_build_object('ok', false, 'reason', 'not_owned');
   END IF;
 
   -- ── Guardrails, in order ───────────────────────────────────
@@ -127,14 +164,19 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'no_credits');
   END IF;
 
-  -- Daily cap: count this user's submissions in the rolling 24h window.
+  -- Daily cap (FIX 3): count this user's submissions AND in-flight claims in
+  -- the rolling 24h window. Counting 'submitting' rows closes the overlapping-
+  -- run race where two claims could each pass the cap before either confirms.
   -- Transient, leave 'approved' so it can fire after the window rolls.
   SELECT count(*)
     INTO v_submitted_24h
     FROM public.application_queue q
    WHERE q.user_id = v_user_id
-     AND q.status = 'submitted'
-     AND q.submitted_at >= now() - interval '24 hours';
+     AND (
+       (q.status = 'submitted'  AND q.submitted_at    >= now() - interval '24 hours')
+       OR
+       (q.status = 'submitting' AND q.last_attempt_at >= now() - interval '24 hours')
+     );
 
   IF v_submitted_24h >= v_daily_cap THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'daily_cap');
@@ -151,17 +193,34 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'already_submitted');
   END IF;
 
-  -- BR-131 autonomy threshold re-validation (server-side). Only autonomous
-  -- paths are gated; an explicit user-approved row (queued_by='user') bypasses
-  -- this check because a human already approved it. Terminal on failure.
-  IF v_queued_by IN ('assist_mode', 'auto_mode')
-     AND (v_match_score IS NULL OR v_match_score < v_threshold) THEN
-    UPDATE public.application_queue
-       SET status     = 'cancelled',
-           last_error = 'below_threshold',
-           updated_at = now()
-     WHERE id = p_queue_id;
-    RETURN jsonb_build_object('ok', false, 'reason', 'below_threshold');
+  -- FIX 1 / BR-130/131/148: SERVER-AUTHORITATIVE submission authorization.
+  -- The client-supplied queued_by is audit-only and NEVER an authorization
+  -- input. A row may submit iff EITHER an explicit human approval exists OR
+  -- the autonomous criteria hold under the server's own review_mode + score.
+  --
+  -- (a) Explicit human approval — written by approvePreparedPacket
+  --     (event_type='approval'). Authorizes ANY review mode.
+  v_has_approval := EXISTS (
+    SELECT 1
+      FROM public.application_events ev
+     WHERE ev.application_id = v_application_id
+       AND ev.user_id        = v_user_id
+       AND ev.event_type     = 'approval'
+  );
+
+  -- (b) Autonomous eligibility — server's review_mode is assist/auto AND the
+  --     server-side match_score clears the server-side threshold.
+  v_autonomous_ok := (
+    v_review_mode IN ('assist', 'auto')
+    AND v_match_score IS NOT NULL
+    AND v_match_score >= v_threshold
+  );
+
+  -- Neither path authorizes submission yet: leave the row 'approved'
+  -- (transient — a later approval event can authorize it). A below-threshold
+  -- row is NOT cancelled; it simply awaits approval.
+  IF NOT (v_has_approval OR v_autonomous_ok) THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'awaiting_approval');
   END IF;
 
   -- ── All guards pass: CHARGE + CLAIM atomically ─────────────
@@ -191,7 +250,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.claim_submission(uuid) IS
-  'ADR-006 / BR-131,132,135,136: service-role-only. Atomically re-validates autonomy guardrails (pause, credits, daily cap, no-resubmit, score threshold), charges one credit, and claims an approved application_queue row into submitting. Returns {ok,...}. Never callable by clients.';
+  'ADR-006 / BR-005,130,131,132,135,136,148: service-role-only. Per-user advisory-locked. Re-validates autonomy guardrails server-side (ownership, pause, credits, daily cap incl. in-flight, no-resubmit) and authorizes submission ONLY via an explicit approval event OR server-side review_mode+score (never the client queued_by). Charges one credit and claims an approved application_queue row into submitting. Returns {ok,...}. Never callable by clients.';
 
 REVOKE EXECUTE ON FUNCTION public.claim_submission(uuid) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.claim_submission(uuid) TO service_role;
@@ -337,11 +396,22 @@ GRANT  EXECUTE ON FUNCTION public.finalize_submission(uuid, boolean, text, text,
 -- 3) public.expire_stuck_submitting(p_older_than interval DEFAULT '30 minutes')
 --      RETURNS integer
 --
---    Self-heals after a crashed worker run: resets queue rows stuck in
---    'submitting' older than the cutoff back to 'approved' (so they can be
---    re-claimed) and refunds the credit charged at claim (mirrors the
---    failure refund — the submission never confirmed, so no credit is owed).
---    Returns the number of rows reset. Safe to run repeatedly.
+--    Self-heals after a crashed worker run: rows stuck in 'submitting' past
+--    the cutoff are moved to the TERMINAL 'failed' state (FIX 4) — NOT back
+--    to 'approved'. Rationale: a row stuck in 'submitting' MAY have submitted
+--    externally even though finalize never recorded it (applications.submitted_at
+--    is still null). Returning it to 'approved' risks a SECOND external
+--    submission on the next worker run. Terminal 'failed' requires manual
+--    reconciliation and is never auto-resubmitted (the worker only claims
+--    'approved' rows). The unconfirmed-but-charged credit is refunded
+--    (BR-136), and each expired row gets a 'submission_attempt' application_event
+--    flagged outcome='unconfirmed' so the unconfirmed state is visible/auditable.
+--
+--    Refunds are aggregated PER USER (FIX 4 edge case): if one user has
+--    multiple stuck rows, that user's credits are incremented by the exact
+--    COUNT of their stuck rows, not a flat +1.
+--
+--    Returns the number of rows expired. Safe to run repeatedly.
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.expire_stuck_submitting(
   p_older_than interval DEFAULT interval '30 minutes'
@@ -354,42 +424,100 @@ AS $$
 DECLARE
   v_count integer;
 BEGIN
-  -- Refund credits for the rows we are about to reset (BR-136: an
-  -- unconfirmed submission must not consume a credit). last_attempt_at
-  -- is the time the claim flipped the row to 'submitting'.
+  -- Snapshot + lock the stuck rows once; every downstream CTE keys off this
+  -- set. last_attempt_at is the time the claim flipped the row to 'submitting'.
   WITH stuck AS (
-    SELECT id, user_id
+    SELECT id, user_id, application_id
       FROM public.application_queue
      WHERE status = 'submitting'
        AND last_attempt_at IS NOT NULL
        AND last_attempt_at < now() - p_older_than
      FOR UPDATE SKIP LOCKED
   ),
+  -- BR-136: refund the unconsumed credit. Aggregate per user so a user with
+  -- N stuck rows is refunded exactly N credits (not a flat +1 per UPDATE row).
+  per_user AS (
+    SELECT user_id, count(*)::integer AS n
+      FROM stuck
+     GROUP BY user_id
+  ),
   refunded AS (
     UPDATE public.user_settings us
-       SET credits    = credits + 1,
+       SET credits    = credits + per_user.n,
+           updated_at = now()
+      FROM per_user
+     WHERE us.user_id = per_user.user_id
+    RETURNING us.user_id
+  ),
+  -- Move each stuck row to the TERMINAL 'failed' state (never back to approved).
+  expired AS (
+    UPDATE public.application_queue q
+       SET status     = 'failed',
+           last_error = 'expired_unconfirmed_submitting',
            updated_at = now()
       FROM stuck
-     WHERE us.user_id = stuck.user_id
-    RETURNING stuck.id AS queue_id
+     WHERE q.id = stuck.id
+    RETURNING q.id, q.user_id, q.application_id
   ),
-  reset AS (
-    UPDATE public.application_queue q
-       SET status     = 'approved',
-           last_error = 'expired_stuck_submitting',
-           updated_at = now()
-      FROM refunded
-     WHERE q.id = refunded.queue_id
-    RETURNING q.id
+  -- Audit each expiry (BR-002 / BR-133): a submission_attempt event marking the
+  -- outcome unconfirmed so manual reconciliation is possible. actor='system'
+  -- and event_type='submission_attempt' are existing valid enum values.
+  logged AS (
+    INSERT INTO public.application_events
+      (user_id, application_id, event_type, actor, reason, metadata)
+    SELECT
+      expired.user_id, expired.application_id, 'submission_attempt', 'system',
+      'Stuck submission expired — manual reconciliation required',
+      jsonb_build_object(
+        'outcome', 'unconfirmed',
+        'source',  'expire_stuck_submitting'
+      )
+    FROM expired
+    RETURNING id
   )
-  SELECT count(*) INTO v_count FROM reset;
+  -- Data-modifying CTEs (refunded, expired, logged) always execute exactly
+  -- once, whether or not the primary query references them; we count expired.
+  SELECT count(*) INTO v_count FROM expired;
 
   RETURN v_count;
 END;
 $$;
 
 COMMENT ON FUNCTION public.expire_stuck_submitting(interval) IS
-  'ADR-006 / BR-136: service-role-only self-heal. Resets queue rows stuck in submitting past the cutoff back to approved and refunds the unconsumed credit. Returns count reset. Never callable by clients.';
+  'ADR-006 / BR-136,002,133: service-role-only self-heal. Moves queue rows stuck in submitting past the cutoff to TERMINAL failed (never back to approved — avoids double external submission), refunds the unconsumed credit per user (correct count), and writes a submission_attempt event (outcome=unconfirmed) for each. Returns count expired. Never callable by clients.';
 
 REVOKE EXECUTE ON FUNCTION public.expire_stuck_submitting(interval) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.expire_stuck_submitting(interval) TO service_role;
+
+
+-- ============================================================
+-- 4) RLS hardening (FIX 2 / BR-005) — root-cause defense-in-depth
+--
+--    The RPC ownership check (claim_submission, FIX 2) already closes the
+--    submission hole: a queue row whose application_id is not owned by its
+--    user_id is never submitted or charged. This RLS change tightens the
+--    ROOT CAUSE so such a row can't be inserted in the first place.
+--
+--    Recreated faithfully from 20260612000004_create_application_queue.sql:
+--    same name, role, columns, and the existing status constraint
+--    ('pending_approval','approved') are preserved EXACTLY. The ONLY addition
+--    is a WITH CHECK clause requiring the inserted application_id to belong to
+--    the caller (auth.uid()). This strictly narrows the policy — it can never
+--    admit a row the original policy would have rejected. RLS stays ENABLED.
+-- ============================================================
+DROP POLICY IF EXISTS "Application queue: insert own" ON public.application_queue;
+
+CREATE POLICY "Application queue: insert own"
+  ON public.application_queue FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND status IN ('pending_approval', 'approved')
+    -- FIX 2 / BR-005: the queued application must belong to the caller.
+    AND EXISTS (
+      SELECT 1
+        FROM public.applications a
+       WHERE a.id = application_id
+         AND a.user_id = (SELECT auth.uid())
+    )
+  );

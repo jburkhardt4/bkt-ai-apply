@@ -18,8 +18,10 @@
  *     (persistSession:false; key never leaves the runtime — BR-006)
  *   - @supabase/supabase-js from the deno.json import map
  *   - CORS_HEADERS + json() from _shared/http.ts; OPTIONS preflight short-circuit
- *   - Deno.serve(async (req) => Response); invoked unauthenticated by the
- *     scheduler (same as prospector-cron) — the service role is the trust anchor
+ *   - Deno.serve(async (req) => Response); deployed --no-verify-jwt so pg_cron
+ *     can invoke it without a user JWT (same as prospector-cron / gmail-sync).
+ *     An optional CRON_SECRET (header 'x-cron-secret' or Authorization Bearer)
+ *     gates the open endpoint when set; the service role is the trust anchor.
  *
  * The worker's ONLY DB mutations are the three service-role RPCs
  * (expire_stuck_submitting / claim_submission / finalize_submission). It writes
@@ -53,6 +55,31 @@ function batchSize(): number {
   const raw = Deno.env.get('SUBMISSION_BATCH_SIZE')
   const n = raw ? Number.parseInt(raw, 10) : NaN
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_BATCH_SIZE
+}
+
+/**
+ * Shared-secret gate for the scheduler (FIX 5). The worker is deployed with
+ * verify_jwt disabled (--no-verify-jwt) so pg_cron can invoke it without a user
+ * JWT — matching prospector-cron / gmail-sync. To avoid leaving the endpoint
+ * open, an optional CRON_SECRET locks it down:
+ *   - If CRON_SECRET is SET, the request MUST carry it, either as the
+ *     'x-cron-secret' header or as 'Authorization: Bearer <CRON_SECRET>';
+ *     otherwise the request is rejected (401).
+ *   - If CRON_SECRET is UNSET, the request is allowed (backward-compatible /
+ *     dry-run-safe — mirrors the pre-secret behavior).
+ * Returns true when the request is authorized to proceed.
+ */
+function isCronAuthorized(req: Request): boolean {
+  const secret = Deno.env.get('CRON_SECRET')
+  if (!secret) return true // unset → open (backward-compatible)
+
+  const headerSecret = req.headers.get('x-cron-secret')
+  if (headerSecret && headerSecret === secret) return true
+
+  const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization')
+  if (authHeader && authHeader === `Bearer ${secret}`) return true
+
+  return false
 }
 
 function createServiceClient(): SupabaseClient {
@@ -132,6 +159,60 @@ interface LiveResult {
   expiredStuck: number
 }
 
+/** Max finalize attempts on a SUCCESS outcome before giving up (FIX 4). */
+const FINALIZE_MAX_ATTEMPTS = 3
+/** Base backoff between finalize retries (ms); grows linearly per attempt. */
+const FINALIZE_BACKOFF_MS = 200
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Minimal shape of a Supabase RPC error we care about. */
+interface RpcError {
+  message: string
+}
+
+/**
+ * Finalizes a claimed row. The finalize RPC is idempotent (it only acts on a
+ * row in 'submitting'), so retrying a SUCCESS outcome cannot double-charge or
+ * double-transition. A transient DB error on a successful submission must not
+ * strand the row, so we retry up to FINALIZE_MAX_ATTEMPTS with a short linear
+ * backoff. A FAILURE outcome is finalized in a single attempt (the stuck-row
+ * expiry path is the backstop). Returns the last error, or null on success.
+ */
+async function finalizeWithRetry(
+  supabase: SupabaseClient,
+  queueId: string,
+  outcome: SubmissionOutcome,
+): Promise<RpcError | null> {
+  const maxAttempts = outcome.success ? FINALIZE_MAX_ATTEMPTS : 1
+  let lastError: RpcError | null = null
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const { error } = await supabase.rpc('finalize_submission', {
+      p_queue_id: queueId,
+      p_success: outcome.success,
+      p_channel: outcome.channel,
+      p_error: outcome.error ?? null,
+      p_metadata: outcome.metadata ?? {},
+    })
+
+    if (!error) return null
+    lastError = error
+
+    if (attempt < maxAttempts) {
+      console.error(
+        `submission-worker: finalize_submission(${queueId}) attempt ${attempt}/${maxAttempts} ` +
+          `failed: ${error.message} — retrying`,
+      )
+      await sleep(FINALIZE_BACKOFF_MS * attempt)
+    }
+  }
+
+  return lastError
+}
+
 async function runLive(supabase: SupabaseClient): Promise<LiveResult> {
   // (a) Self-heal any rows a crashed prior run left stuck in 'submitting'.
   let expiredStuck = 0
@@ -209,19 +290,27 @@ async function runLive(supabase: SupabaseClient): Promise<LiveResult> {
     }
 
     // Finalize EXACTLY once per claimed row (RPC refunds the credit on failure,
-    // transitions discovery->applied + writes events on success).
-    const { error: finalizeError } = await supabase.rpc('finalize_submission', {
-      p_queue_id: row.id,
-      p_success: outcome.success,
-      p_channel: outcome.channel,
-      p_error: outcome.error ?? null,
-      p_metadata: outcome.metadata ?? {},
-    })
+    // transitions discovery->applied + writes events on success). The RPC is
+    // idempotent (only acts on rows in 'submitting'), so a retried success
+    // call is safe. On a SUCCESS outcome we retry a transient finalize blip up
+    // to FINALIZE_MAX_ATTEMPTS so a real submission is not stranded by a DB
+    // hiccup; on a FAILURE outcome a single call suffices (refund/mark-failed).
+    const finalizeError = await finalizeWithRetry(supabase, row.id, outcome)
 
     if (finalizeError) {
-      // The submission may have happened but we could not record the outcome.
-      // expire_stuck_submitting will reclaim/refund the row on a later run.
-      console.error(`submission-worker: finalize_submission(${row.id}) error: ${finalizeError.message}`)
+      if (outcome.success) {
+        // A real submission was sent but we could NOT record it after retries.
+        // Log loudly — expire_stuck_submitting is the backstop: it will move
+        // the still-'submitting' row to terminal 'failed' (outcome=unconfirmed)
+        // for manual reconciliation, never auto-resubmitting it.
+        console.error(
+          `submission-worker: CRITICAL finalize_submission(${row.id}) failed after retries ` +
+            `on a SUCCESSFUL submission — manual reconciliation required: ${finalizeError.message}`,
+        )
+      } else {
+        // Failure-outcome finalize blip: expire_stuck_submitting reclaims later.
+        console.error(`submission-worker: finalize_submission(${row.id}) error: ${finalizeError.message}`)
+      }
     }
 
     if (outcome.success) submitted += 1
@@ -267,6 +356,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // CORS preflight (required for supabase.functions.invoke()).
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
+  }
+
+  // FIX 5: scheduler shared-secret gate. The function is deployed
+  // --no-verify-jwt, so this is the only auth on the endpoint when CRON_SECRET
+  // is set. Checked before any work (and before touching the service-role key).
+  if (!isCronAuthorized(req)) {
+    return json({ error: 'unauthorized' }, 401)
   }
 
   let supabase: SupabaseClient

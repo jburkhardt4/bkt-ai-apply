@@ -25,16 +25,22 @@ no-resubmit) are enforced server-side inside the RPCs it calls.
 | Serialization | Rows are processed **sequentially** (never `Promise.all`): each claim charges a credit + counts toward the daily cap, so they must not race (BR-136) |
 | DB mutations | **Only** via three service-role RPCs (`expire_stuck_submitting`, `claim_submission`, `finalize_submission`). The worker writes no `application_events` and touches no credits directly — the RPCs own all mutations + event sourcing (BR-002/133, LSN-004) |
 | Channel routing | `application_method` `api`/`ats` on a known ATS host → ATS adapter; everything else → browser fallback; addressable-but-`manual` → immediate `manual_required` failure |
-| Guardrails | Re-validated server-side inside `claim_submission`: pause (BR-132), credits (BR-136), daily cap, no-resubmit (BR-135), score threshold for autonomous rows (BR-131) |
+| Guardrails | Re-validated server-side inside `claim_submission` (per-user advisory-locked): ownership (BR-005), pause (BR-132), credits (BR-136), daily cap incl. in-flight `submitting` rows (BR-136), no-resubmit (BR-135). **Authorization is server-authoritative** (BR-130/131/148): a row submits only if an explicit `approval` event exists OR the server's `review_mode` is `assist`/`auto` and `match_score ≥ threshold` — the client `queued_by` is audit-only. A row lacking authorization stays `approved` (`awaiting_approval`), never cancelled |
 | Failure visibility | Every failure is finalized as `failed` + a `submission_attempt` event with the reason; the charged credit is refunded. Never silent (ADR-006) |
-| Invocation | Unauthenticated POST by the scheduler — the **service role is the trust anchor**, mirroring `prospector-cron` / `gmail-sync` |
+| Stuck self-heal | A row stuck in `submitting` past 30 min is moved to **terminal `failed`** (`last_error = expired_unconfirmed_submitting`), the credit is refunded, and a `submission_attempt` event (`outcome = unconfirmed`) is written. It is **never** auto-returned to `approved` — a stuck row may have submitted externally, so it requires manual reconciliation rather than risking a double submission |
+| Finalize resilience | On a **successful** submission the worker retries `finalize_submission` up to 3× with a short backoff if the RPC errors, so a transient DB blip cannot strand a real submission; if all retries fail it logs loudly and the stuck-row expiry above is the backstop. The RPC is idempotent (acts only on `submitting`), so retries are safe |
+| Invocation | POST by the scheduler. Deployed `--no-verify-jwt` (pg_cron carries no user JWT) — the **service role is the trust anchor**, mirroring `prospector-cron` / `gmail-sync`. An optional `CRON_SECRET` gates the endpoint: when set, every request must carry it (`x-cron-secret` header or `Authorization: Bearer <CRON_SECRET>`) or it is rejected `401` |
 
 ---
 
 ## 1. Deploy
 
+The worker is invoked by pg_cron, which carries **no user JWT**, so it must be
+deployed with JWT verification disabled (matching `prospector-cron` /
+`gmail-sync`). The endpoint is then protected in-code by `CRON_SECRET` (step 2).
+
 ```bash
-supabase functions deploy submission-worker
+supabase functions deploy submission-worker --no-verify-jwt
 ```
 
 The function imports `@supabase/supabase-js` from the `supabase/functions/deno.json`
@@ -53,6 +59,7 @@ Dashboard: **Project → Edge Functions → Secrets**, or CLI:
 supabase secrets set \
   SUBMISSION_LIVE="false" \
   SUBMISSION_BATCH_SIZE="10" \
+  CRON_SECRET="<long random string>" \
   BROWSERBASE_API_KEY="<browserbase api key>" \
   BROWSERBASE_PROJECT_ID="<browserbase project id>"
 ```
@@ -61,6 +68,7 @@ supabase secrets set \
 | --- | --- | --- |
 | `SUBMISSION_LIVE` | to go live | Must be the exact string `true` to send real applications. Anything else (including unset) = dry run. **Leave unset/`false` until you intend to submit for real.** |
 | `SUBMISSION_BATCH_SIZE` | no | Max `approved` rows processed per run (default 10) |
+| `CRON_SECRET` | strongly recommended | Locks the `--no-verify-jwt` endpoint. When set, every invocation must carry it (`x-cron-secret` header or `Authorization: Bearer <CRON_SECRET>`) or it gets `401`. When **unset** the endpoint is open (backward-compatible / dry-run-safe). Set it before going live and add the matching header to the pg_cron call (step 3). |
 | `BROWSERBASE_API_KEY` | for browser channel | Absent → browser adapter returns `browser_not_configured` (graceful) |
 | `BROWSERBASE_PROJECT_ID` | for browser channel | Required alongside the API key to bootstrap a session |
 
@@ -70,7 +78,10 @@ do not set them by hand. The service-role key never leaves the function runtime
 
 ## 3. Schedule (pg_cron → net.http_post)
 
-Same mechanism as `gmail-sync`. Roughly every 5 minutes:
+Same mechanism as `gmail-sync`. Roughly every 5 minutes. Because the function
+is deployed `--no-verify-jwt`, the request carries the `x-cron-secret` header so
+it passes the in-code `CRON_SECRET` gate (use the **same** value you set in
+step 2). Keep the deploy command (step 1) and this schedule consistent.
 
 ```sql
 select cron.schedule(
@@ -79,12 +90,19 @@ select cron.schedule(
   $$
   select net.http_post(
     url     := 'https://<project-ref>.supabase.co/functions/v1/submission-worker',
-    headers := jsonb_build_object('Content-Type', 'application/json'),
+    headers := jsonb_build_object(
+      'Content-Type',  'application/json',
+      'x-cron-secret', '<same value as the CRON_SECRET edge secret>'
+    ),
     body    := '{}'::jsonb
   );
   $$
 );
 ```
+
+> If you set `CRON_SECRET` **after** scheduling, re-run `cron.schedule` with the
+> header (or `cron.unschedule('submission-worker-5m')` first) so the scheduled
+> call carries the secret — otherwise every tick will get `401`.
 
 Scheduling the job is safe **before** going live — every tick is a harmless
 dry-run count until `SUBMISSION_LIVE=true` is set.
@@ -93,16 +111,20 @@ dry-run count until `SUBMISSION_LIVE=true` is set.
 
 ```bash
 # Dry run (default): returns the approved count, sends nothing.
+# Include -H "x-cron-secret: <CRON_SECRET>" if you set CRON_SECRET (else 401).
 curl -s -X POST "https://<project-ref>.supabase.co/functions/v1/submission-worker" \
-  -H "Content-Type: application/json" -d '{}'
+  -H "Content-Type: application/json" \
+  -H "x-cron-secret: <CRON_SECRET>" -d '{}'
 # → { "mode":"dry_run", "approvedCount": <N>, "message":"Set SUBMISSION_LIVE=true ..." }
 ```
 
 To exercise the live path, set `SUBMISSION_LIVE=true`, then re-invoke and check:
 
 - `application_queue` — approved rows move to `submitted` or `failed`
-  (or stay `approved` if a transient guard like `no_credits`/`paused`/`daily_cap`
-  fired; cancelled for terminal guards `already_submitted`/`below_threshold`).
+  (or stay `approved` if a transient guard fired: `no_credits` / `paused` /
+  `daily_cap` / `awaiting_approval`; `cancelled` for the terminal
+  `already_submitted` guard; a stuck `submitting` row self-heals to terminal
+  `failed` with `last_error = expired_unconfirmed_submitting`).
 - `user_settings.credits` — decremented on a confirmed submit, refunded on failure.
 - `applications.submitted_at` + stage `discovery → applied` on confirmed submits.
 - `application_events` — one `submission_attempt` per attempt; one

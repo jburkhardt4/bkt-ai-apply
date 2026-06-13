@@ -19,6 +19,11 @@ export interface LlmRequest {
   system: string
   messages: ChatTurn[]
   maxTokens: number
+  /** Gemini-only: token budget for the model's internal "thinking". Set to 0
+   *  to disable it for fast structured tasks (classification, short drafts) —
+   *  on Gemini 2.5 Flash, thinking can otherwise consume the whole output
+   *  budget and return empty text. Ignored by providers that don't support it. */
+  thinkingBudget?: number
 }
 
 export interface LlmUsage {

@@ -189,7 +189,9 @@ async function draftReply(
 
   const provider = getProvider('google')
   const result = await provider.complete(
-    { model: GEMINI_MODEL_NAME, system, messages: [{ role: 'user', content: user }], maxTokens: DRAFT_MAX_TOKENS },
+    // thinkingBudget: 0 — same Gemini 2.5 Flash failure mode as classification;
+    // a short professional reply needs no extended reasoning.
+    { model: GEMINI_MODEL_NAME, system, messages: [{ role: 'user', content: user }], maxTokens: DRAFT_MAX_TOKENS, thinkingBudget: 0 },
     apiKey,
   )
 

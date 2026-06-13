@@ -1,14 +1,16 @@
 ---
 name: missing-convention-docs
-description: Two CLAUDE.md-referenced convention files do not exist — component-patterns.md and golden-principles.md — causing pre-flight read gaps
+description: SUPERSEDED by [[project-missing-docs]] — component-patterns.md now exists; golden-principles.md and error-handling.md still missing.
 metadata:
   type: project
 ---
 
-`docs/conventions/component-patterns.md`, `docs/conventions/golden-principles.md`, and `docs/conventions/error-handling.md` are listed in CLAUDE.md Key Reference Files but none of these files exist on disk (confirmed 2026-06-07).
+**Superseded 2026-06-13 — see [[project-missing-docs]] for the current, fuller list.**
 
-**Why:** Files were added to the reference table before they were written. Any agent doing pre-flight reads for a component, design, or error-handling task will HOLD on these missing paths.
+Correction to the 2026-06-07 record: `docs/conventions/component-patterns.md` HAS since been written (exists, dated 2026-06-12). Still genuinely missing as of 2026-06-13:
+- `docs/conventions/golden-principles.md`
+- `docs/conventions/error-handling.md`
+- `docs/domain/pipeline-stages.md` (fallback: business-rules BR-010–BR-013)
+- `docs/domain/data-model.md` (fallback: supabase/migrations/)
 
-**How to apply:** On any task touching UI components, design patterns, or error handling conventions, note these files are absent. Do not HOLD the overall work order if the task does not require their specific content — but capture as a lesson_candidate and recommend Context-Keeper create stubs. Do not assume content from the filenames.
-
-[[lsn-003-e2e-required]]
+**How to apply:** Use [[project-missing-docs]] as the source of truth; do not HOLD when a documented fallback exists.

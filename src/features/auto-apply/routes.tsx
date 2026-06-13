@@ -27,7 +27,6 @@ import {
   useLastTarget,
   useRemovedSeedSavedIds,
   useSavedSearchIds,
-  useSubmittedDelta,
 } from './state'
 import { SEARCH_SEED } from './data/searchData'
 import { SAVED_SEED } from './data/savedData'
@@ -80,7 +79,6 @@ function toLastTarget(job: SearchJob | SavedJob): SearchJob {
 function useDemoBoardActions() {
   const toast = useBktToast()
   const [, setCredits] = useCredits()
-  const [, setSubmittedDelta] = useSubmittedDelta()
   const [appliedIds, setAppliedIds] = useAppliedSearchIds()
   const [savedIds, setSavedIds] = useSavedSearchIds()
   const [, setLastTarget] = useLastTarget()
@@ -88,7 +86,6 @@ function useDemoBoardActions() {
   const autoApply = (job: SearchJob | SavedJob) => {
     setAppliedIds((ids) => (ids.includes(String(job.id)) ? ids : [...ids, String(job.id)]))
     if (job.title && job.company) setLastTarget(toLastTarget(job))
-    setSubmittedDelta((n) => n + 1)
     setCredits((c) => Math.max(0, c - 1))
     toast(`Application queued — ${job.company ?? job.title}`, 'circle-check', 'var(--bkt-success)')
   }
@@ -237,6 +234,17 @@ export function SavedRoute() {
 
 export function DocsRoute({ type }: { type: DocType }) {
   const toast = useBktToast()
+  const { user } = useAuth()
   const [lastTarget] = useLastTarget()
-  return <DocsHome type={type} docs={DOCS_SEED} lastJob={lastTarget} dateOrder="mdy" aiVariant="rail" onToast={toast} />
+  return (
+    <DocsHome
+      type={type}
+      docs={DOCS_SEED}
+      userId={user?.id ?? null}
+      lastJob={lastTarget}
+      dateOrder="mdy"
+      aiVariant="rail"
+      onToast={toast}
+    />
+  )
 }

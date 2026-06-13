@@ -2,6 +2,7 @@ import { getSupabaseClient } from '../../../lib/supabase'
 import type { Database } from '../../../types/db.types'
 import type { PipelineStage } from '../../../types/pipeline'
 import { canTransitionStage } from '../domain/stageRules'
+import { deriveSubmittedCount } from './submittedCount'
 
 export type ApplicationRow = Database['public']['Tables']['applications']['Row'] & {
   jobs: {
@@ -23,6 +24,25 @@ export async function fetchApplications(userId: string): Promise<ApplicationRow[
 
   if (error) throw new Error(error.message)
   return (data ?? []) as ApplicationRow[]
+}
+
+/**
+ * Counts the user's submitted applications straight from `applications` DB
+ * truth (Phase 2b dashboard honesty). Replaces the localStorage submitted
+ * delta. Returns 0 on any error so the dashboard degrades gracefully rather
+ * than throwing in the stat row.
+ */
+export async function fetchSubmittedCount(userId: string): Promise<number> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from('applications')
+    .select('stage, submitted_at')
+    .eq('user_id', userId)
+
+  if (error) throw new Error(error.message)
+  return deriveSubmittedCount(
+    (data ?? []) as { stage: string; submitted_at: string | null }[],
+  )
 }
 
 export async function transitionStage(params: {

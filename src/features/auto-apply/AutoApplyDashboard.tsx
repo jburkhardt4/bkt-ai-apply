@@ -8,8 +8,9 @@ import { useState } from 'react'
 import { useBktToast } from '@/components/bkt/toast-context'
 import { useAuth } from '@/contexts/auth-context'
 import { applyToJob, declineJob, fetchApplicationTimeline, fetchJobMatches } from './services/autoApplyService'
+import { fetchSubmittedCount } from '@/features/applications/services/applicationService'
 import { useAsyncData } from './hooks/useAutoApplyData'
-import { useBudget, useCredits, usePaused, useReviewMode, useSubmittedDelta } from './state'
+import { useBudget, useCredits, usePaused, useReviewMode } from './state'
 import { JOBS_SEED } from './data/jobsData'
 import { BudgetModal, ModeTabs, ReviewModeMenu, TopBar } from './components/chrome'
 import { REVIEW_MODES } from './reviewModes'
@@ -24,6 +25,12 @@ export function AutoApplyDashboard() {
   const userId = user?.id ?? null
 
   const { data, loading, reload } = useAsyncData(() => fetchJobMatches(userId), [userId])
+  // Phase 2b: submitted count comes from `applications` DB truth, not a
+  // localStorage delta. Reloads in lockstep with the job-matches fetch.
+  const { data: submittedCount, reload: reloadSubmitted } = useAsyncData(
+    () => (userId ? fetchSubmittedCount(userId) : Promise.resolve<number | null>(null)),
+    [userId],
+  )
   const [overrides, setOverrides] = useState<Record<string, JobMatch['status']>>({})
   const jobs: JobMatch[] = (data?.jobs ?? []).map((j) => {
     const status = overrides[String(j.id)]
@@ -34,13 +41,16 @@ export function AutoApplyDashboard() {
   const [mode, setMode] = useState<'review' | 'jobs'>('jobs')
   const [credits, setCredits] = useCredits()
   const [budget, setBudget] = useBudget()
-  const [submittedDelta, setSubmittedDelta] = useSubmittedDelta()
   const [openId, setOpenId] = useState<JobMatch['id'] | null>(null)
   const [paused, setPaused] = usePaused()
   const [reviewMode, setReviewMode] = useReviewMode()
   const [budgetOpen, setBudgetOpen] = useState(false)
 
-  const submitted = live ? jobs.filter((j) => j.status === 'Applied').length : JOBS_SEED.stats.submitted + submittedDelta
+  // Live: DB-derived submitted count (fall back to in-view Applied rows until
+  // the count resolves). Demo/seed: the seeded stat stays stable.
+  const submitted = live
+    ? submittedCount ?? jobs.filter((j) => j.status === 'Applied').length
+    : JOBS_SEED.stats.submitted
   const matches = live ? jobs.length : JOBS_SEED.stats.matches
 
   const setStatus = (id: JobMatch['id'], status: JobMatch['status']) => setOverrides((o) => ({ ...o, [String(id)]: status }))
@@ -49,11 +59,12 @@ export function AutoApplyDashboard() {
     const j = jobs.find((x) => x.id === id)
     if (!j) return
     setStatus(id, 'Applied')
-    setSubmittedDelta((n) => n + 1)
     setCredits((c) => Math.max(0, c - 1))
     toast(`Application queued — ${j.company}`, 'circle-check', 'var(--bkt-success)')
     if (live) {
-      applyToJob(j, userId).catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
+      applyToJob(j, userId)
+        .then(() => reloadSubmitted())
+        .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
     }
   }
 

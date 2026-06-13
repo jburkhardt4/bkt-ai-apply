@@ -1,6 +1,8 @@
 import type { Json } from '../../../types/db.types'
 import type { AiTaskType } from '../../../types/pipeline'
-import { logAiUsage, routeAiTask } from '../../../lib/ai-router'
+import { getModelPricing, logAiUsage, routeAiTask } from '../../../lib/ai-router'
+import { getSupabaseClient } from '../../../lib/supabase'
+import { createDocumentVersion, type StoredDocumentVersion } from './documentStorageService'
 
 interface GenerationUsage {
   tokensIn: number
@@ -16,6 +18,15 @@ interface GenerationInputBase {
   jobDescription: string
   masterProfile: string
   highlights: string[]
+  /** Existing draft to revise (forwarded to the Edge Function as currentContent). */
+  currentContent?: string
+  /**
+   * When true, the generated document is persisted to the `documents` table
+   * (Storage + row) via documentStorageService and surfaced in metadata. The
+   * submission-packet flow leaves this off — it persists + links the documents
+   * itself after generation, so enabling it here would double-write.
+   */
+  persist?: boolean
   nowIso?: string
   usageOverride?: GenerationUsage
 }
@@ -41,6 +52,10 @@ export interface GeneratedDocumentPayload {
     reasoningTrace: Json
     contentHashCandidate: string
     generatedAt: string
+    /** Whether `content` came from the LLM Edge Function or the template fallback. */
+    source: 'llm' | 'template_fallback'
+    /** Present only when `persist` was requested and the write succeeded. */
+    storedDocument?: StoredDocumentVersion
   }
 }
 
@@ -142,9 +157,11 @@ function buildReasoningTrace(params: {
   routeModelName: string
   routeModelProvider: string
   costPolicyStatus: string
+  source: 'llm' | 'template_fallback'
 }): Json {
   return {
     rule_refs: ['BR-050', 'BR-052', 'BR-054', 'AI-RULE-001', 'AI-RULE-002', 'AI-RULE-003'],
+    source: params.source,
     routing: {
       task_type: params.taskType,
       model_name: params.routeModelName,
@@ -156,6 +173,28 @@ function buildReasoningTrace(params: {
       company_name: normalizeLine(params.input.companyName),
       highlights_count: normalizeLines(params.input.highlights).length,
     },
+  }
+}
+
+type DocumentTypeName = 'resume' | 'cover_letter'
+
+interface EdgeDocumentResponse {
+  content: string
+  usage: { input_tokens: number; output_tokens: number }
+}
+
+/** Maps the routing task type to the Edge Function's documentType. */
+function toDocumentType(taskType: 'resume_rewriting' | 'cover_letter_generation'): DocumentTypeName {
+  return taskType === 'resume_rewriting' ? 'resume' : 'cover_letter'
+}
+
+/** Builds the JD/posting object handed to the generate-document Edge Function. */
+function buildJobContext(input: GenerationInputBase): Record<string, unknown> {
+  return {
+    title: normalizeLine(input.jobTitle),
+    company: normalizeLine(input.companyName),
+    description: normalizeLine(input.jobDescription),
+    highlights: normalizeLines(input.highlights),
   }
 }
 
@@ -180,16 +219,54 @@ async function generateDocument(params: {
     }
   }
 
-  const content = params.contentBuilder(params.input)
+  const documentType = toDocumentType(params.taskType)
+
+  // Real generation: call the routed `generate-document` Edge Function (which
+  // holds the provider key). On any error, fall back to the deterministic
+  // template builder so the builder/packet flow still gets a document.
+  let content: string
+  let usage: GenerationUsage
+  let source: 'llm' | 'template_fallback'
+
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase.functions.invoke<EdgeDocumentResponse>('generate-document', {
+    body: {
+      provider: route.modelProvider,
+      model: route.modelName,
+      documentType,
+      job: buildJobContext(params.input),
+      masterProfile: params.input.masterProfile,
+      currentContent: params.input.currentContent,
+    },
+  })
+
+  if (!error && data && typeof data.content === 'string' && data.content.trim().length > 0) {
+    content = data.content
+    const pricing = getModelPricing(route.modelName)
+    const tokensIn = data.usage.input_tokens
+    const tokensOut = data.usage.output_tokens
+    usage = {
+      tokensIn,
+      tokensOut,
+      estimatedCostUsd: Number(
+        (tokensIn * pricing.inputUsdPerToken + tokensOut * pricing.outputUsdPerToken).toFixed(6),
+      ),
+    }
+    source = 'llm'
+  } else {
+    content = params.contentBuilder(params.input)
+    usage =
+      params.input.usageOverride ??
+      estimateUsage(
+        params.taskType,
+        [params.input.masterProfile, params.input.jobDescription, ...params.input.highlights].join(' '),
+        content,
+      )
+    source = 'template_fallback'
+  }
+
   const generatedAt = params.input.nowIso ?? new Date().toISOString()
   const title = `${params.titlePrefix} - ${normalizeLine(params.input.companyName)} - ${normalizeLine(params.input.jobTitle)}`
-  const usage =
-    params.input.usageOverride ??
-    estimateUsage(
-      params.taskType,
-      [params.input.masterProfile, params.input.jobDescription, ...params.input.highlights].join(' '),
-      content,
-    )
 
   const reasoningTrace = buildReasoningTrace({
     taskType: params.taskType,
@@ -197,6 +274,7 @@ async function generateDocument(params: {
     routeModelName: route.modelName,
     routeModelProvider: route.modelProvider,
     costPolicyStatus: route.costDecision.status,
+    source,
   })
 
   await logAiUsage({
@@ -209,6 +287,18 @@ async function generateDocument(params: {
     estimated_cost_usd: usage.estimatedCostUsd,
     application_id: params.input.applicationId ?? null,
   })
+
+  // Optional persistence to the `documents` table (Storage + row), reusing the
+  // canonical documentStorageService path (content_hash, version, RLS-scoped).
+  // The submission-packet flow leaves persist off and persists/links itself.
+  let storedDocument: StoredDocumentVersion | undefined
+  if (params.input.persist) {
+    storedDocument = await createDocumentVersion({
+      userId: params.input.userId,
+      documentType,
+      content,
+    })
+  }
 
   return {
     status: 'generated',
@@ -225,6 +315,8 @@ async function generateDocument(params: {
         reasoningTrace,
         contentHashCandidate: toStableHash(content),
         generatedAt,
+        source,
+        storedDocument,
       },
     },
   }

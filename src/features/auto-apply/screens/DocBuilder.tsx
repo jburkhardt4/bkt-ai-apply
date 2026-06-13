@@ -12,6 +12,7 @@ import { DocPaper } from './DocPaper'
 import type { DocContent, DocType } from './DocPaper'
 import { DocAssistant } from './DocAssistant'
 import type { AiTargetJob } from './DocAssistant'
+import { alignDocumentToJob } from '../services/docWriterService'
 
 type Patch = Partial<ResumeContent> & Partial<LetterContent>
 
@@ -162,13 +163,15 @@ export interface DocBuilderProps {
   item: DocItem | null
   initialContent: DocContent
   autoAlign?: boolean
+  /** Authenticated user id — enables real LLM generation; null = demo preview. */
+  userId: string | null
   lastJob: AiTargetJob
   aiVariant: 'rail' | 'floating'
   onBack: () => void
   onToast: ToastFn
 }
 
-export function DocBuilder({ type, docs, item, initialContent, autoAlign = false, lastJob, aiVariant, onBack, onToast }: DocBuilderProps) {
+export function DocBuilder({ type, docs, item, initialContent, autoAlign = false, userId, lastJob, aiVariant, onBack, onToast }: DocBuilderProps) {
   const [content, setContent] = useState<DocContent>(initialContent)
   const [tplId, setTplId] = useState(item?.template ?? 'classic')
   const [fmt, setFmt] = useState({ fontSize: 11, lineHeight: 1.45 })
@@ -188,35 +191,70 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     saveT.current = setTimeout(() => setSaving(false), 900)
   }
 
-  const runAlign = () => {
+  // Drops aligned copy into the editable fields and flashes the aligned state.
+  const applyAligned = (text: string) => {
+    if (type === 'resume') {
+      const base = content as ResumeContent
+      set({
+        headline: lastJob.title,
+        summary: text,
+        skills: [...new Set([...(lastJob.skills ?? []), ...base.skills])].slice(0, 10),
+      })
+    } else {
+      const base = content as LetterContent
+      set({
+        company: lastJob.company,
+        role: lastJob.title,
+        recipient: `${lastJob.company} Hiring Team`,
+        greeting: `Dear ${lastJob.company} Hiring Team,`,
+        body: [text, ...base.body.slice(1)],
+      })
+    }
+    setAligned(true)
+    setTimeout(() => setAligned(false), 1800)
+  }
+
+  // Demo-mode (no auth) pre-baked copy so the design-review UAT stays
+  // interactive without Supabase / Edge Functions.
+  const demoAlignedText = (): string =>
+    type === 'resume'
+      ? `Salesforce consulting leader targeting the ${lastJob.title} role at ${lastJob.company}. 12+ years leading engagements end-to-end — solution design, integration management, and client delivery teams of 30+ consultants — with CPQ architecture wins (38% faster quotes) and multi-cloud programs to $4.5M.`
+      : `I am writing to apply for the ${lastJob.title} role at ${lastJob.company}. Over the last twelve years I have led Salesforce delivery from both sides of the table — most recently as founder of BKT Advisory, where I run discovery-to-go-live engagements for enterprise clients.`
+
+  const runAlign = async () => {
     if (aligning) return
     setAligning(true)
-    setTimeout(() => {
-      if (type === 'resume') {
-        const base = initialContent as ResumeContent
-        set({
-          headline: lastJob.title,
-          summary: `Salesforce consulting leader targeting the ${lastJob.title} role at ${lastJob.company}. 12+ years leading engagements end-to-end — solution design, integration management, and client delivery teams of 30+ consultants — with CPQ architecture wins (38% faster quotes) and multi-cloud programs to $4.5M.`,
-          skills: [...new Set([...(lastJob.skills ?? []), ...base.skills])].slice(0, 10),
-        })
-      } else {
-        const base = initialContent as LetterContent
-        set({
-          company: lastJob.company,
-          role: lastJob.title,
-          recipient: `${lastJob.company} Hiring Team`,
-          greeting: `Dear ${lastJob.company} Hiring Team,`,
-          body: [
-            `I am writing to apply for the ${lastJob.title} role at ${lastJob.company}. Over the last twelve years I have led Salesforce delivery from both sides of the table — most recently as founder of BKT Advisory, where I run discovery-to-go-live engagements for enterprise clients.`,
-            ...base.body.slice(1),
-          ],
-        })
+
+    // Demo preview path — keep the prior pre-baked behavior.
+    if (!userId) {
+      setTimeout(() => {
+        applyAligned(demoAlignedText())
+        setAligning(false)
+        onToast(`Aligned to ${lastJob.company} — ${lastJob.title}`, 'wand-sparkles', 'var(--bkt-blue-300)')
+      }, 1100)
+      return
+    }
+
+    // Live path — real generation via the routed generate-document Edge Function.
+    try {
+      const result = await alignDocumentToJob({ userId, type, lastJob, content })
+      if (result.status === 'queued') {
+        onToast(`AI budget reached — ${result.reason}`, 'circle-alert', 'var(--bkt-warning)')
+        return
       }
+      applyAligned(result.content)
+      onToast(
+        result.source === 'llm'
+          ? `Aligned to ${lastJob.company} — ${lastJob.title}`
+          : `Aligned (offline draft) — ${lastJob.company}`,
+        'wand-sparkles',
+        'var(--bkt-blue-300)',
+      )
+    } catch (e: unknown) {
+      onToast(e instanceof Error ? e.message : 'Auto-align failed', 'circle-x', 'var(--bkt-danger)')
+    } finally {
       setAligning(false)
-      setAligned(true)
-      setTimeout(() => setAligned(false), 1800)
-      onToast(`Aligned to ${lastJob.company} — ${lastJob.title}`, 'wand-sparkles', 'var(--bkt-blue-300)')
-    }, 1100)
+    }
   }
 
   // Kick off auto-align on mount from a timer callback so no state is set
@@ -442,6 +480,7 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
           type={type}
           variant={aiVariant}
           ai={docs.ai}
+          userId={userId}
           lastJob={lastJob}
           onPatch={(target, text) => {
             if (target === 'summary') set({ summary: text })

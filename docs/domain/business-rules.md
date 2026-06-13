@@ -175,6 +175,9 @@
 | BR-134 | Submission is API-first (`application_method` `api`/`ats` → ATS endpoint adapters); browser-channel postings submit via Browserbase + Stagehand. BR-032/033/034 remain binding — postings that cannot be submitted within those rules fail to manual with a recorded reason | ADR-006, BR-032, BR-033, BR-034 |
 | BR-135 | An application transitions `discovery → applied` only on confirmed successful submission (or explicit JB manual action); queueing alone never changes stage | ADR-006, BR-004 |
 | BR-136 | Each submission decrements `user_settings.credits` atomically; zero credits or exhausted monthly budget halts assist/auto queueing and submission until replenished | ADR-006 |
+| BR-146 | The submission worker defaults to a zero-side-effect dry-run; real submissions fire only when `SUBMISSION_LIVE=true` AND the resolved channel's config is present. Absent config (no ATS board/payload, no Browserbase key) fails to manual with a recorded reason — the worker never blind-fires (BR-032/033/034 remain binding) | ADR-006, BR-134 |
+| BR-147 | A submission credit is charged atomically at claim (`claim_submission`) and refunded on failure or stuck-reset (`finalize_submission`/`expire_stuck_submitting`), so only a confirmed successful submission ultimately consumes a credit | ADR-006, BR-136 |
+| BR-148 | Clients may only create the user-owned queue statuses (`pending_approval`/`approved`) or move a row to `cancelled`; `submitting`/`submitted`/`failed` are written exclusively by the service-role worker, which re-validates every guardrail server-side regardless of the client-supplied `status`/`queued_by` | ADR-006, BR-131, BR-133 |
 
 ---
 

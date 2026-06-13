@@ -8,6 +8,7 @@ import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import { ChipPill, QualLine, SkillTag } from '@/components/bkt/bits'
 import { companyLogo } from '@/components/bkt/format'
+import type { TimelineEvent } from '../services/autoApplyService'
 import type { JobMatch, SearchJob } from '../types'
 
 function JDTab({ label, badge, active, onClick }: { label: string; badge?: ReactNode; active: boolean; onClick: () => void }) {
@@ -55,9 +56,12 @@ export interface JDSidebarProps {
   onClose: () => void
   onApply: (id: JDJob['id']) => void
   onDecline: (id: JDJob['id']) => void
+  /** Event-sourced application timeline shown on the Application tab. */
+  auditEvents?: TimelineEvent[]
+  auditLoading?: boolean
 }
 
-export function JDSidebar({ job, onClose, onApply, onDecline }: JDSidebarProps) {
+export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, auditLoading }: JDSidebarProps) {
   const [tab, setTab] = useState<'overview' | 'application' | 'fit'>('overview')
   // Reset to Overview when a different job opens (adjust-state-during-render).
   const jobId = job?.id
@@ -150,20 +154,44 @@ export function JDSidebar({ job, onClose, onApply, onDecline }: JDSidebarProps) 
             </>
           )}
 
-          {tab === 'application' && (
-            <div
-              style={{
-                border: '1px dashed var(--border-strong)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '26px 20px',
-                textAlign: 'center',
-                color: 'var(--text-muted)',
-                font: '400 var(--text-sm)/1.5 var(--font-body)',
-              }}
-            >
-              Application materials will appear here once Auto Apply submits this role.
-            </div>
-          )}
+          {tab === 'application' &&
+            (auditLoading ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', font: '400 var(--text-sm)/1.5 var(--font-body)', padding: '26px 0' }}>
+                Loading application activity…
+              </div>
+            ) : auditEvents && auditEvents.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <div style={{ font: '700 var(--text-md)/1 var(--font-display)', color: 'var(--text-strong)', marginBottom: 14 }}>Activity</div>
+                {auditEvents.map((ev, i) => (
+                  <div key={ev.id} style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--primary)', marginTop: 5, flexShrink: 0 }}></span>
+                      {i < auditEvents.length - 1 && <span style={{ flex: 1, width: 2, background: 'var(--border)', margin: '3px 0' }}></span>}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, paddingBottom: 16 }}>
+                      <span style={{ font: '600 var(--text-base)/1.2 var(--font-body)', color: 'var(--text-strong)' }}>{ev.title}</span>
+                      <span style={{ font: '400 var(--text-xs)/1.3 var(--font-body)', color: 'var(--text-muted)' }}>
+                        {ev.actor} · {ev.at}
+                      </span>
+                      {ev.reason && <span style={{ font: '400 var(--text-sm)/1.4 var(--font-body)', color: 'var(--text-body)' }}>{ev.reason}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  border: '1px dashed var(--border-strong)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '26px 20px',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)',
+                  font: '400 var(--text-sm)/1.5 var(--font-body)',
+                }}
+              >
+                Application materials will appear here once Auto Apply submits this role.
+              </div>
+            ))}
 
           {tab === 'fit' && (
             <>

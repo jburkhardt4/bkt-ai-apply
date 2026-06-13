@@ -8,11 +8,13 @@
 // `transition_stage` RPC, which writes `application_events` (event
 // sourcing non-negotiable #4).
 import { getSupabaseClientSafe } from '@/lib/supabase'
-import { transitionStage } from '@/features/applications/services/applicationService'
+import { transitionStage, type AuditEventRow } from '@/features/applications/services/applicationService'
 import type { PipelineStage } from '@/types/pipeline'
-import type { EmailMessage, InboxData, JobMatch, JobStatus } from '../types'
+import type { EmailMessage, InboxData, JobMatch, JobStatus, SavedJob, SearchJob } from '../types'
 import { JOBS_SEED } from '../data/jobsData'
 import { INBOX_SEED } from '../data/inboxData'
+import { SEARCH_SEED } from '../data/searchData'
+import { SAVED_SEED } from '../data/savedData'
 
 export type DataSource = 'live' | 'demo'
 
@@ -249,5 +251,241 @@ export async function fetchInbox(userId: string | null): Promise<{ source: DataS
     }
   } catch {
     return { source: 'demo', inbox: INBOX_SEED }
+  }
+}
+
+/* ---------------- search / saved board (Phase 2 data backbone) ---------------- */
+
+const JOB_SELECT =
+  'id, title, location, description, skills, compensation_min, compensation_max, remote_type, job_type, posted_at, created_at, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps)'
+
+interface LiveSearchJobRow {
+  id: string
+  title: string
+  location: string | null
+  description: string | null
+  skills: string[] | null
+  compensation_min: number | null
+  compensation_max: number | null
+  remote_type: string | null
+  job_type: string | null
+  posted_at: string | null
+  created_at: string
+  companies: LiveCompanyRow | null
+  ai_scores: LiveScoreRow[] | null
+}
+
+function mapJob(row: LiveSearchJobRow): SearchJob {
+  const company = row.companies
+  const score = row.ai_scores?.[0] ?? null
+  const chips = [row.remote_type, row.job_type].filter((c): c is string => Boolean(c))
+  const about =
+    company && (company.industry || company.size_range)
+      ? [company.industry, company.size_range].filter(Boolean).join(' · ')
+      : undefined
+  return {
+    id: row.id,
+    domain: company?.domain ?? undefined,
+    company: company?.name ?? 'Unknown company',
+    industry: company?.industry ?? '',
+    posted: relativeTime(row.posted_at ?? row.created_at),
+    title: row.title,
+    chips: chips.length > 0 ? chips : (row.skills ?? []).slice(0, 3),
+    score: Math.round(score?.overall_score ?? 0),
+    location: row.location ?? undefined,
+    overview: row.description ?? undefined,
+    skills: row.skills ?? undefined,
+    keyMatches: score?.strengths ?? undefined,
+    keyGaps: score?.gaps ?? undefined,
+    about,
+  }
+}
+
+export interface SearchBoard {
+  source: DataSource
+  jobs: SearchJob[]
+  /** job_ids already applied to (have an application row). */
+  appliedIds: string[]
+  /** job_ids bookmarked in saved_jobs. */
+  savedIds: string[]
+}
+
+/** Search board from real `jobs` rows + the user's applied/saved sets.
+ *  Falls back to the design seeds when Supabase is unconfigured or empty. */
+export async function fetchSearchBoard(userId: string | null): Promise<SearchBoard> {
+  const demo: SearchBoard = { source: 'demo', jobs: SEARCH_SEED.jobs, appliedIds: [], savedIds: [] }
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId) return demo
+  try {
+    const [jobsResult, appsResult, savedResult] = await Promise.all([
+      supabase.from('jobs').select(JOB_SELECT).eq('user_id', userId).order('created_at', { ascending: false }).limit(60),
+      supabase.from('applications').select('job_id').eq('user_id', userId),
+      supabase.from('saved_jobs').select('job_id').eq('user_id', userId),
+    ])
+    if (jobsResult.error) throw new Error(jobsResult.error.message)
+    const rows = (jobsResult.data ?? []) as unknown as LiveSearchJobRow[]
+    if (rows.length === 0) return demo
+    const appliedIds = ((appsResult.data ?? []) as { job_id: string }[]).map((r) => r.job_id)
+    const savedIds = ((savedResult.data ?? []) as { job_id: string }[]).map((r) => r.job_id)
+    return { source: 'live', jobs: rows.map(mapJob), appliedIds, savedIds }
+  } catch {
+    return demo
+  }
+}
+
+interface LiveSavedRow {
+  job_id: string
+  created_at: string
+  jobs: LiveSearchJobRow | null
+}
+
+function mapSaved(row: LiveSavedRow): SavedJob {
+  const job = row.jobs ? mapJob(row.jobs) : null
+  return {
+    id: row.job_id,
+    title: job?.title ?? 'Untitled role',
+    saved: relativeTime(row.created_at),
+    chips: job?.chips ?? [],
+    allChips: job?.skills ?? job?.chips ?? [],
+    desc: job?.overview ?? '',
+    domain: job?.domain,
+    company: job?.company,
+    score: job?.score,
+    industry: job?.industry,
+    posted: job?.posted,
+    overview: job?.overview,
+    skills: job?.skills,
+    level: job?.level,
+    location: job?.location,
+  }
+}
+
+/** Saved jobs from `saved_jobs` joined to the posting. Seed fallback when empty. */
+export async function fetchSavedJobs(userId: string | null): Promise<{ source: DataSource; jobs: SavedJob[] }> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId) return { source: 'demo', jobs: SAVED_SEED.jobs }
+  try {
+    const { data, error } = await supabase
+      .from('saved_jobs')
+      .select(`job_id, created_at, jobs(${JOB_SELECT})`)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as unknown as LiveSavedRow[]
+    if (rows.length === 0) return { source: 'demo', jobs: SAVED_SEED.jobs }
+    return { source: 'live', jobs: rows.map(mapSaved) }
+  } catch {
+    return { source: 'demo', jobs: SAVED_SEED.jobs }
+  }
+}
+
+/** Bookmark a posting (idempotent — duplicate saves are ignored). */
+export async function saveJob(userId: string | null, jobId: string): Promise<void> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId) return
+  const { error } = await supabase.from('saved_jobs').insert({ user_id: userId, job_id: jobId })
+  if (error && error.code !== '23505') throw new Error(error.message)
+}
+
+/** Remove a bookmark. */
+export async function unsaveJob(userId: string | null, jobId: string): Promise<void> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId) return
+  const { error } = await supabase.from('saved_jobs').delete().eq('user_id', userId).eq('job_id', jobId)
+  if (error) throw new Error(error.message)
+}
+
+/** Auto-apply to a discovered posting: ensure an application exists, then
+ *  transition discovery → applied via the `transition_stage` RPC (which
+ *  writes the application_events audit row — event-sourcing non-negotiable).
+ *  Returns { applied:false } when the posting is already past discovery. */
+export async function autoApplyToJob(userId: string | null, jobId: string): Promise<{ applied: boolean }> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId) return { applied: false }
+  const existing = await supabase.from('applications').select('id, stage').eq('user_id', userId).eq('job_id', jobId).maybeSingle()
+  if (existing.error) throw new Error(existing.error.message)
+  let application = existing.data as { id: string; stage: string } | null
+  if (!application) {
+    const inserted = await supabase.from('applications').insert({ user_id: userId, job_id: jobId, stage: 'discovery' }).select('id, stage').single()
+    if (inserted.error) throw new Error(inserted.error.message)
+    application = inserted.data as { id: string; stage: string }
+  }
+  if (application.stage !== 'discovery') return { applied: false }
+  await transitionStage({
+    applicationId: application.id,
+    userId,
+    fromStage: 'discovery',
+    toStage: 'applied',
+    reason: 'Auto-applied via Search',
+  })
+  return { applied: true }
+}
+
+/* ---------------- application timeline (Phase 2 audit log) ---------------- */
+
+export interface TimelineEvent {
+  id: string
+  title: string
+  actor: string
+  at: string
+  reason: string | null
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  discovery: 'Discovery',
+  applied: 'Applied',
+  screening: 'Screening',
+  interview_scheduled: 'Interview Scheduled',
+  interview_complete: 'Interview Complete',
+  offer: 'Offer',
+  hired: 'Hired',
+  rejected: 'Rejected',
+  ghosted: 'Ghosted',
+}
+
+const ACTOR_LABELS: Record<string, string> = {
+  user: 'You',
+  gmail_scraper: 'Gmail',
+  calendar_scraper: 'Calendar',
+  system: 'System',
+}
+
+function prettyStage(stage: string): string {
+  return STAGE_LABELS[stage] ?? stage.replace(/_/g, ' ')
+}
+
+function mapTimelineEvent(row: AuditEventRow): TimelineEvent {
+  const title =
+    row.from_stage && row.to_stage
+      ? `${prettyStage(row.from_stage)} → ${prettyStage(row.to_stage)}`
+      : prettyStage(row.to_stage ?? row.event_type)
+  return {
+    id: row.id,
+    title,
+    actor: ACTOR_LABELS[row.actor] ?? row.actor,
+    at: relativeTime(row.created_at),
+    reason: row.reason,
+  }
+}
+
+/** Event-sourced timeline for an application (application_events), newest
+ *  first. Returns [] in demo mode or when there is no application yet. */
+export async function fetchApplicationTimeline(
+  userId: string | null,
+  applicationId: string | null | undefined,
+): Promise<TimelineEvent[]> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId || !applicationId) return []
+  try {
+    const { data, error } = await supabase
+      .from('application_events')
+      .select('*')
+      .eq('application_id', applicationId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return ((data ?? []) as AuditEventRow[]).map(mapTimelineEvent)
+  } catch {
+    return []
   }
 }

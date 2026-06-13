@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { useBktToast } from '@/components/bkt/toast-context'
 import { useAuth } from '@/contexts/auth-context'
-import { applyToJob, declineJob, fetchJobMatches } from './services/autoApplyService'
+import { applyToJob, declineJob, fetchApplicationTimeline, fetchJobMatches } from './services/autoApplyService'
 import { useAsyncData } from './hooks/useAutoApplyData'
 import { useBudget, useCredits, usePaused, useReviewMode, useSubmittedDelta } from './state'
 import { JOBS_SEED } from './data/jobsData'
@@ -69,6 +69,11 @@ export function AutoApplyDashboard() {
 
   const reviewCount = jobs.filter((j) => j.status === 'Review').length
   const openJob = jobs.find((j) => j.id === openId) ?? null
+  const openApplicationId = openJob?.applicationId ?? null
+  const { data: timeline, loading: timelineLoading } = useAsyncData(
+    () => fetchApplicationTimeline(userId, openApplicationId),
+    [userId, openApplicationId],
+  )
 
   return (
     <>
@@ -115,7 +120,14 @@ export function AutoApplyDashboard() {
           <QuickReview jobs={jobs} onApply={apply} onDecline={decline} />
         )}
       </div>
-      <JDSidebar job={openJob} onClose={() => setOpenId(null)} onApply={apply} onDecline={decline} />
+      <JDSidebar
+        job={openJob}
+        onClose={() => setOpenId(null)}
+        onApply={apply}
+        onDecline={decline}
+        auditEvents={timeline ?? []}
+        auditLoading={timelineLoading}
+      />
       <BudgetModal
         open={budgetOpen}
         budget={budget}

@@ -219,6 +219,25 @@ export function senderDomain(fromHeader: string): string | null {
   return normalizeDomain(address.slice(at + 1))
 }
 
+/* ---------------- sender exclusion (digests / self-sent) ---------------- */
+
+// Senders that are never an employer/recruiter signal and are dropped before
+// classification. The observed offender is a Gemini "Daily Summary" digest the
+// user emails to *themselves* — it quotes real job mail and fools the model —
+// so self-sent mail is excluded by address match. Extend this list (lowercase
+// substrings, matched against the sender address) for any other digest /
+// no-reply senders that should never be ingested.
+export const EXCLUDED_SENDER_SUBSTRINGS: string[] = ['gemini-noreply@google.com']
+
+/** True when an email must be skipped on its sender alone (self-sent digest or
+ *  a known no-reply digest source), before any classification work. */
+export function isExcludedSender(fromAddress: string, selfEmail: string | null): boolean {
+  const address = extractAddress(fromAddress) // lowercased, header stripped
+  if (!address) return false
+  if (selfEmail && address === selfEmail.trim().toLowerCase()) return true
+  return EXCLUDED_SENDER_SUBSTRINGS.some((substr) => address.includes(substr))
+}
+
 const NAME_STOPWORDS = new Set(['inc', 'llc', 'ltd', 'corp', 'the', 'co', 'group', 'team'])
 
 function nameTokens(name: string): string[] {

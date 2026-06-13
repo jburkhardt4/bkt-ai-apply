@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   classifyByKeywords,
   canTransitionStage,
+  isExcludedSender,
   matchApplication,
   parseGeminiClassification,
   resolveAutoAction,
@@ -75,6 +76,28 @@ describe('senderDomain', () => {
     expect(senderDomain('Jane Doe <jane@WWW.Acme.com>')).toBe('acme.com')
     expect(senderDomain('plain@acme.com')).toBe('acme.com')
     expect(senderDomain('not-an-address')).toBeNull()
+  })
+})
+
+describe('isExcludedSender', () => {
+  const self = 'john@bktadvisory.com'
+
+  it('excludes self-sent mail (the Gemini daily-summary digest)', () => {
+    expect(isExcludedSender('John Burkhardt <john@bktadvisory.com>', self)).toBe(true)
+    expect(isExcludedSender('JOHN@BKTADVISORY.COM', self)).toBe(true)
+  })
+
+  it('excludes known digest/no-reply senders from the blocklist', () => {
+    expect(isExcludedSender('Gemini <gemini-noreply@google.com>', self)).toBe(true)
+  })
+
+  it('keeps genuine recruiter/employer mail', () => {
+    expect(isExcludedSender('recruiter@acme.com', self)).toBe(false)
+    expect(isExcludedSender('careers@google.com', self)).toBe(false) // not the digest no-reply
+  })
+
+  it('does not exclude when self email is unknown and sender is not blocklisted', () => {
+    expect(isExcludedSender('recruiter@acme.com', null)).toBe(false)
   })
 })
 

@@ -36,6 +36,7 @@ import {
   buildGeminiUserMessage,
   classifyByKeywords,
   estimateGeminiFlashCostUsd,
+  isExcludedSender,
   matchApplication,
   parseGeminiClassification,
   resolveAutoAction,
@@ -79,28 +80,29 @@ function createServiceClient(): SupabaseClient {
   })
 }
 
-/** The refresh token belongs to one Gmail account; resolve its app user. */
-async function resolveUserId(supabase: SupabaseClient): Promise<string> {
+/** The refresh token belongs to one Gmail account; resolve its app user +
+ *  email (the email drives self-sent digest exclusion). */
+async function resolveUser(supabase: SupabaseClient): Promise<{ id: string; email: string }> {
   const configuredEmail = Deno.env.get('GMAIL_USER_EMAIL')
   if (configuredEmail) {
     const { data, error } = await supabase
       .from('users')
-      .select('id')
+      .select('id, email')
       .eq('email', configuredEmail.toLowerCase())
       .maybeSingle()
     if (error) throw new Error(`users lookup failed: ${error.message}`)
     if (!data) throw new Error(`GMAIL_USER_EMAIL ${configuredEmail} has no users row`)
-    return data.id
+    return { id: data.id, email: data.email }
   }
 
-  const { data, error } = await supabase.from('users').select('id').limit(2)
+  const { data, error } = await supabase.from('users').select('id, email').limit(2)
   if (error) throw new Error(`users lookup failed: ${error.message}`)
   if (!data || data.length !== 1) {
     throw new Error(
       `Expected exactly one users row when GMAIL_USER_EMAIL is unset; found ${data?.length ?? 0}`,
     )
   }
-  return data[0].id
+  return { id: data[0].id, email: data[0].email }
 }
 
 async function loadCandidates(
@@ -216,12 +218,21 @@ async function transitionViaRpc(
 async function processMessage(
   supabase: SupabaseClient,
   userId: string,
+  selfEmail: string | null,
   meta: GmailMessageMeta,
   labelNames: string[],
   labelMap: LabelMapEntry[],
   candidates: ApplicationCandidate[],
   summary: RunSummary,
 ): Promise<void> {
+  // Sender-based exclusion runs first: self-sent digests (e.g. the Gemini
+  // "Daily Summary" the user emails themselves) quote real job mail and would
+  // otherwise be misclassified. Skip before any Gemini call (BR-035).
+  if (isExcludedSender(meta.fromAddress, selfEmail)) {
+    summary.skipped_irrelevant += 1
+    return
+  }
+
   const facts: EmailFacts = {
     fromAddress: meta.fromAddress,
     subject: meta.subject,
@@ -334,9 +345,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   let supabase: SupabaseClient
   let userId: string
+  let selfEmail: string | null
   try {
     supabase = createServiceClient()
-    userId = await resolveUserId(supabase)
+    const resolved = await resolveUser(supabase)
+    userId = resolved.id
+    selfEmail = resolved.email
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`gmail-sync: ${msg}`)
@@ -411,7 +425,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           const labelNames = meta.labelIds
             .map((id) => labelNamesById[id])
             .filter((name): name is string => Boolean(name))
-          await processMessage(supabase, userId, meta, labelNames, labelMap, candidates, summary)
+          await processMessage(supabase, userId, selfEmail, meta, labelNames, labelMap, candidates, summary)
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           console.error(`gmail-sync: message ${messageId} failed: ${msg}`)

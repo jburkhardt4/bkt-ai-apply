@@ -163,6 +163,9 @@ async function classifyEmail(
           system: GEMINI_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: buildGeminiUserMessage(facts) }],
           maxTokens: GEMINI_MAX_TOKENS,
+          // Classification needs no reasoning; disabling thinking keeps the
+          // JSON answer within the small output budget (see google.ts).
+          thinkingBudget: 0,
         },
         apiKey,
       )

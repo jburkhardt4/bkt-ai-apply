@@ -44,7 +44,14 @@ export const googleProvider: LlmProvider = {
           role: m.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: m.content }],
         })),
-        generationConfig: { maxOutputTokens: request.maxTokens },
+        generationConfig: {
+          maxOutputTokens: request.maxTokens,
+          // thinkingBudget: 0 disables Gemini 2.5 "thinking" so it doesn't
+          // spend the output budget reasoning and return empty text.
+          ...(request.thinkingBudget != null
+            ? { thinkingConfig: { thinkingBudget: request.thinkingBudget } }
+            : {}),
+        },
       }),
     })
 

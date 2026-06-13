@@ -35,10 +35,7 @@ const NAV: { group: string; items: NavItemDef[] }[] = [
   },
   {
     group: 'Interview',
-    items: [
-      { icon: 'headphones', label: 'Interview Buddy', key: 'buddy' },
-      { icon: 'message-square', label: 'Mock Interviews', key: 'mock' },
-    ],
+    items: [{ icon: 'graduation-cap', label: 'Interview Prep', key: 'interview-prep' }],
   },
   {
     group: 'Platform',

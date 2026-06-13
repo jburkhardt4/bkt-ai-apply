@@ -1,27 +1,49 @@
 // BKT AI-Apply — client-side shared state for the redesigned surface.
-// Credits / budget / review-mode / saved-jobs have no backing tables yet,
-// so they persist in localStorage (see README-REDESIGN.md for the follow-up
-// migration plan). Everything is namespaced under "bkt-auto-apply:".
+//
+// Phase 2 data backbone: credits / budget / review-mode / paused / last
+// auto-apply target are now backed by the `user_settings` row (via
+// <AutoApplySettingsProvider> + ../settings-context), so they persist
+// server-side and survive across devices. The remaining seed-tracking
+// hooks (submitted delta, applied/saved search ids) stay in localStorage
+// until Phase 2b swaps Search/Saved onto real `jobs`/`saved_jobs` rows.
+import { useCallback } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { usePersistentState } from './hooks/useAutoApplyData'
-import { JOBS_SEED } from './data/jobsData'
-import { SEARCH_SEED } from './data/searchData'
-import type { ReviewModeId, SearchJob } from './types'
+import { useAutoApplySettings } from './settings-context'
+import type { AutoApplySettings } from './services/settingsService'
+
+/* ---------------- user_settings-backed (server persisted) ---------------- */
+
+function useSettingField<K extends keyof AutoApplySettings>(
+  key: K,
+): [AutoApplySettings[K], Dispatch<SetStateAction<AutoApplySettings[K]>>] {
+  const { settings, setField } = useAutoApplySettings()
+  const set = useCallback<Dispatch<SetStateAction<AutoApplySettings[K]>>>((value) => setField(key, value), [setField, key])
+  return [settings[key], set]
+}
 
 export function useCredits() {
-  return usePersistentState<number>('credits', JOBS_SEED.user.credits)
+  return useSettingField('credits')
 }
 
 export function useBudget() {
-  return usePersistentState<number>('budget', 240)
+  return useSettingField('budget')
 }
 
 export function useReviewMode() {
-  return usePersistentState<ReviewModeId>('review-mode', 'review')
+  return useSettingField('reviewMode')
 }
 
 export function usePaused() {
-  return usePersistentState<boolean>('paused', false)
+  return useSettingField('paused')
 }
+
+/** The most recent posting Auto Apply targeted — drives doc auto-align. */
+export function useLastTarget() {
+  return useSettingField('lastTarget')
+}
+
+/* ---------------- localStorage (Phase 2b will move these to the DB) ------- */
 
 /** Extra submissions made this session/device on top of the seeded stat. */
 export function useSubmittedDelta() {
@@ -41,11 +63,4 @@ export function useSavedSearchIds() {
 /** Seeded saved jobs the user deleted (ids). */
 export function useRemovedSeedSavedIds() {
   return usePersistentState<string[]>('removed-seed-saved-ids', [])
-}
-
-const DEFAULT_TARGET: SearchJob = SEARCH_SEED.jobs.find((j) => j.id === 's7') ?? SEARCH_SEED.jobs[0]!
-
-/** The most recent posting Auto Apply targeted — drives doc auto-align. */
-export function useLastTarget() {
-  return usePersistentState<SearchJob>('last-target', DEFAULT_TARGET)
 }

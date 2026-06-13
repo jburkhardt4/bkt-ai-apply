@@ -9,6 +9,7 @@ import { AppShell } from './components/AppShell'
 import { AutoApplyDashboard } from './features/auto-apply/AutoApplyDashboard'
 import { DocsRoute, InboxRoute, SavedRoute, SearchRoute } from './features/auto-apply/routes'
 import { PreferencesScreen } from './features/auto-apply/screens/PreferencesScreen'
+import { InterviewPrepScreen } from './features/auto-apply/screens/InterviewPrepScreen'
 import { PlaceholderScreen } from './features/auto-apply/components/chrome'
 import { useBktToast } from './components/bkt/toast-context'
 import { useNavKey } from './features/auto-apply/router'
@@ -38,10 +39,8 @@ function RoutedPage({ navKey }: { navKey: NavKey }) {
       return <DocsRoute type="resume" />
     case 'letters':
       return <DocsRoute type="letter" />
-    case 'buddy':
-      return <PlaceholderScreen label="Interview Buddy" />
-    case 'mock':
-      return <PlaceholderScreen label="Mock Interviews" />
+    case 'interview-prep':
+      return <InterviewPrepScreen />
     case 'notifications':
       return <PlaceholderScreen label="Notifications" />
     case 'pipeline':

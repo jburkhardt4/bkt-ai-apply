@@ -12,6 +12,7 @@ import { BktToastProvider } from '@/components/bkt/toast'
 import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import { AutoApplySidebar } from '@/features/auto-apply/components/AutoApplySidebar'
+import { AutoApplySettingsProvider } from '@/features/auto-apply/components/AutoApplySettingsProvider'
 import { navigate, useNavKey } from '@/features/auto-apply/router'
 import { fetchInbox, fetchJobMatches } from '@/features/auto-apply/services/autoApplyService'
 import type { NavKey } from '@/features/auto-apply/types'
@@ -80,7 +81,7 @@ export function AppShell({ children }: AppShellProps) {
             onOpenAssistant={() => setAssistantOpen(true)}
           />
           <main className="bkt-scroll" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-            {children}
+            <AutoApplySettingsProvider>{children}</AutoApplySettingsProvider>
           </main>
         </div>
 

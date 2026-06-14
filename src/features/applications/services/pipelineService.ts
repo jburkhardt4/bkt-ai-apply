@@ -24,9 +24,15 @@ function extractKeywords(content: string, keywords: string[]): string[] {
   return keywords.filter((keyword) => normalized.includes(keyword.toLowerCase()))
 }
 
+// Expected-target scoring (see scoreJobFit). A bucket reaches full weight at its
+// target match count. Calibrated 2026-06 to un-starve the funnel: the previous
+// targets (skills 4, domain 2) were too strict against real postings that use
+// different phrasing than the master profile, pushing strong-fit roles below the
+// 60 consideration line. Skills 4→3 and domain 2→1 raise the pass rate without
+// touching the 80 auto-submit threshold (BR-008). See docs/domain/business-rules.md.
 const SCORE_TARGETS = {
-  skills: 4,
-  domain: 2,
+  skills: 3,
+  domain: 1,
   seniority: 2,
   tools: 2,
 } as const
@@ -102,9 +108,20 @@ export function scoreJobFit(parsed: ParsedJobDescription, profile: CandidateProf
   const domainsMatched = extractKeywords(combined, profile.domainKeywords).length
   const seniorityMatched = extractKeywords(combined, profile.seniorityKeywords).length
   const toolsMatched = extractKeywords(combined, profile.toolingKeywords).length
+  // Location/auth: full credit for remote/hybrid/anywhere, the target metro, or
+  // a generic US posting. Broadened 2026-06 so US-wide roles outside the target
+  // metro are not punished (the funnel skewed against non-metro postings).
+  const lowerCombined = combined.toLowerCase()
+  const targetMetro = profile.targetLocation.toLowerCase().split(',')[0].trim()
   const locationMatched = Number(
-    combined.toLowerCase().includes('remote') ||
-      combined.toLowerCase().includes(profile.targetLocation.toLowerCase().split(',')[0]),
+    lowerCombined.includes('remote') ||
+      lowerCombined.includes('hybrid') ||
+      lowerCombined.includes('anywhere') ||
+      lowerCombined.includes('united states') ||
+      // Word-boundary match for common US abbreviations written in uppercase so
+      // the pronoun "us" in text like "contact us" is not accidentally matched.
+      /\b(US|U\.S\.?|USA|US-based)\b/.test(combined) ||
+      (targetMetro.length > 0 && lowerCombined.includes(targetMetro)),
   )
 
   const breakdown = {
@@ -112,7 +129,8 @@ export function scoreJobFit(parsed: ParsedJobDescription, profile: CandidateProf
     domain: scoreBucket(domainsMatched, SCORE_TARGETS.domain, 20),
     seniority: scoreBucket(seniorityMatched, SCORE_TARGETS.seniority, 20),
     tools: scoreBucket(toolsMatched, SCORE_TARGETS.tools, 15),
-    locationAuth: locationMatched > 0 ? 10 : 2,
+    // Baseline raised 2→5: a non-remote, non-target role still has location signal.
+    locationAuth: locationMatched > 0 ? 10 : 5,
   }
 
   const overall = breakdown.skills + breakdown.domain + breakdown.seniority + breakdown.tools + breakdown.locationAuth

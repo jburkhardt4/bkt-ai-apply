@@ -41,6 +41,7 @@
 | BR-022 | match_score < 60: job stays in `discovery` with Reject recommendation; JB can override | SIGN-OFF-005 |
 | BR-023 | Score override by JB requires a reason string; written to `application_events` with actor = 'jb_manual' | AC-003-06 |
 | BR-024 | All AI scores store reasoning_trace in `ai_scores.reasoning_trace` | AI-RULE-009 |
+| BR-025 | Heuristic fallback calibration (`pipelineService.scoreJobFit`): expected-target match counts are skills 3, domain 1, seniority 2, tools 2; Location/Auth awards 10 for remote/hybrid/anywhere/US/target-metro and a 5 baseline otherwise. Calibrated 2026-06 to stop starving the funnel below the BR-020 line. The BR-021 auto-submit threshold (80) is unchanged | BR-020, BR-141 |
 
 ---
 
@@ -101,6 +102,8 @@
 | BR-070 | Documents are versioned per user per type (resume, cover_letter) | US-007 |
 | BR-071 | A new version must be created rather than editing an existing document | BR-007 |
 | BR-072 | Application-linked documents are marked is_locked = true and become immutable | E-008 |
+| BR-073 | Resume + cover-letter copy must never contain em-dashes (—) or en-dashes (–) — a known AI "tell". Enforced in three layers: the generation/assistant prompts forbid them, `textSanitizer.sanitizeDashes` strips any that slip through before they reach builder state, and seed copy + structural separators use commas/periods/middots | US-007 |
+| BR-074 | The DocBuilder resume + cover-letter sections are fully editable: roles, education entries, bullet lines, and letter paragraphs can each be added and removed (not a fixed template) | US-007 |
 
 ---
 

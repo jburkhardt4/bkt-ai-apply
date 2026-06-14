@@ -219,6 +219,25 @@ function mapEmail(row: LiveEmailRow, labelDisplay: LabelDisplayMap): EmailMessag
   }
 }
 
+/**
+ * Trigger a live Gmail pull by invoking the `gmail-sync` Edge Function, then the
+ * caller refetches `emails`. gmail-sync is deployed with verify_jwt=false and is
+ * safe to invoke from the client; server-side it fetches new mail, classifies it,
+ * writes `emails` rows, and auto-transitions matched applications. Returns false
+ * (never throws) when Supabase is unconfigured or the call fails, so the inbox
+ * Refresh button degrades gracefully to a plain refetch of existing rows.
+ */
+export async function triggerGmailSync(): Promise<boolean> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase) return false
+  try {
+    const { error } = await supabase.functions.invoke('gmail-sync', { body: {} })
+    return !error
+  } catch {
+    return false
+  }
+}
+
 export async function fetchInbox(userId: string | null): Promise<{ source: DataSource; inbox: InboxData }> {
   const supabase = getSupabaseClientSafe()
   if (!supabase || !userId) return { source: 'demo', inbox: INBOX_SEED }

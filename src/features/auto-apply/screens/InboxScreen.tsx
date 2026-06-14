@@ -187,7 +187,7 @@ export interface InboxScreenProps {
   data: InboxData
   onToast: ToastFn
   dateOrder?: 'dmy' | 'mdy'
-  onRefresh?: () => void
+  onRefresh?: () => void | Promise<void>
   /** True when rows come from the live emails table — enables real send. */
   live?: boolean
 }
@@ -238,12 +238,17 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live 
     setSelectedId(rest.length ? rest[0]!.id : null)
   }
   const refresh = () => {
+    if (spinning) return
     setSpinning(true)
-    onRefresh?.()
-    setTimeout(() => {
+    // Await the real Gmail sync (when wired) but keep a minimum spin so the
+    // feedback is perceptible even on a fast/no-op sync.
+    void Promise.allSettled([
+      Promise.resolve(onRefresh?.()),
+      new Promise((resolve) => setTimeout(resolve, 700)),
+    ]).then(() => {
       setSpinning(false)
       onToast('Inbox up to date', 'refresh-cw', 'var(--bkt-blue-300)')
-    }, 700)
+    })
   }
 
   return (

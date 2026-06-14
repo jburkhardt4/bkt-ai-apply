@@ -5,6 +5,7 @@
 // artifact is persisted separately to the `documents` table; this parser only
 // shapes the editable builder view. Pure + unit-tested.
 import type { ResumeContent } from '../types'
+import { sanitizeDashes, sanitizeDashList } from './textSanitizer'
 
 export interface ResumeAlignPatch {
   headline: string
@@ -116,19 +117,22 @@ export function parseGeneratedResume(
   const sections = parseSections(text)
   const lead = sections.find((s) => s.heading === '')
 
-  const summary =
+  const summary = sanitizeDashes(
     sectionBody(findSection(sections, ['summary', 'profile', 'objective', 'about'])) ||
-    sectionBody(lead) ||
-    toParagraphs(text)[0] ||
-    normalizeText(text)
+      sectionBody(lead) ||
+      toParagraphs(text)[0] ||
+      normalizeText(text),
+  )
 
   const parsedSkills = splitSkills(
     sectionBody(findSection(sections, ['skill', 'competenc', 'strength', 'expertise'])),
   )
-  const skills = dedupe([...opts.jobSkills, ...parsedSkills, ...opts.baseSkills]).slice(0, 12)
+  const skills = sanitizeDashList(dedupe([...opts.jobSkills, ...parsedSkills, ...opts.baseSkills])).slice(0, 12)
 
-  const bullets = sectionBullets(
-    findSection(sections, ['experience', 'impact', 'highlight', 'achievement', 'alignment']),
+  const bullets = sanitizeDashList(
+    sectionBullets(
+      findSection(sections, ['experience', 'impact', 'highlight', 'achievement', 'alignment']),
+    ),
   )
 
   const patch: ResumeAlignPatch = { headline: opts.headline, summary, skills }
@@ -156,7 +160,7 @@ export function parseGeneratedLetter(
   text: string,
   opts: { company: string; role: string },
 ): LetterAlignPatch {
-  const paragraphs = toParagraphs(text)
+  const paragraphs = sanitizeDashList(toParagraphs(text))
   const recipient = `${opts.company} Hiring Team`
   let greeting = `Dear ${recipient},`
   const body: string[] = []

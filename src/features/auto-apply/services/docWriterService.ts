@@ -17,6 +17,7 @@ import { sendChatMessage } from '@/features/ai-agent/services/chatCompletionServ
 import type { DocContent, DocType } from '../screens/DocPaper'
 import type { AiTargetJob } from '../screens/DocAssistant'
 import type { LetterContent, ResumeContent } from '../types'
+import { sanitizeDashes } from './textSanitizer'
 
 export type AlignDocResult =
   | { status: 'generated'; content: string; source: 'llm' | 'template_fallback' }
@@ -28,7 +29,7 @@ function deriveProfileFromContent(type: DocType, content: DocContent): { profile
     const rc = content as ResumeContent
     const bullets = rc.experience.flatMap((e) => e.bullets)
     return {
-      profile: [rc.headline, rc.summary].filter(Boolean).join(' — '),
+      profile: [rc.headline, rc.summary].filter(Boolean).join('. '),
       highlights: bullets.length > 0 ? bullets.slice(0, 6) : rc.skills.slice(0, 6),
     }
   }
@@ -53,7 +54,7 @@ export async function alignDocumentToJob(params: {
   const { profile, highlights } = deriveProfileFromContent(params.type, params.content)
   const jobDescription = [params.lastJob.title, (params.lastJob.skills ?? []).join(', ')]
     .filter(Boolean)
-    .join(' — ')
+    .join('. ')
 
   const currentContent = params.type === 'resume'
     ? (params.content as ResumeContent).summary
@@ -95,6 +96,10 @@ export function buildDocAssistantPrompt(type: DocType, lastJob: AiTargetJob): st
       : '',
     'Be concise and practical. When you propose new copy, return the rewritten',
     `${noun} text directly so it can be pasted in. Never fabricate experience.`,
+    // No-em-dash rule: em/en dashes are an AI "tell" and must never appear in
+    // resume or cover-letter copy. Use commas, periods, or restructure instead.
+    'Write in a natural human voice. Never use em-dashes (—) or en-dashes (–);',
+    'use commas, periods, or split the sentence. Avoid stock AI phrasing.',
   ]
     .filter(Boolean)
     .join('\n')
@@ -125,7 +130,8 @@ export async function askDocWriter(params: {
     message: `${grounding}\n\nRequest: ${params.message}`,
   })
   return {
-    text: result.assistantMessage.content,
+    // Safety net: strip any em/en dash the model still produced (no-em-dash rule).
+    text: sanitizeDashes(result.assistantMessage.content),
     status: result.status,
     conversationId: result.conversationId,
   }

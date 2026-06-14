@@ -17,6 +17,7 @@ import {
   fetchSavedJobs,
   fetchSearchBoard,
   saveJob,
+  triggerGmailSync,
   unsaveJob,
   type SearchBoard,
 } from './services/autoApplyService'
@@ -45,12 +46,18 @@ export function InboxRoute() {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const { data, reload } = useAsyncData(() => fetchInbox(userId), [userId])
+  // Refresh first pulls new mail via gmail-sync (live), then refetches the
+  // emails table. Falls back to a plain refetch when Supabase is unconfigured.
+  const handleRefresh = async () => {
+    if (userId) await triggerGmailSync()
+    reload()
+  }
   return (
     <InboxScreen
       data={data?.inbox ?? INBOX_SEED}
       onToast={toast}
       dateOrder="mdy"
-      onRefresh={reload}
+      onRefresh={handleRefresh}
       live={data?.source === 'live'}
     />
   )

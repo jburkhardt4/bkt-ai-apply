@@ -62,17 +62,18 @@
 --    row's user_id; a mismatch returns 'not_owned' (no submit, no charge).
 --
 --    Concurrency (FIX 3 / BR-136): a per-user advisory xact lock serializes
---    concurrent claims for one user, and the daily-cap count includes
---    in-flight 'submitting' rows so overlapping runs cannot exceed the cap.
+--    concurrent claims for one user, and the daily-cap and monthly-budget counts
+--    include in-flight 'submitting' rows so overlapping runs cannot exceed either cap.
 --
 --    Reason codes returned (ok:false):
 --      not_claimable      row missing or not in 'approved' (no mutation)
 --      not_owned          application not owned by queue row's user (no mutation) BR-005
 --      paused             user_settings.paused = true       (stays approved) BR-132
 --      no_credits         credits < 1                        (stays approved) BR-136
---      daily_cap          >= daily_submission_cap submitted+in-flight in 24h (stays approved)
---      already_submitted  applications.submitted_at set      (-> cancelled)  BR-135
---      awaiting_approval  no approval event AND not autonomously eligible (stays approved) BR-130/131
+--      daily_cap                 >= daily_submission_cap submitted+in-flight in 24h (stays approved)
+--      monthly_budget_exhausted  >= monthly_budget_usd submissions this calendar month (stays approved)
+--      already_submitted         applications.submitted_at set      (-> cancelled)  BR-135
+--      awaiting_approval         no approval event AND not autonomously eligible (stays approved) BR-130/131
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.claim_submission(p_queue_id uuid)
   RETURNS jsonb
@@ -100,6 +101,8 @@ DECLARE
   v_job_id         uuid;
 
   v_submitted_24h  integer;
+  v_monthly_budget integer;
+  v_submitted_month integer;
 
   v_has_approval   boolean;
   v_autonomous_ok  boolean;
@@ -128,8 +131,10 @@ BEGIN
   -- Load server-authoritative guardrail settings (BR-131), including the
   -- authoritative autonomy level (review_mode) — never trust the client.
   SELECT us.paused, us.credits, us.daily_submission_cap,
-         us.auto_submit_score_threshold, us.review_mode
-    INTO v_paused, v_credits, v_daily_cap, v_threshold, v_review_mode
+         us.auto_submit_score_threshold, us.review_mode,
+         us.monthly_budget_usd
+    INTO v_paused, v_credits, v_daily_cap, v_threshold, v_review_mode,
+         v_monthly_budget
     FROM public.user_settings us
    WHERE us.user_id = v_user_id;
 
@@ -182,6 +187,24 @@ BEGIN
 
   IF v_submitted_24h >= v_daily_cap THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'daily_cap');
+  END IF;
+
+  -- Monthly budget check (FIX 8 / BR-131/BR-136): count this user's submissions
+  -- (and in-flight 'submitting' claims) in the current calendar month against
+  -- monthly_budget_usd (each submission = 1 credit = $1). Transient: leave the
+  -- row 'approved' so it can fire once the month rolls over.
+  SELECT count(*)
+    INTO v_submitted_month
+    FROM public.application_queue q
+   WHERE q.user_id = v_user_id
+     AND (
+       (q.status = 'submitted'  AND q.submitted_at    >= date_trunc('month', now()))
+       OR
+       (q.status = 'submitting' AND q.last_attempt_at >= date_trunc('month', now()))
+     );
+
+  IF v_submitted_month >= v_monthly_budget THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'monthly_budget_exhausted');
   END IF;
 
   -- BR-135 no-resubmit: if the application already submitted, this row is
@@ -252,7 +275,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.claim_submission(uuid) IS
-  'ADR-006 / BR-005,130,131,132,135,136,148: service-role-only. Per-user advisory-locked. Re-validates autonomy guardrails server-side (ownership of application AND job, pause, credits, daily cap incl. in-flight, no-resubmit) and authorizes submission ONLY via an explicit approval event OR server-side review_mode+score (never the client queued_by). Charges one credit and claims an approved application_queue row into submitting. Returns {ok,...}. Never callable by clients.';
+  'ADR-006 / BR-005,130,131,132,135,136,148: service-role-only. Per-user advisory-locked. Re-validates autonomy guardrails server-side (ownership of application AND job, pause, credits, daily cap incl. in-flight, monthly budget incl. in-flight, no-resubmit) and authorizes submission ONLY via an explicit approval event OR server-side review_mode+score (never the client queued_by). Charges one credit and claims an approved application_queue row into submitting. Returns {ok,...}. Never callable by clients.';
 
 REVOKE EXECUTE ON FUNCTION public.claim_submission(uuid) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.claim_submission(uuid) TO service_role;

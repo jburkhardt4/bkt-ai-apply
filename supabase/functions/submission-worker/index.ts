@@ -79,21 +79,24 @@ async function timingSafeEqual(a: string, b: string): Promise<boolean> {
 }
 
 /**
- * Shared-secret gate for the scheduler (FIX 5). The worker is deployed with
- * verify_jwt disabled (--no-verify-jwt) so pg_cron can invoke it without a user
+ * Shared-secret gate for the scheduler (FIX 5 / FIX 6). The worker is deployed
+ * with verify_jwt disabled (--no-verify-jwt) so pg_cron can invoke it without a user
  * JWT — matching prospector-cron / gmail-sync. To avoid leaving the endpoint
- * open, an optional CRON_SECRET locks it down:
+ * open, CRON_SECRET gates access:
  *   - If CRON_SECRET is SET, the request MUST carry it, either as the
  *     'x-cron-secret' header or as 'Authorization: Bearer <CRON_SECRET>';
  *     otherwise the request is rejected (401).
- *   - If CRON_SECRET is UNSET, the request is allowed (backward-compatible /
- *     dry-run-safe — mirrors the pre-secret behavior).
+ *   - If CRON_SECRET is UNSET in dry-run mode, the request is allowed
+ *     (backward-compatible / dry-run-safe — mirrors the pre-secret behavior).
+ *   - If CRON_SECRET is UNSET in live mode (SUBMISSION_LIVE=true), the request
+ *     is REJECTED (FIX 6). A live --no-verify-jwt endpoint must never be open;
+ *     set CRON_SECRET to a long random value before enabling live submissions.
  * The secret is compared in constant time (timingSafeEqual).
  * Returns true when the request is authorized to proceed.
  */
 async function isCronAuthorized(req: Request): Promise<boolean> {
   const secret = Deno.env.get('CRON_SECRET')
-  if (!secret) return true // unset → open (backward-compatible)
+  if (!secret) return !isLive() // unset → open in dry-run only; fail closed in live mode
 
   const headerSecret = req.headers.get('x-cron-secret')
   if (headerSecret && (await timingSafeEqual(headerSecret, secret))) return true

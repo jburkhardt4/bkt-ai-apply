@@ -68,7 +68,7 @@ supabase secrets set \
 | --- | --- | --- |
 | `SUBMISSION_LIVE` | to go live | Must be the exact string `true` to send real applications. Anything else (including unset) = dry run. **Leave unset/`false` until you intend to submit for real.** |
 | `SUBMISSION_BATCH_SIZE` | no | Max `approved` rows processed per run (default 10) |
-| `CRON_SECRET` | **required to go live** | Locks the `--no-verify-jwt` endpoint. When set, every invocation must carry it (`x-cron-secret` header or `Authorization: Bearer <CRON_SECRET>`) or it gets `401`. When **unset** the endpoint is open **only in dry-run** — if `SUBMISSION_LIVE=true` and `CRON_SECRET` is unset the worker **fails closed** (`503`, refuses to run) so a live endpoint is never left unauthenticated. Set it (and add the matching header to the pg_cron call, step 3) before going live. |
+| `CRON_SECRET` | **required to go live** | Locks the `--no-verify-jwt` endpoint. When set, every invocation must carry it (`x-cron-secret` header or `Authorization: Bearer <CRON_SECRET>`) or it gets `401`. When **unset** the endpoint is open **only in dry-run** — if `SUBMISSION_LIVE=true` and `CRON_SECRET` is unset the worker **fails closed** (`401`, refuses to run) so a live endpoint is never left unauthenticated. Set it (and add the matching header to the pg_cron call, step 3) before going live. |
 | `BROWSERBASE_API_KEY` | for browser channel | Absent → browser adapter returns `browser_not_configured` (graceful) |
 | `BROWSERBASE_PROJECT_ID` | for browser channel | Required alongside the API key to bootstrap a session |
 

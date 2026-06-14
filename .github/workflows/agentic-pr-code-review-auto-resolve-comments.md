@@ -1,13 +1,37 @@
 ---
+name: Agentic - PR Code Review - Auto-Resolve Comments
+description: Automatically resolves open PR code review comments by generating and pushing the necessary code fixes, then marking each resolved thread.
+on:
+  workflow_run:
+    workflows: ["Agentic - PR Code Review - Auto-Resolve Comments"]
+    types: [completed]
+    branches: [main]
 tools:
   github:
     toolsets: [default]
 permissions:
   actions: read
-  contents: write
-  issues: write
-  pull-requests: write
-# Unsupported fields preserved from source JSON:
+  contents: read
+  issues: read
+  pull-requests: read
+strict: true
+safe-outputs:
+  push-to-pull-request-branch:
+    target: "triggering"
+    if-no-changes: "warn"
+    allowed-files:
+      - "src/**"
+      - "supabase/**"
+      - "e2e/**"
+      - "docs/**"
+    excluded-files:
+      - "**/*.lock"
+      - "pnpm-lock.yaml"
+  resolve-pull-request-review-thread:
+    max: 25
+  add-comment:
+    max: 1
+    target: "triggering"
 # model: claude-sonnet-4.6
 # require_actor_write_permission: true
 ---

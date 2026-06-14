@@ -14,7 +14,7 @@
 
 Add "Prospector" as the **third item** in `AppSidebar.tsx` `NAV_ITEMS` array, after "Ingestion".
 
-```
+```text
 Position in NAV_ITEMS:
   [0] Dashboard    — /          — LayoutDashboard icon
   [1] Ingestion    — /ingestion — Upload icon
@@ -43,7 +43,7 @@ Add `/prospector` to `src/App.tsx` route switch. The Prospector page component l
 
 ### 3.1 Page Layout (Desktop)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  Prospector                               [Enable toggle]│
 │  Configure your automated job search                     │

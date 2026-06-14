@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClientSafe } from '@/lib/supabase'
 import {
   decideQueueAction,
   enqueueForSubmission,
@@ -12,14 +12,14 @@ import { graduateProspectorMatches } from './prospectorGraduationService'
 // threshold gating, idempotent create + 23505 absorption, existing-app score
 // sync, mode-based enqueue). decideQueueAction's own autonomy semantics are
 // already covered in submissionQueueService.test.ts.
-vi.mock('@/lib/supabase', () => ({ getSupabaseClient: vi.fn() }))
+vi.mock('@/lib/supabase', () => ({ getSupabaseClientSafe: vi.fn() }))
 vi.mock('@/features/applications/services/submissionQueueService', () => ({
   decideQueueAction: vi.fn(),
   enqueueForSubmission: vi.fn(),
   fetchSubmitThreshold: vi.fn(),
 }))
 
-const mockGetSupabaseClient = vi.mocked(getSupabaseClient)
+const mockGetSupabaseClientSafe = vi.mocked(getSupabaseClientSafe)
 const mockDecide = vi.mocked(decideQueueAction)
 const mockEnqueue = vi.mocked(enqueueForSubmission)
 const mockThreshold = vi.mocked(fetchSubmitThreshold)
@@ -72,7 +72,7 @@ function appsRefetch(result: DbResult) {
 }
 
 function setClient(from: ReturnType<typeof vi.fn>) {
-  mockGetSupabaseClient.mockReturnValue({ from } as unknown as ReturnType<typeof getSupabaseClient>)
+  mockGetSupabaseClientSafe.mockReturnValue({ from } as unknown as ReturnType<typeof getSupabaseClientSafe>)
 }
 
 describe('graduateProspectorMatches', () => {

@@ -14,7 +14,7 @@
 //   BR-130 / BR-131 — mode-based autonomy via decideQueueAction; the worker's
 //                     claim_submission still re-validates server-side, so
 //                     enqueuing 'approved' never bypasses a guardrail.
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClientSafe } from '@/lib/supabase'
 import type { ReviewModeId } from '@/features/auto-apply/types'
 import {
   decideQueueAction,
@@ -57,7 +57,8 @@ export async function graduateProspectorMatches(params: {
   userId: string
   reviewMode: ReviewModeId
 }): Promise<GraduationResult> {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseClientSafe()
+  if (!supabase) return { created: 0, enqueued: 0 }
   const { userId, reviewMode } = params
 
   // All scores for this user's prospector jobs, newest first. No score-threshold

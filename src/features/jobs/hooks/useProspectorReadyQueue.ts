@@ -18,9 +18,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClientSafe } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { ProspectorJobMatch } from '../components/ProspectorReadyQueue'
+import { PROSPECTOR_READY_QUEUE_SEED } from '../data/prospectorSeedData'
 
 // Match score threshold — cite BR-105, BR-020; never hardcode literals elsewhere
 const READY_QUEUE_MIN_SCORE = 60
@@ -44,7 +45,19 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
     if (!user) return
 
     let cancelled = false
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+
+    // When Supabase is not configured, fall back to seed data so the UI
+    // is reviewable without credentials (mirrors auto-apply service pattern).
+    if (!supabase) {
+      Promise.resolve().then(() => {
+        if (!cancelled) {
+          setJobs(PROSPECTOR_READY_QUEUE_SEED)
+          setLoading(false)
+        }
+      })
+      return () => { cancelled = true }
+    }
 
     // Join applications -> jobs to filter by both match_score and jobs.source.
     // The select uses a nested join: jobs!inner ensures only rows with a matching
@@ -78,9 +91,17 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
 
         if (fetchError) {
           setError(fetchError.message)
-          setJobs([])
+          setJobs(PROSPECTOR_READY_QUEUE_SEED)
         } else {
-          const shaped: ProspectorJobMatch[] = (data ?? []).map((row) => {
+          const rows = data ?? []
+          if (rows.length === 0) {
+            // No rows yet — show seed data so the UI is reviewable.
+            setJobs(PROSPECTOR_READY_QUEUE_SEED)
+            setLoading(false)
+            return
+          }
+
+          const shaped: ProspectorJobMatch[] = rows.map((row) => {
             // The Supabase JS client infers the join result shape — use unknown
             // to safely narrow without relying on the inferred array/object type.
             const jobRaw = row.jobs as unknown
@@ -118,6 +139,7 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
       .catch((err: unknown) => {
         if (cancelled) return
         setError(err instanceof Error ? err.message : 'Failed to load ready queue')
+        setJobs(PROSPECTOR_READY_QUEUE_SEED)
         setLoading(false)
       })
 

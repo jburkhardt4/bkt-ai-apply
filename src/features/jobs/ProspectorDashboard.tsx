@@ -12,7 +12,7 @@ import { useProspectorProfile } from './hooks/useProspectorProfile'
 import { useProspectingRuns } from './hooks/useProspectingRuns'
 import { useProspectorSearchResults } from './hooks/useProspectorSearchResults'
 import { useProspectorReadyQueue } from './hooks/useProspectorReadyQueue'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClientSafe } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { useAutoApplySettings } from '@/features/auto-apply/settings-context'
 import { cn } from '@/lib/utils'
@@ -123,7 +123,11 @@ export function ProspectorDashboard() {
     }
 
     try {
-      const supabase = getSupabaseClient()
+      const supabase = getSupabaseClientSafe()
+      if (!supabase) {
+        toast.info('Supabase is not configured — Run Now requires a live backend.', { id: toastId })
+        return
+      }
       const { data, error } = await supabase.functions.invoke<ProspectorRunResponse>(
         'prospector-cron',
         { signal: controller.signal },

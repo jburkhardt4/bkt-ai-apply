@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient, getSupabaseClientSafe } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { Tables, TablesInsert } from '@/types/db.types'
 
@@ -66,7 +66,15 @@ export function useProspectorProfile(): UseProspectorProfileResult {
     if (!user) return
 
     let cancelled = false
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+
+    // When Supabase is not configured, gracefully degrade — no profile loaded.
+    if (!supabase) {
+      Promise.resolve().then(() => {
+        if (!cancelled) setLoading(false)
+      })
+      return () => { cancelled = true }
+    }
 
     Promise.resolve(
       supabase

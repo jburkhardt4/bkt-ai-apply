@@ -624,6 +624,20 @@ BEGIN
     RAISE EXCEPTION 'write_approval_event: application not found or not owned by caller';
   END IF;
 
+  -- Submission artifact check (FIX 9 / BR-130/131): verify that a resume has
+  -- been linked to the application via application_materials. This ensures the
+  -- caller went through approvePreparedPacket (which calls linkDocumentsToApplication
+  -- first) and cannot forge an approval event on a bare application that has
+  -- never had a submission packet prepared.
+  IF NOT EXISTS (
+    SELECT 1
+      FROM public.application_materials am
+     WHERE am.application_id = p_application_id
+       AND am.material_type  = 'resume'
+  ) THEN
+    RAISE EXCEPTION 'write_approval_event: no linked resume document found; complete the document preparation flow before approving (BR-130/131)';
+  END IF;
+
   INSERT INTO public.application_events
     (user_id, application_id, event_type, actor, reason, metadata)
   VALUES
@@ -634,7 +648,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.write_approval_event(uuid, jsonb) IS
-  'ADR-006 / BR-130/131: server-trusted path for approval events. Verifies application ownership via auth.uid() then inserts an application_events row with event_type=approval. Direct client inserts of approval events are blocked by the tightened App events: insert own RLS policy. Callable by authenticated users.';
+  'ADR-006 / BR-130/131: server-trusted path for approval events. Verifies (1) application ownership via auth.uid(), (2) that a resume has been linked via application_materials (i.e. approvePreparedPacket was called), then inserts an application_events row with event_type=approval. Direct client inserts of approval events are blocked by the tightened App events: insert own RLS policy. Callable by authenticated users.';
 
 -- Public/anon cannot call this function.
 REVOKE EXECUTE ON FUNCTION public.write_approval_event(uuid, jsonb) FROM PUBLIC, anon;

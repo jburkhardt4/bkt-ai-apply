@@ -45,6 +45,9 @@ import type { SubmissionInput, SubmissionOutcome } from '../_shared/submission/t
 // ---------------------------------------------------------------------------
 
 const DEFAULT_BATCH_SIZE = 10
+// How many approved rows to scan per tick. Must be > 1 to scan past unclaimable
+// rows (paused/no-credit/daily-cap) without exceeding batchSize() actual claims.
+const SCAN_MULTIPLIER = 4
 
 /** The kill-default safety gate — must be exactly the string 'true' to go live. */
 function isLive(): boolean {
@@ -250,13 +253,16 @@ async function runLive(supabase: SupabaseClient): Promise<LiveResult> {
     }
   }
 
-  // (b) Pull the batch of approved rows, oldest first.
+  // (b) Pull a wider scan window (SCAN_MULTIPLIER × batchSize()) so unclaimable
+  // rows (paused/no-credit/daily-cap/awaiting_approval) in the front of the
+  // queue do not stall newer claimable rows on every scheduler tick. We stop
+  // processing once batchSize() rows have actually been claimed.
   const { data: rows, error: selectError } = await supabase
     .from('application_queue')
     .select('id')
     .eq('status', 'approved')
     .order('created_at', { ascending: true })
-    .limit(batchSize())
+    .limit(batchSize() * SCAN_MULTIPLIER)
 
   if (selectError) {
     throw new Error(`select approved queue rows failed: ${selectError.message}`)
@@ -269,8 +275,10 @@ async function runLive(supabase: SupabaseClient): Promise<LiveResult> {
   let processed = 0
 
   // (c) SEQUENTIAL — claims charge credits + count toward the daily cap; never
-  // parallelize (BR-136 accounting must not be raced).
+  // parallelize (BR-136 accounting must not be raced). Stop once batchSize()
+  // rows have been claimed so the per-tick submission limit is respected.
   for (const row of queue) {
+    if (processed >= batchSize()) break
     // Claim (re-validates ALL guardrails server-side + charges the credit).
     const { data: claimData, error: claimError } = await supabase.rpc('claim_submission', {
       p_queue_id: row.id,

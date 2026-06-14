@@ -93,67 +93,77 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
   const { user } = useAuth()
   const userId = user?.id ?? null
 
-  const [formatted, setFormatted] = useState<string | null>(null)
-  const [formatting, setFormatting] = useState(false)
-  const [source, setSource] = useState<'llm' | 'fallback' | null>(null)
+  // Async LLM-formatted JD result, keyed by jobId so a stale result for a
+  // previously open job is never shown for the current one.
+  const [asyncJd, setAsyncJd] = useState<{
+    jobId: string
+    markdown: string
+    source: 'llm' | 'fallback'
+  } | null>(null)
 
-  // Normalize the JD into clean Markdown when the sheet opens for a job. Cache
-  // hits render instantly; the cost gate + usage logging live in the service.
+  const jobId = job?.id ?? null
+  const raw = (job?.description ?? '').trim()
+  const cached = jobId ? formattedJdCache.get(jobId) : undefined
+
+  // Fetch the formatted JD when the sheet opens for a job that has a description,
+  // isn't cached, and we have an authenticated user. The effect does NO synchronous
+  // setState (display state is derived during render below, avoiding the cascading
+  // re-renders flagged by react-hooks/set-state-in-effect); it records the async
+  // result via setAsyncJd inside the promise callbacks only.
   useEffect(() => {
     if (!open || !job) return
 
-    const jobId = job.id
-    const raw = (job.description ?? '').trim()
-
-    if (raw.length === 0) {
-      setFormatted(null)
-      setFormatting(false)
-      setSource(null)
-      return
-    }
-
-    const cached = formattedJdCache.get(jobId)
-    if (cached) {
-      setFormatted(cached.markdown)
-      setSource(cached.source)
-      setFormatting(false)
-      return
-    }
-
-    // Without an authenticated user we can't call the JWT-gated function; show
-    // the raw description rather than block the panel.
-    if (!userId) {
-      setFormatted(raw)
-      setSource('fallback')
-      setFormatting(false)
-      return
-    }
+    const rawDescription = (job.description ?? '').trim()
+    if (rawDescription.length === 0) return
+    if (formattedJdCache.get(job.id)) return
+    // Without an authenticated user we can't call the JWT-gated function; the
+    // render-time derivation falls back to the raw description.
+    if (!userId) return
 
     let cancelled = false
-    setFormatting(true)
-    setFormatted(null)
-    setSource(null)
-
-    formatJobDescription({ userId, rawDescription: raw })
+    formatJobDescription({ userId, rawDescription })
       .then((result) => {
         if (cancelled) return
-        formattedJdCache.set(jobId, result)
-        setFormatted(result.markdown)
-        setSource(result.source)
+        formattedJdCache.set(job.id, result)
+        setAsyncJd({ jobId: job.id, markdown: result.markdown, source: result.source })
       })
       .catch(() => {
         if (cancelled) return
-        setFormatted(raw)
-        setSource('fallback')
-      })
-      .finally(() => {
-        if (!cancelled) setFormatting(false)
+        setAsyncJd({ jobId: job.id, markdown: rawDescription, source: 'fallback' })
       })
 
     return () => {
       cancelled = true
     }
   }, [open, job, userId])
+
+  // Derive display state during render (cache hits render instantly; the cost gate
+  // + usage logging live in the service).
+  const asyncForThisJob = asyncJd && asyncJd.jobId === jobId ? asyncJd : null
+  let formatted: string | null
+  let source: 'llm' | 'fallback' | null
+  let formatting: boolean
+  if (!open || !job || raw.length === 0) {
+    formatted = null
+    source = null
+    formatting = false
+  } else if (cached) {
+    formatted = cached.markdown
+    source = cached.source
+    formatting = false
+  } else if (!userId) {
+    formatted = raw
+    source = 'fallback'
+    formatting = false
+  } else if (asyncForThisJob) {
+    formatted = asyncForThisJob.markdown
+    source = asyncForThisJob.source
+    formatting = false
+  } else {
+    formatted = null
+    source = null
+    formatting = true
+  }
 
   if (!job) return null
 

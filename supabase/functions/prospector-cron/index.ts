@@ -316,8 +316,13 @@ function isAllowedByProfileFilters(
 ): boolean {
   // ── Environment / work-mode filter ───────────────────────────────────────
   // Only restrict when the profile explicitly limits to specific work modes.
+  // Prospector form stores "in-office" but job rows use "onsite" — normalise
+  // before comparing so in-office-only profiles are not silently skipped.
   const wantedEnvs = profile.environments
-    .map((e) => e.toLowerCase().trim())
+    .map((e) => {
+      const lower = e.toLowerCase().trim()
+      return lower === 'in-office' ? 'onsite' : lower
+    })
     .filter((e) => e === 'remote' || e === 'hybrid' || e === 'onsite')
 
   if (wantedEnvs.length > 0 && job.remote_type != null) {

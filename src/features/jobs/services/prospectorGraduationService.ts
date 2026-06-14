@@ -110,7 +110,17 @@ export async function graduateProspectorMatches(params: {
   //    the batch — it's fetched and treated as already-present.
   let created = 0
   for (const jobId of jobIds) {
-    if (appIdByJob.has(jobId)) continue
+    if (appIdByJob.has(jobId)) {
+      // Sync the latest qualifying score onto the existing application so
+      // useProspectorReadyQueue (match_score >= 60) and claim_submission both
+      // see the current score. Silently ignore errors — best-effort update.
+      await supabase
+        .from('applications')
+        .update({ match_score: bestByJob.get(jobId)! })
+        .eq('user_id', userId)
+        .eq('id', appIdByJob.get(jobId)!)
+      continue
+    }
     const { data: inserted, error: insErr } = await supabase
       .from('applications')
       .insert({ user_id: userId, job_id: jobId, stage: 'discovery', match_score: bestByJob.get(jobId)! })

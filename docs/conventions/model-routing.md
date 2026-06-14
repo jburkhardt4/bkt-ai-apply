@@ -34,6 +34,7 @@ Use these pinned model names exactly through src/lib/ai-router.ts.
 | email_classification | Gemini 2.5 Flash | google | Primary | High-volume, low-latency |
 | intent_routing | Gemini 2.5 Flash | google | Primary | Chat intent detection |
 | general_qa | Claude Sonnet 4.6 | anthropic | Primary | Cost-efficient general chat |
+| jd_formatting | Claude 3.5 Haiku | anthropic | Primary | Low-latency JD normalization for the Prospector sidebar |
 
 ---
 

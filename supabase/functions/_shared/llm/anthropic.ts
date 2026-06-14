@@ -13,6 +13,7 @@ const MODEL_ID_BY_NAME: Record<string, string> = {
   'Claude Sonnet 4.6': 'claude-sonnet-4-6',
   'Claude Opus 4.6': 'claude-opus-4-8',
   'Claude Opus 4.8': 'claude-opus-4-8',
+  'Claude 3.5 Haiku': 'claude-3-5-haiku-latest',
 }
 const DEFAULT_MODEL_ID = 'claude-sonnet-4-6'
 

@@ -79,6 +79,7 @@ export type AiTaskType =
   | 'email_draft'
   | 'intent_routing'
   | 'general_qa'
+  | 'jd_formatting'
 
 export type AiModelProvider = 'anthropic' | 'openai' | 'google'
 

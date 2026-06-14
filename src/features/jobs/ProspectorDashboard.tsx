@@ -196,7 +196,11 @@ export function ProspectorDashboard() {
     let failed = 0
     for (const job of unscored) {
       try {
-        const result = await runScoreForJob({ userId: user.id, jobId: job.id })
+        const result = await runScoreForJob({
+          userId: user.id,
+          jobId: job.id,
+          prospectorProfile: profile,
+        })
         if (result.status === 'queued') queued += 1
         else saved += 1
       } catch {
@@ -231,7 +235,7 @@ export function ProspectorDashboard() {
     }
 
     setIsScoring(false)
-  }, [user, isScoring, searchResults, refetchSearchResults, refetchQueue, settings])
+  }, [user, isScoring, searchResults, refetchSearchResults, refetchQueue, settings, profile])
 
   // ── Graduate already-scored matches into the pipeline (once per mount) ──
   // Prospector jobs scored in earlier sessions never created applications, so

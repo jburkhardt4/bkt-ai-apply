@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '../../../lib/supabase'
 import { masterProfile } from '../data/masterProfile'
+import type { CandidateProfile } from '../../../types/pipeline'
 import { parseJobDescription, scoreJobFit } from './pipelineService'
 import { scoreJobFitWithLlm } from './aiScoringService'
 import {
@@ -8,6 +9,27 @@ import {
   sourceUrlDedupKey,
   type IngestionDraftJob,
 } from './ingestionCsv'
+
+/**
+ * Builds the CandidateProfile used for scoring, merging live prospector data
+ * over the hardcoded masterProfile defaults so scoring always reflects the
+ * user's current Prospector form (locations, custom keywords).
+ *
+ * Called by runScoreForJob. All other masterProfile fields (seniority, domain,
+ * tooling, constraints) are kept as-is — only the fields the Prospector form
+ * exposes are overridden.
+ */
+export function buildScoringProfile(override?: {
+  locations?: string[] | null
+  keywords?: string[] | null
+} | null): CandidateProfile {
+  const location = override?.locations?.[0]?.trim() || masterProfile.targetLocation
+  const extraKeywords = (override?.keywords ?? [])
+    .map((k) => k.toLowerCase().trim())
+    .filter(Boolean)
+  const mergedSkills = Array.from(new Set([...masterProfile.skillKeywords, ...extraKeywords]))
+  return { ...masterProfile, targetLocation: location, skillKeywords: mergedSkills }
+}
 
 export interface IngestionResultRow {
   rowNumber: number
@@ -216,6 +238,13 @@ export async function runScoreForJob(params: {
   userId: string
   jobId: string
   applicationId?: string
+  /** Live prospecting_profiles row — overrides masterProfile.targetLocation and
+   *  merges keywords into skillKeywords so scoring reflects the user's current
+   *  Prospector form settings (SSOT: Prospector form = canonical profile). */
+  prospectorProfile?: {
+    locations?: string[] | null
+    keywords?: string[] | null
+  } | null
 }): Promise<ScoreRunResult> {
   const supabase = getSupabaseClient()
 
@@ -230,11 +259,12 @@ export async function runScoreForJob(params: {
     throw new Error(`Failed to load job for scoring: ${jobError.message}`)
   }
 
+  const scoringProfile = buildScoringProfile(params.prospectorProfile)
   const textToScore = job.description?.trim() ? job.description : job.title
-  const parsed = parseJobDescription(textToScore, masterProfile)
+  const parsed = parseJobDescription(textToScore, scoringProfile)
   // Deterministic heuristic — kept as the explicit cost-cap / Edge-error
   // fallback for the LLM scoring path (never removed).
-  const heuristicMatch = scoreJobFit(parsed, masterProfile)
+  const heuristicMatch = scoreJobFit(parsed, scoringProfile)
 
   // Prefer the routed LLM scorer (BR-103: match_scoring → score-job-fit Edge
   // Function); it persists ai_scores via the same persistAiScore path and falls
@@ -243,7 +273,7 @@ export async function runScoreForJob(params: {
     userId: params.userId,
     jobId: params.jobId,
     job: { id: job.id, title: job.title, source_url: job.source_url, description: job.description, text: textToScore },
-    profile: masterProfile,
+    profile: scoringProfile,
     heuristicMatch,
     heuristicReasoningTrace: buildReasoningTrace(job),
     applicationId: params.applicationId,

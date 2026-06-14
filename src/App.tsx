@@ -1,5 +1,4 @@
 import { Toaster } from 'sonner'
-import { Analytics } from '@vercel/analytics/react'
 import type { ReactNode } from 'react'
 import LoginPage from './pages/LoginPage'
 import IngestionPage from './pages/IngestionPage'
@@ -83,7 +82,6 @@ export default function App() {
       <>
         <LoginPage />
         <Toaster richColors position="top-right" />
-        <Analytics />
       </>
     )
   }
@@ -94,7 +92,6 @@ export default function App() {
         <RoutedPage navKey={navKey} />
       </AppShell>
       <Toaster richColors position="top-right" />
-      <Analytics />
     </>
   )
 }

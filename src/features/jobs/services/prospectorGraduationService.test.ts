@@ -83,6 +83,16 @@ describe('graduateProspectorMatches', () => {
     mockEnqueue.mockResolvedValue(undefined as never)
   })
 
+  it('returns zero counts immediately when Supabase client is unavailable', async () => {
+    mockGetSupabaseClientSafe.mockReturnValue(null as unknown as ReturnType<typeof getSupabaseClientSafe>)
+
+    const result = await graduateProspectorMatches({ userId: 'user-1', reviewMode: 'auto' })
+
+    expect(result).toEqual({ created: 0, enqueued: 0 })
+    expect(mockThreshold).not.toHaveBeenCalled()
+    expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
   it('returns zero counts and does no further work when no score meets the threshold', async () => {
     const scores = aiScores({ data: [{ job_id: 'job-1', overall_score: 40, scored_at: T(3) }], error: null })
     const from = vi.fn().mockImplementationOnce(() => ({ select: scores.select }))

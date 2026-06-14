@@ -48,8 +48,8 @@ export const PROSPECTOR_SEARCH_SEED: ProspectorSearchResult[] = [
     location: 'Los Angeles, CA',
     remote_type: 'hybrid',
     job_type: 'contract',
-    compensation_min: 95,
-    compensation_max: 110,
+    compensation_min: 95, // hourly rate (contract role)
+    compensation_max: 110, // hourly rate (contract role)
     description: 'Lead the design, development, and optimization of Salesforce platform including architecture strategy.',
     description_formatted: null,
     posted_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),

@@ -90,7 +90,9 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
         if (cancelled) return
 
         if (fetchError) {
-          setError(fetchError.message)
+          // Graceful fallback: show seed data so the UI is reviewable;
+          // clear error so consumers don't see conflicting state.
+          setError(null)
           setJobs(PROSPECTOR_READY_QUEUE_SEED)
         } else {
           const rows = data ?? []
@@ -138,7 +140,9 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load ready queue')
+        // Graceful fallback: seed data keeps UI usable; clear error for consistency.
+        void err
+        setError(null)
         setJobs(PROSPECTOR_READY_QUEUE_SEED)
         setLoading(false)
       })

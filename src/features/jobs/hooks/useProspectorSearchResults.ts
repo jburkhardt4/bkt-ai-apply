@@ -28,6 +28,7 @@ export interface ProspectorSearchResult {
   compensation_min: number | null
   compensation_max: number | null
   description: string | null
+  description_formatted: string | null
   posted_at: string | null
   match_score: number | null
   source_url: string
@@ -67,6 +68,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           compensation_min,
           compensation_max,
           description,
+          description_formatted,
           posted_at,
           source_url,
           created_at,
@@ -123,6 +125,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
               compensation_min: row.compensation_min,
               compensation_max: row.compensation_max,
               description: row.description,
+              description_formatted: row.description_formatted,
               posted_at: row.posted_at,
               match_score: matchScore,
               source_url: row.source_url,

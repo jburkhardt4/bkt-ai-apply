@@ -52,7 +52,49 @@ export interface SubmissionOutcome {
   metadata?: Record<string, unknown>
 }
 
-/** A channel adapter: pure async function from input to outcome. Never throws
- *  for expected conditions — the worker also wraps every call in try/catch as a
- *  belt-and-suspenders guard so one row can never crash the batch. */
-export type SubmissionAdapter = (input: SubmissionInput) => Promise<SubmissionOutcome>
+/**
+ * Candidate application data resolved by the worker (service-role) from the
+ * `candidate_profiles` row + the master résumé PDF downloaded from the
+ * `documents` storage bucket. Adapters receive this — they never read the DB
+ * (LSN-004: I/O stays in the worker; adapters stay pure + testable).
+ */
+export interface CandidatePayload {
+  firstName: string
+  lastName: string
+  fullName: string
+  email: string
+  phone: string
+  location: string
+  linkedinUrl: string | null
+  websiteUrl: string | null
+  workAuthorization: string
+  /** Master résumé file to attach; null when no master PDF is uploaded yet. */
+  resume: { bytes: Uint8Array; filename: string; contentType: string } | null
+  /** Storage path of the résumé (audit/preview); null when none. */
+  resumePath: string | null
+}
+
+/**
+ * A built (but not yet sent) ATS request — the artifact shadow-validate saves to
+ * `submission_previews` for human review. Serializable: NO file bytes, NO secrets.
+ */
+export interface BuiltRequest {
+  channel: SubmissionChannel
+  vendor: AtsVendor | null
+  /** The URL that WOULD be POSTed to (null when unresolvable). */
+  endpoint: string | null
+  /** Summary of the fields that WOULD be sent (no résumé bytes, no secrets). */
+  payload: Record<string, unknown>
+  /** Storage path of the résumé that WOULD be attached. */
+  resumePath: string | null
+  /** Required fields/answers that could not be filled — blocks a real send. */
+  missing: string[]
+}
+
+/** A channel adapter: pure async function from input + candidate to outcome.
+ *  Never throws for expected conditions — the worker also wraps every call in
+ *  try/catch as a belt-and-suspenders guard so one row can never crash the batch. */
+export type SubmissionAdapter = (
+  input: SubmissionInput,
+  candidate: CandidatePayload | null,
+) => Promise<SubmissionOutcome>

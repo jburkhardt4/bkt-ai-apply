@@ -21,6 +21,8 @@
 
 // @ts-expect-error — esm.sh URL import; resolved by Deno runtime, not Node TS server
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getApiKeyForProvider } from '../_shared/llm/factory.ts'
+import { formatJdMarkdown } from '../_shared/jd-format.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -157,6 +159,16 @@ interface RunStats {
 const SERPAPI_BASE = 'https://serpapi.com/search.json'
 const SERPAPI_RESULTS_PER_PAGE = 10
 const SOURCE_LABEL = 'prospector'
+
+// JD normalization at creation time (jd_formatting → Claude 3.5 Haiku). Bounded
+// per run so a large discovery batch can't blow the function timeout or run up
+// cost; any job not formatted here is backfilled lazily when first viewed.
+const JD_FORMAT_MODEL_NAME = 'Claude 3.5 Haiku'
+const JD_FORMAT_MAX_PER_RUN = 25
+// Anthropic list price for Haiku 3.5 (USD per token) — mirrors getModelPricing in
+// src/lib/ai-router.ts. Used only for ai_model_usage cost logging (AI-RULE-002).
+const JD_HAIKU_INPUT_USD_PER_TOKEN = 0.8 / 1_000_000
+const JD_HAIKU_OUTPUT_USD_PER_TOKEN = 4 / 1_000_000
 
 // Exponential backoff config (INT-RULE-003)
 const BACKOFF_MAX_RETRIES = 3
@@ -311,13 +323,44 @@ async function fetchSerpApi(url: string): Promise<SerpApiJobResult[]> {
 // ---------------------------------------------------------------------------
 
 /**
- * Looks up or inserts a company by name.
- * Returns the company UUID, or null if company_name is empty.
- * The companies table is a shared lookup (not user-scoped); see E-003.
+ * Best-effort company web domain from a posting's apply URL. Returns the bare
+ * host (no www.) ONLY when it is the employer's own site — known job boards and
+ * ATS hosts are rejected (their favicon is the board's, not the company's), so
+ * the JD sidebar falls back to the source-board favicon instead. Returns null
+ * when the URL is unparseable or board-owned.
+ */
+function deriveCompanyDomain(sourceUrl: string | null): string | null {
+  if (!sourceUrl) return null
+  let host: string
+  try {
+    host = new URL(sourceUrl).hostname.replace(/^www\./, '').toLowerCase()
+  } catch {
+    return null
+  }
+  if (!host) return null
+  const BOARD_HOSTS = [
+    'google.com', 'dice.com', 'bebee.com', 'indeed.com', 'linkedin.com',
+    'glassdoor.com', 'ziprecruiter.com', 'monster.com', 'simplyhired.com',
+    'careersprint.com', 'wellfound.com', 'angel.co', 'jobvite.com',
+    'greenhouse.io', 'lever.co', 'workday.com', 'myworkdayjobs.com',
+    'ashbyhq.com', 'icims.com', 'smartrecruiters.com', 'workable.com',
+    'taleo.net', 'jobs.net', 'recruiting.com',
+  ]
+  const isBoard = BOARD_HOSTS.some((b) => host === b || host.endsWith(`.${b}`))
+  return isBoard ? null : host
+}
+
+/**
+ * Looks up or inserts a company by name, capturing a best-effort web domain.
+ * Returns the company UUID, or null if company_name is empty. The companies
+ * table is a shared lookup (not user-scoped); see E-003. When an existing
+ * company has no domain yet and we derived one, we backfill it so the JD
+ * sidebar can resolve a real logo on subsequent views.
  */
 async function upsertCompany(
   supabase: SupabaseClient,
-  companyName: string | undefined
+  companyName: string | undefined,
+  domain: string | null
 ): Promise<string | null> {
   if (!companyName?.trim()) return null
 
@@ -326,7 +369,7 @@ async function upsertCompany(
   // Try to find an existing company first (shared lookup table)
   const { data: existing, error: selectError } = await supabase
     .from('companies')
-    .select('id')
+    .select('id, domain')
     .eq('name', name)
     .maybeSingle()
 
@@ -335,12 +378,24 @@ async function upsertCompany(
     return null
   }
 
-  if (existing) return existing.id
+  if (existing) {
+    // Backfill a missing domain when we now have one (best-effort; ignore errors).
+    if (domain && !existing.domain) {
+      const { error: domainError } = await supabase
+        .from('companies')
+        .update({ domain })
+        .eq('id', existing.id)
+      if (domainError) {
+        console.warn(`prospector-cron: company domain backfill failed for "${name}": ${domainError.message}`)
+      }
+    }
+    return existing.id
+  }
 
   // Insert a new company record
   const { data: inserted, error: insertError } = await supabase
     .from('companies')
-    .insert({ name })
+    .insert(domain ? { name, domain } : { name })
     .select('id')
     .single()
 
@@ -359,6 +414,73 @@ async function upsertCompany(
   }
 
   return inserted?.id ?? null
+}
+
+/**
+ * Formats newly-discovered job descriptions into clean Markdown and stores them
+ * on jobs.description_formatted, logging one ai_model_usage row per call. This
+ * is the creation-time normalization path (jd_formatting → Claude 3.5 Haiku).
+ *
+ * Best-effort and bounded: at most JD_FORMAT_MAX_PER_RUN jobs are formatted per
+ * run; any error (missing key, model failure, write failure) is logged and
+ * skipped so discovery is never blocked. Unformatted jobs fall back to the raw
+ * description and are backfilled lazily the first time they're viewed.
+ */
+async function formatAndStoreNewJobs(
+  supabase: SupabaseClient,
+  userId: string,
+  newJobs: { id: string; description: string }[]
+): Promise<void> {
+  if (newJobs.length === 0) return
+
+  const apiKey = getApiKeyForProvider('anthropic')
+  if (!apiKey) {
+    console.warn('prospector-cron: ANTHROPIC_KEY not configured — skipping JD formatting')
+    return
+  }
+
+  const batch = newJobs.slice(0, JD_FORMAT_MAX_PER_RUN)
+  for (const job of batch) {
+    try {
+      const { markdown, usage } = await formatJdMarkdown({
+        provider: 'anthropic',
+        model: JD_FORMAT_MODEL_NAME,
+        apiKey,
+        description: job.description,
+      })
+      if (markdown.length === 0) continue
+
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({ description_formatted: markdown })
+        .eq('id', job.id)
+      if (updateError) {
+        console.warn(`prospector-cron: storing formatted JD failed for job ${job.id}: ${updateError.message}`)
+        continue
+      }
+
+      const estimatedCostUsd = Number(
+        (usage.input_tokens * JD_HAIKU_INPUT_USD_PER_TOKEN +
+          usage.output_tokens * JD_HAIKU_OUTPUT_USD_PER_TOKEN).toFixed(6),
+      )
+      const { error: usageError } = await supabase.from('ai_model_usage').insert({
+        user_id: userId,
+        model_provider: 'anthropic',
+        model_name: JD_FORMAT_MODEL_NAME,
+        task_type: 'jd_formatting',
+        tokens_in: usage.input_tokens,
+        tokens_out: usage.output_tokens,
+        estimated_cost_usd: estimatedCostUsd,
+        application_id: null,
+      })
+      if (usageError) {
+        console.warn(`prospector-cron: logging JD formatting usage failed for job ${job.id}: ${usageError.message}`)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn(`prospector-cron: JD formatting failed for job ${job.id}: ${msg}`)
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -514,7 +636,8 @@ async function mapJobResult(
     // hasSalaryData === false → no salary listed → retain
   }
 
-  const companyId = await upsertCompany(supabase, result.company_name)
+  const companyDomain = deriveCompanyDomain(sourceUrl)
+  const companyId = await upsertCompany(supabase, result.company_name, companyDomain)
 
   return {
     user_id: userId,
@@ -562,6 +685,9 @@ async function runForProfile(
     status: 'success',
     errors: [],
   }
+
+  // Jobs newly inserted this run, eligible for creation-time JD formatting.
+  const newJobs: { id: string; description: string }[] = []
 
   if (profile.job_titles.length === 0) {
     console.warn(`prospector-cron: profile ${profile.id} has no job_titles — skipping`)
@@ -614,13 +740,17 @@ async function runForProfile(
 
       const jobRow = mappedJob
 
-      // Upsert with ON CONFLICT DO NOTHING — deduplication by source_url (BR-063, BR-102)
-      const { error: upsertError } = await supabase
+      // Upsert with ON CONFLICT DO NOTHING — deduplication by source_url (BR-063, BR-102).
+      // .select('id') returns the row ONLY when it was newly inserted (a duplicate
+      // returns an empty set), so we know precisely which jobs need formatting and
+      // jobs_queued counts true inserts (its documented "newly inserted" meaning).
+      const { data: upsertedRows, error: upsertError } = await supabase
         .from('jobs')
         .upsert(jobRow, {
           onConflict: 'source_url',
           ignoreDuplicates: true,
         })
+        .select('id')
 
       if (upsertError) {
         const msg = upsertError.message
@@ -630,7 +760,19 @@ async function runForProfile(
         continue
       }
 
-      stats.jobs_queued += 1
+      const insertedId = upsertedRows?.[0]?.id
+      if (insertedId) {
+        stats.jobs_queued += 1
+        if (jobRow.description && jobRow.description.trim().length > 0) {
+          newJobs.push({ id: insertedId, description: jobRow.description })
+        }
+      }
+    }
+  }
+
+  // Format newly-discovered JDs into clean Markdown at creation time (best-effort,
+  // bounded). Failures never abort ingestion — unformatted jobs backfill lazily.
+  await formatAndStoreNewJobs(supabase, profile.user_id, newJobs)
     }
   }
 

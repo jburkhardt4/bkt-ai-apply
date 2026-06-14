@@ -24,36 +24,15 @@
  */
 import { CORS_HEADERS, json } from '../_shared/http.ts'
 import { getAuthenticatedUserId } from '../_shared/auth.ts'
-import { getApiKeyForProvider, getProvider, isProviderId } from '../_shared/llm/factory.ts'
+import { getApiKeyForProvider, isProviderId } from '../_shared/llm/factory.ts'
 import { LlmError, clientMessageForCode, httpStatusForCode } from '../_shared/llm/errors.ts'
-
-const DEFAULT_MAX_TOKENS = 1536
+import { JD_FORMAT_MAX_TOKENS, formatJdMarkdown } from '../_shared/jd-format.ts'
 
 interface RequestBody {
   provider?: string
   model?: string
   description?: unknown
-  system?: string
   maxTokens?: number
-}
-
-// The exact JD-normalization instruction set. Used when the client does not
-// pass an explicit system prompt. Kept verbatim so formatting stays uniform
-// regardless of the originating job board (BR: omnichannel JD consistency).
-const DEFAULT_SYSTEM_PROMPT = [
-  'You are a precise parsing assistant for a professional job board. Your task is to take raw, messy job descriptions and instantly output a cleanly formatted Markdown version.',
-  'Rules:',
-  "1. Use standard Markdown headers (`###`) for core sections: 'About the Role', 'Key Responsibilities', and 'Requirements/Qualifications'.",
-  '2. Convert all lists to standard bullet points (`*`).',
-  '3. Strip out excessive company promotional fluff, equal opportunity boilerplate, and unreadable line breaks.',
-  '4. Output ONLY the formatted Markdown. No preamble.',
-].join('\n')
-
-/** Strips a ```markdown … ``` (or bare ```) fence if the model wrapped output. */
-function stripCodeFence(text: string): string {
-  const trimmed = text.trim()
-  const fenced = trimmed.match(/^```(?:markdown|md)?\s*([\s\S]*?)\s*```$/i)
-  return fenced ? fenced[1].trim() : trimmed
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -88,21 +67,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     )
   }
 
-  const provider = getProvider(providerId)
   let result
   try {
-    result = await provider.complete(
-      {
-        model: typeof body.model === 'string' ? body.model : '',
-        system:
-          typeof body.system === 'string' && body.system.length > 0
-            ? body.system
-            : DEFAULT_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: description }],
-        maxTokens: typeof body.maxTokens === 'number' ? body.maxTokens : DEFAULT_MAX_TOKENS,
-      },
+    result = await formatJdMarkdown({
+      provider: providerId,
+      model: typeof body.model === 'string' ? body.model : '',
       apiKey,
-    )
+      description,
+      maxTokens: typeof body.maxTokens === 'number' ? body.maxTokens : JD_FORMAT_MAX_TOKENS,
+    })
   } catch (err) {
     if (err instanceof LlmError) {
       return json(
@@ -113,7 +86,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: 'Unexpected server error', code: 'unknown', provider: providerId }, 500)
   }
 
-  const markdown = stripCodeFence(result.text)
+  const markdown = result.markdown
   if (markdown.length === 0) {
     // The model returned empty/whitespace output — surface as 'unknown' so the
     // caller can fall back to the raw description rather than render a blank panel.

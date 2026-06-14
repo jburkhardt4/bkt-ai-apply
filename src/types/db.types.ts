@@ -798,6 +798,7 @@ export type Database = {
           compensation_min: number | null
           created_at: string
           description: string | null
+          description_formatted: string | null
           expires_at: string | null
           id: string
           job_type: string | null
@@ -817,6 +818,7 @@ export type Database = {
           compensation_min?: number | null
           created_at?: string
           description?: string | null
+          description_formatted?: string | null
           expires_at?: string | null
           id?: string
           job_type?: string | null
@@ -836,6 +838,7 @@ export type Database = {
           compensation_min?: number | null
           created_at?: string
           description?: string | null
+          description_formatted?: string | null
           expires_at?: string | null
           id?: string
           job_type?: string | null

@@ -27,6 +27,9 @@ export interface FormatJobDescriptionInput {
   userId: string
   /** The raw, possibly-messy scraped description (may be null/empty). */
   rawDescription: string | null
+  /** When set, a successful LLM format is persisted to jobs.description_formatted
+   *  so the result is cached in the DB and later views are instant. */
+  jobId?: string
 }
 
 export interface FormatJobDescriptionResult {
@@ -103,6 +106,19 @@ export async function formatJobDescription(
     estimated_cost_usd: estimatedCostUsd,
     application_id: null,
   })
+
+  // Persist the normalized Markdown so this job renders instantly next time and
+  // for any other viewer (backfills rows discovered before creation-time
+  // formatting existed). Non-fatal: this session already has the result.
+  if (input.jobId) {
+    const { error: persistError } = await supabase
+      .from('jobs')
+      .update({ description_formatted: data.markdown })
+      .eq('id', input.jobId)
+    if (persistError) {
+      console.warn(`jdFormattingService: failed to persist formatted JD: ${persistError.message}`)
+    }
+  }
 
   return { markdown: data.markdown, source: 'llm' }
 }

@@ -34,11 +34,14 @@
  *   → 201 { id, connectUrl?, seleniumRemoteUrl?, ... }
  */
 
-import type { SubmissionInput, SubmissionOutcome } from './types.ts'
+import type { CandidatePayload, SubmissionInput, SubmissionOutcome } from './types.ts'
 
 const BROWSERBASE_SESSIONS_ENDPOINT = 'https://api.browserbase.com/v1/sessions'
 
-export async function browserAdapter(input: SubmissionInput): Promise<SubmissionOutcome> {
+export async function browserAdapter(
+  input: SubmissionInput,
+  _candidate: CandidatePayload | null = null,
+): Promise<SubmissionOutcome> {
   const apiKey = Deno.env.get('BROWSERBASE_API_KEY')
   const projectId = Deno.env.get('BROWSERBASE_PROJECT_ID')
 

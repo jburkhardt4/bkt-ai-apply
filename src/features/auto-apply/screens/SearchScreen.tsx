@@ -1,6 +1,6 @@
 // BKT AI-Apply — Job Search screen (internal job board).
 // Ported 1:1 from the design-system UI kit (SearchScreen.jsx).
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktAvatar } from '@/components/bkt/BktAvatar'
 import { BktBadge } from '@/components/bkt/BktBadge'
@@ -504,8 +504,13 @@ export interface SearchScreenProps {
 }
 
 export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDetails, onAutoApply, onToast }: SearchScreenProps) {
+  // Input text shows the seed query/location; the *applied* filters start empty
+  // so the full board is visible on mount (applying the seed phrase verbatim
+  // would wrongly hide everything). Search/Enter promotes the inputs to applied.
   const [query, setQuery] = useState(data.query)
   const [location, setLocation] = useState(data.location)
+  const [appliedQuery, setAppliedQuery] = useState('')
+  const [appliedLocation, setAppliedLocation] = useState('')
   const [workMode, setWorkMode] = useState<string[]>([])
   const [skills, setSkills] = useState<string[]>([])
   const [seniority, setSeniority] = useState<string[]>([])
@@ -514,25 +519,93 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
   const [visible, setVisible] = useState(7)
   const [loadingMore, setLoadingMore] = useState(false)
 
+  // Skill filter options reflect the real loaded board when present, falling
+  // back to the seed list (demo mode / empty board).
+  const skillOptions = useMemo(() => {
+    const fromJobs = new Set<string>()
+    for (const j of data.jobs) for (const s of j.skills ?? j.chips ?? []) fromJobs.add(s)
+    return fromJobs.size > 0 ? [...fromJobs].sort((a, b) => a.localeCompare(b)) : data.skills
+  }, [data.jobs, data.skills])
+
+  // Real filter + sort over the loaded jobs (live rows in live mode). Text
+  // search applies on Search/Enter; chips + sort apply immediately.
+  const filteredAll = useMemo(() => {
+    const norm = (s: string) => s.toLowerCase()
+    const qTokens = appliedQuery.trim().toLowerCase().split(/\s+/).filter((t) => t.length >= 2)
+    const locTokens = appliedLocation.trim().toLowerCase().split(/[\s,]+/).filter((t) => t.length >= 3)
+
+    const matchesQuery = (job: SearchJob) => {
+      if (qTokens.length === 0) return true
+      const hay = [job.title, job.company, job.industry, ...(job.skills ?? []), ...job.chips]
+        .filter(Boolean)
+        .map((f) => norm(String(f)))
+        .join(' ')
+      return qTokens.some((t) => hay.includes(t))
+    }
+
+    const matchesLocation = (job: SearchJob) => {
+      if (locTokens.length === 0) return true
+      const hay = norm(job.location ?? '')
+      return locTokens.some((t) => hay.includes(t))
+    }
+
+    const matchesWorkMode = (job: SearchJob) => {
+      if (workMode.length === 0) return true
+      const hay = norm([job.location, ...job.chips].filter(Boolean).join(' '))
+      return workMode.some((m) =>
+        m === 'Remote'
+          ? hay.includes('remote')
+          : /hybrid|on-?site|in[ -]?office/.test(hay) || !hay.includes('remote'),
+      )
+    }
+
+    const matchesSkills = (job: SearchJob) => {
+      if (skills.length === 0) return true
+      const set = [...(job.skills ?? []), ...job.chips].map(norm)
+      return skills.some((s) => set.some((x) => x.includes(norm(s))))
+    }
+
+    const matchesSeniority = (job: SearchJob) => {
+      if (seniority.length === 0) return true
+      const hay = norm([job.title, job.level].filter(Boolean).join(' '))
+      return seniority.some((s) => hay.includes(norm(s)))
+    }
+
+    const base = data.jobs.filter(
+      (j) =>
+        matchesQuery(j) &&
+        matchesLocation(j) &&
+        matchesWorkMode(j) &&
+        matchesSkills(j) &&
+        matchesSeniority(j),
+    )
+    // Most Relevant = match score desc; Newest = best-effort by relative-time label.
+    return sort === 'Newest'
+      ? [...base].sort((a, b) => (a.posted > b.posted ? 1 : a.posted < b.posted ? -1 : 0))
+      : [...base].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+  }, [data.jobs, appliedQuery, appliedLocation, workMode, skills, seniority, sort])
+
   const runSearch = (msg?: string) => {
     setSearching(true)
+    setAppliedQuery(query)
+    setAppliedLocation(location)
+    setVisible(7)
+    // Brief, honest spinner; the filtering itself is synchronous over loaded rows.
     setTimeout(() => {
       setSearching(false)
-      setVisible(7)
       if (msg) onToast(msg, 'search', 'var(--bkt-blue-300)')
-    }, 750)
+    }, 320)
   }
 
   const loadMore = () => {
     setLoadingMore(true)
     setTimeout(() => {
       setLoadingMore(false)
-      setVisible(data.jobs.length)
-    }, 700)
+      setVisible(filteredAll.length)
+    }, 400)
   }
 
-  const jobs = sort === 'Newest' ? [...data.jobs].sort((a, b) => (a.posted > b.posted ? 1 : -1)) : data.jobs
-  const shown = jobs.slice(0, visible)
+  const shown = filteredAll.slice(0, visible)
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -586,7 +659,7 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
           />
           <FilterMenu
             label="Skills"
-            options={data.skills}
+            options={skillOptions}
             searchable
             value={skills}
             onApply={(v) => {
@@ -616,8 +689,25 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '18px 28px 10px' }}>
           {searching ? (
             [0, 1, 2, 3].map((i) => <SearchCardSkeleton key={i} />)
+          ) : shown.length === 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+                padding: '48px 24px',
+                textAlign: 'center',
+              }}
+            >
+              <Icon name="search-x" size={28} color="var(--bkt-zinc-400)" />
+              <span style={{ font: '600 var(--text-md)/1.3 var(--font-display)', color: 'var(--text-strong)' }}>No matching jobs</span>
+              <span style={{ font: '400 var(--text-sm)/1.5 var(--font-body)', color: 'var(--text-muted)', maxWidth: 380 }}>
+                Try a broader search term, clear a filter, or widen the location.
+              </span>
+            </div>
           ) : (
-            <div key={`${sort}-${visible >= data.jobs.length}`} className="bkt-stagger" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div key={`${sort}-${appliedQuery}-${shown.length}`} className="bkt-stagger" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {shown.map((job) => (
                 <SearchJobCard
                   key={job.id}
@@ -635,14 +725,14 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
         </div>
 
         {/* load more */}
-        {!searching && (
+        {!searching && shown.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 26px' }}>
-            {visible < data.jobs.length ? (
+            {visible < filteredAll.length ? (
               <BktButton variant="ghost" size="md" loading={loadingMore} onClick={loadMore} iconLeft={!loadingMore ? <Icon name="refresh-cw" size={14} /> : null}>
                 Load more
               </BktButton>
             ) : (
-              <span style={{ font: '400 var(--text-sm)/1 var(--font-body)', color: 'var(--text-muted)' }}>All {data.jobs.length} matching jobs loaded.</span>
+              <span style={{ font: '400 var(--text-sm)/1 var(--font-body)', color: 'var(--text-muted)' }}>All {filteredAll.length} matching jobs loaded.</span>
             )}
           </div>
         )}

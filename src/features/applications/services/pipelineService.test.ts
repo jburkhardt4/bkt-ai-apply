@@ -7,17 +7,21 @@ import type { CandidateProfile, ParsedJobDescription } from '../../../types/pipe
 //
 // The first four buckets use Expected-Target scoring:
 //   Math.min(Math.round((matched / expectedTarget) * weight), weight)
-// where expectedTarget is a fixed constant (skills=4, domain=2, seniority=2,
+// where expectedTarget is a fixed constant (skills=3, domain=1, seniority=2,
 // tools=2), NOT the length of the master-profile keyword list.
 // Matching at or above the target awards the full bucket weight; exceeding it
 // is capped at the weight (Math.min). Below-target results are proportional.
 //
+// Targets were recalibrated 2026-06 (skills 4→3, domain 2→1) to un-starve the
+// funnel; the Location/Auth baseline was raised 2→5 and the match list widened
+// to remote/hybrid/anywhere/US/target-metro.
+//
 // Canonical bucket values:
-//   Skills  (target 4, weight 35): 0→0, 1→9, 2→18, 3→26, 4→35, 5+→35 (capped)
-//   Domain  (target 2, weight 20): 0→0, 1→10, 2→20, 3+→20
-//   Seniority (target 2, weight 20): same as Domain
+//   Skills  (target 3, weight 35): 0→0, 1→12, 2→23, 3→35, 4+→35 (capped)
+//   Domain  (target 1, weight 20): 0→0, 1→20, 2+→20
+//   Seniority (target 2, weight 20): 0→0, 1→10, 2→20, 3+→20
 //   Tools   (target 2, weight 15): 0→0, 1→8,  2→15, 3+→15
-//   Location/Auth: 10 (remote OR targetLocation match), 2 (baseline) — unchanged
+//   Location/Auth: 10 (remote/hybrid/anywhere/US/target match), 5 (baseline)
 
 function buildProfile(overrides: Partial<CandidateProfile> = {}): CandidateProfile {
   return {
@@ -60,7 +64,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
   // (a) Below-target proportional cases
   // -------------------------------------------------------------------------
 
-  it('Skills below target: 1 of 4 expected → round(1/4 * 35) = 9', () => {
+  it('Skills below target: 1 of 3 expected → round(1/3 * 35) = 12', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -70,15 +74,15 @@ describe('scoreJobFit — Expected-Target scoring', () => {
 
     const result = scoreJobFit(parsed, profile)
 
-    expect(result.breakdown.skills).toBe(9)
+    expect(result.breakdown.skills).toBe(12)
     expect(result.breakdown.domain).toBe(0)
     expect(result.breakdown.seniority).toBe(0)
     expect(result.breakdown.tools).toBe(0)
-    expect(result.breakdown.locationAuth).toBe(2)
-    expect(result.overall).toBe(11)
+    expect(result.breakdown.locationAuth).toBe(5)
+    expect(result.overall).toBe(17)
   })
 
-  it('Skills below target: 2 of 4 expected → round(2/4 * 35) = 18', () => {
+  it('Skills below target: 2 of 3 expected → round(2/3 * 35) = 23', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -88,10 +92,10 @@ describe('scoreJobFit — Expected-Target scoring', () => {
 
     const result = scoreJobFit(parsed, profile)
 
-    expect(result.breakdown.skills).toBe(18)
+    expect(result.breakdown.skills).toBe(23)
   })
 
-  it('Domain below target: 1 of 2 expected → round(1/2 * 20) = 10', () => {
+  it('Domain at target: 1 of 1 expected → full weight 20', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -101,7 +105,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
 
     const result = scoreJobFit(parsed, profile)
 
-    expect(result.breakdown.domain).toBe(10)
+    expect(result.breakdown.domain).toBe(20)
   })
 
   it('Tools below target: 1 of 2 expected → round(1/2 * 15) = 8', () => {
@@ -121,7 +125,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
   // (b) At-target = full-weight cases
   // -------------------------------------------------------------------------
 
-  it('Skills at target: 4 of 4 expected → full weight 35', () => {
+  it('Skills at/above target: 4 matches vs target 3 → full weight 35', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -132,7 +136,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
     expect(scoreJobFit(parsed, profile).breakdown.skills).toBe(35)
   })
 
-  it('Domain at target: 2 of 2 expected → full weight 20', () => {
+  it('Domain above target: 2 matches vs target 1 → full weight 20', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -158,7 +162,7 @@ describe('scoreJobFit — Expected-Target scoring', () => {
   // (c) Over-target cases — Math.min cap ensures bucket cannot exceed weight
   // -------------------------------------------------------------------------
 
-  it('Skills over target: 5 matches against target 4 → still capped at 35', () => {
+  it('Skills over target: 5 matches against target 3 → still capped at 35', () => {
     const profile = buildProfile()
     const parsed = buildParsed({
       requirements: [
@@ -229,11 +233,11 @@ describe('scoreJobFit — Expected-Target scoring', () => {
     expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
   })
 
-  it('falls back to the baseline Location/Auth (2) when neither remote nor target location match', () => {
+  it('falls back to the baseline Location/Auth (5) when neither remote nor target location match', () => {
     const profile = buildProfile({ targetLocation: 'Austin, TX' })
     const parsed = buildParsed({ location: 'New York, NY' })
 
-    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(2)
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(5)
   })
 
   // -------------------------------------------------------------------------

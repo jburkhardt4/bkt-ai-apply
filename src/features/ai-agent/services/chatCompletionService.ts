@@ -13,6 +13,7 @@
  */
 
 import { getSupabaseClient } from '@/lib/supabase'
+import { readEdgeFunctionError } from '@/lib/edgeFunctionError'
 import { getModelPricing, logAiUsage, resolveChatModel, routeAiTask } from '@/lib/ai-router'
 import {
   classifyChatIntent,
@@ -180,7 +181,9 @@ export async function sendChatMessage(input: SendChatInput): Promise<SendChatRes
     },
   })
   if (error || !data) {
-    throw new Error(error?.message ?? 'AI chat function returned no data')
+    // Surface the function's real `{ error }` body (e.g. a missing-key message)
+    // rather than the SDK's generic "non-2xx status code" string.
+    throw new Error(await readEdgeFunctionError(error, 'AI chat function returned no data'))
   }
 
   // 6. Split reply from MEMORY directives; persist the assistant message.

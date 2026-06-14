@@ -7,7 +7,7 @@ import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import { BktInput } from '@/components/bkt/BktInput'
 import type { ToastFn } from '@/components/bkt/toast'
-import type { DocItem, DocsData, LetterContent, ResumeContent } from '../types'
+import type { DocItem, DocsData, LetterContent, ResumeContent, ResumeExperience } from '../types'
 import { DocPaper } from './DocPaper'
 import type { DocContent, DocType } from './DocPaper'
 import { DocAssistant } from './DocAssistant'
@@ -52,6 +52,31 @@ function DBArea({ label, value, onChange, rows = 4 }: { label?: string; value: s
         }}
       />
     </label>
+  )
+}
+
+/** Row header for a repeatable section item: an uppercase label + Remove. */
+function DBItemHeader({ label, onRemove }: { label: string; onRemove?: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 22 }}>
+      <span style={{ font: '600 var(--text-xs)/1 var(--font-body)', letterSpacing: 'var(--tracking-wide)', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+        {label}
+      </span>
+      {onRemove && (
+        <BktButton variant="ghost" size="sm" iconLeft={<Icon name="trash-2" size={13} color="var(--bkt-danger)" />} onClick={onRemove}>
+          Remove
+        </BktButton>
+      )}
+    </div>
+  )
+}
+
+/** Full-width dashed "add another item" button for a repeatable section. */
+function DBAddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <BktButton variant="outline" size="sm" iconLeft={<Icon name="plus" size={14} color="var(--primary)" />} onClick={onClick} style={{ alignSelf: 'flex-start' }}>
+      {label}
+    </BktButton>
   )
 }
 
@@ -192,6 +217,27 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     saveT.current = setTimeout(() => setSaving(false), 900)
   }
 
+  // --- structured-section mutators (resume) ---
+  // Each section is fully editable: roles, education entries, and bullet lines
+  // can be added or removed. Bullets keep blank lines while editing (so Enter
+  // starts a new bullet); DocPaper filters empties at render.
+  const setExperience = (next: ResumeExperience[]) => set({ experience: next })
+  const addRole = () => setExperience([...rc.experience, { role: '', org: '', when: '', bullets: [''] }])
+  const removeRole = (idx: number) => setExperience(rc.experience.filter((_, j) => j !== idx))
+  const patchRole = (idx: number, patch: Partial<ResumeExperience>) =>
+    setExperience(rc.experience.map((e, j) => (j === idx ? { ...e, ...patch } : e)))
+
+  const setEducation = (next: ResumeContent['education']) => set({ education: next })
+  const addEducation = () => setEducation([...rc.education, { degree: '', org: '', when: '' }])
+  const removeEducation = (idx: number) => setEducation(rc.education.filter((_, j) => j !== idx))
+  const patchEducation = (idx: number, patch: Partial<ResumeContent['education'][number]>) =>
+    setEducation(rc.education.map((e, j) => (j === idx ? { ...e, ...patch } : e)))
+
+  // --- letter body paragraph mutators ---
+  const setBody = (next: string[]) => set({ body: next })
+  const addParagraph = () => setBody([...lc.body, ''])
+  const removeParagraph = (idx: number) => setBody(lc.body.filter((_, j) => j !== idx))
+
   // Maps the FULL generated document into the structured builder state (not a
   // single field) so the paper reflects the whole document. The canonical
   // full-text artifact is persisted separately to the `documents` table.
@@ -217,8 +263,8 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
   // interactive without Supabase / Edge Functions.
   const demoAlignedText = (): string =>
     type === 'resume'
-      ? `Salesforce consulting leader targeting the ${lastJob.title} role at ${lastJob.company}. 12+ years leading engagements end-to-end — solution design, integration management, and client delivery teams of 30+ consultants — with CPQ architecture wins (38% faster quotes) and multi-cloud programs to $4.5M.`
-      : `I am writing to apply for the ${lastJob.title} role at ${lastJob.company}. Over the last twelve years I have led Salesforce delivery from both sides of the table — most recently as founder of BKT Advisory, where I run discovery-to-go-live engagements for enterprise clients.`
+      ? `Salesforce consulting leader targeting the ${lastJob.title} role at ${lastJob.company}. 12+ years leading engagements end-to-end: solution design, integration management, and client delivery teams of 30+ consultants, with CPQ architecture wins (38% faster quotes) and multi-cloud programs to $4.5M.`
+      : `I am writing to apply for the ${lastJob.title} role at ${lastJob.company}. Over the last twelve years I have led Salesforce delivery from both sides of the table, most recently as founder of BKT Advisory, where I run discovery-to-go-live engagements for enterprise clients.`
 
   const runAlign = async () => {
     if (aligning) return
@@ -229,7 +275,7 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
       setTimeout(() => {
         applyAligned(demoAlignedText())
         setAligning(false)
-        onToast(`Aligned to ${lastJob.company} — ${lastJob.title}`, 'wand-sparkles', 'var(--bkt-blue-300)')
+        onToast(`Aligned to ${lastJob.company} · ${lastJob.title}`, 'wand-sparkles', 'var(--bkt-blue-300)')
       }, 1100)
       return
     }
@@ -238,14 +284,14 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     try {
       const result = await alignDocumentToJob({ userId, type, lastJob, content })
       if (result.status === 'queued') {
-        onToast(`AI budget reached — ${result.reason}`, 'circle-alert', 'var(--bkt-warning)')
+        onToast(`AI budget reached: ${result.reason}`, 'circle-alert', 'var(--bkt-warning)')
         return
       }
       applyAligned(result.content)
       onToast(
         result.source === 'llm'
-          ? `Aligned to ${lastJob.company} — ${lastJob.title}`
-          : `Aligned (offline draft) — ${lastJob.company}`,
+          ? `Aligned to ${lastJob.company} · ${lastJob.title}`
+          : `Aligned (offline draft) · ${lastJob.company}`,
         'wand-sparkles',
         'var(--bkt-blue-300)',
       )
@@ -330,62 +376,37 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
                     key={i}
                     style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < rc.experience.length - 1 ? '1px dashed var(--border)' : 'none' }}
                   >
-                    <BktInput
-                      label={`Role ${i + 1}`}
-                      value={e.role}
-                      onChange={(ev) => {
-                        const xs = rc.experience.slice()
-                        xs[i] = { ...e, role: ev.target.value }
-                        set({ experience: xs })
-                      }}
-                    />
+                    <DBItemHeader label={`Role ${i + 1}`} onRemove={() => removeRole(i)} />
+                    <BktInput label="Title" value={e.role} onChange={(ev) => patchRole(i, { role: ev.target.value })} />
                     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8 }}>
-                      <BktInput
-                        label="Organization"
-                        value={e.org}
-                        onChange={(ev) => {
-                          const xs = rc.experience.slice()
-                          xs[i] = { ...e, org: ev.target.value }
-                          set({ experience: xs })
-                        }}
-                      />
-                      <BktInput
-                        label="When"
-                        value={e.when}
-                        onChange={(ev) => {
-                          const xs = rc.experience.slice()
-                          xs[i] = { ...e, when: ev.target.value }
-                          set({ experience: xs })
-                        }}
-                      />
+                      <BktInput label="Organization" value={e.org} onChange={(ev) => patchRole(i, { org: ev.target.value })} />
+                      <BktInput label="When" value={e.when} onChange={(ev) => patchRole(i, { when: ev.target.value })} />
                     </div>
                     <DBArea
                       label="Bullets (one per line)"
                       rows={3}
                       value={e.bullets.join('\n')}
-                      onChange={(v) => {
-                        const xs = rc.experience.slice()
-                        xs[i] = { ...e, bullets: v.split('\n').filter(Boolean) }
-                        set({ experience: xs })
-                      }}
+                      onChange={(v) => patchRole(i, { bullets: v.split('\n') })}
                     />
                   </div>
                 ))}
+                <DBAddButton label="Add role" onClick={addRole} />
               </DBGroup>
               <DBGroup icon="graduation-cap" label="Education">
                 {rc.education.map((e, i) => (
-                  <BktInput
+                  <div
                     key={i}
-                    label="Degree"
-                    value={`${e.degree} — ${e.org} (${e.when})`}
-                    onChange={(ev) => {
-                      const m = ev.target.value
-                      const xs = rc.education.slice()
-                      xs[i] = { ...e, degree: m.split(' — ')[0] || m }
-                      set({ education: xs })
-                    }}
-                  />
+                    style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < rc.education.length - 1 ? '1px dashed var(--border)' : 'none' }}
+                  >
+                    <DBItemHeader label={`Entry ${i + 1}`} onRemove={() => removeEducation(i)} />
+                    <BktInput label="Degree" value={e.degree} onChange={(ev) => patchEducation(i, { degree: ev.target.value })} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8 }}>
+                      <BktInput label="Institution" value={e.org} onChange={(ev) => patchEducation(i, { org: ev.target.value })} />
+                      <BktInput label="Year" value={e.when} onChange={(ev) => patchEducation(i, { when: ev.target.value })} />
+                    </div>
+                  </div>
                 ))}
+                <DBAddButton label="Add education" onClick={addEducation} />
               </DBGroup>
               <DBGroup icon="list-checks" label="Skills">
                 <DBArea
@@ -414,18 +435,23 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
               </DBGroup>
               <DBGroup icon="align-left" label="Letter body" defaultOpen>
                 {lc.body.map((p, i) => (
-                  <DBArea
-                    key={i}
-                    label={`Paragraph ${i + 1}`}
-                    rows={4}
-                    value={p}
-                    onChange={(v) => {
-                      const xs = lc.body.slice()
-                      xs[i] = v
-                      set({ body: xs })
-                    }}
-                  />
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <DBItemHeader
+                      label={`Paragraph ${i + 1}`}
+                      onRemove={lc.body.length > 1 ? () => removeParagraph(i) : undefined}
+                    />
+                    <DBArea
+                      rows={4}
+                      value={p}
+                      onChange={(v) => {
+                        const xs = lc.body.slice()
+                        xs[i] = v
+                        setBody(xs)
+                      }}
+                    />
+                  </div>
                 ))}
+                <DBAddButton label="Add paragraph" onClick={addParagraph} />
                 <BktInput label="Closing" value={lc.closing} onChange={(e) => set({ closing: e.target.value })} />
               </DBGroup>
             </>

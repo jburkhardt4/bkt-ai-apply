@@ -279,7 +279,16 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
             background: 'var(--surface)',
           }}
         >
-          <BktButton variant="outline" size="md" style={{ borderRadius: 'var(--radius-pill)' }} iconRight={<Icon name="external-link" size={15} />}>
+          <BktButton
+            variant="outline"
+            size="md"
+            style={{ borderRadius: 'var(--radius-pill)' }}
+            iconRight={<Icon name="external-link" size={15} />}
+            disabled={!job.source_url}
+            onClick={() => {
+              if (job.source_url) window.open(job.source_url, '_blank', 'noopener,noreferrer')
+            }}
+          >
             View Job
           </BktButton>
           <div style={{ flex: 1 }}></div>

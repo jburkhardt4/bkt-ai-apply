@@ -46,6 +46,21 @@ describe('parseGeneratedResume', () => {
     expect(patch.summary).toBe('A single paragraph resume blurb.')
     expect(patch.experience).toBeUndefined()
   })
+
+  it('strips em-dashes from the generated summary and bullets (no-em-dash rule)', () => {
+    const text = [
+      '## Summary',
+      'Consulting leader — pragmatic architecture and clean governance.',
+      '',
+      '## Impact Highlights',
+      '- Cut quote turnaround 38% — across CPQ and Billing',
+    ].join('\n')
+
+    const patch = parseGeneratedResume(text, opts)
+    expect(patch.summary).not.toMatch(/[—–]/)
+    expect(patch.summary).toBe('Consulting leader, pragmatic architecture and clean governance.')
+    expect(patch.experience?.[0]?.bullets.some((b) => /[—–]/.test(b))).toBe(false)
+  })
 })
 
 describe('parseGeneratedLetter', () => {

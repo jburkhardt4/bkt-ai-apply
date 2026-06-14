@@ -273,6 +273,109 @@ function buildSerpApiUrl(
 }
 
 /**
+ * Builds a SerpApi `google_jobs` URL that restricts results to a specific ATS
+ * job board using a `site:` operator in the query. This guarantees results from
+ * Greenhouse, Ashby, and Workday boards are included in each run rather than
+ * relying on Google's aggregator to surface them organically.
+ *
+ * No `chips` (employment-type) filter is applied for board-specific passes — the
+ * chip token interacts poorly with the `site:` operator on Google Jobs and tends
+ * to zero out results. Location is still applied when set.
+ */
+function buildAtsBoardUrl(
+  jobTitle: string,
+  profile: ProspectingProfile,
+  serpApiKey: string,
+  atsHost: string
+): string {
+  const params = new URLSearchParams()
+
+  params.set('engine', 'google_jobs')
+  params.set('api_key', serpApiKey)
+  params.set('google_domain', 'google.com')
+  params.set('num', String(SERPAPI_RESULTS_PER_PAGE))
+  params.set('hl', 'en')
+  params.set('gl', 'us')
+
+  params.set('q', `${jobTitle} site:${atsHost}`)
+
+  const primaryLocation = profile.locations.find((l) => l.trim().length > 0)
+  if (primaryLocation) {
+    params.set('location', primaryLocation)
+  }
+
+  return `${SERPAPI_BASE}?${params.toString()}`
+}
+
+/** ATS job boards to target explicitly in addition to the general Google Jobs query. */
+const ATS_BOARD_HOSTS = [
+  'boards.greenhouse.io',
+  'jobs.ashbyhq.com',
+  'myworkdayjobs.com',
+] as const
+
+/**
+ * Returns false when a mapped job conflicts with the profile's explicit
+ * environment or job-type restrictions.
+ *
+ * Used as a post-filter for ATS board passes where the `site:` operator
+ * prevents combining env query modifiers and employment-type chips in a
+ * single SerpApi call (see buildAtsBoardUrl comments).
+ */
+function isAllowedByProfileFilters(
+  job: JobInsert,
+  profile: ProspectingProfile,
+): boolean {
+  // ── Environment / work-mode filter ───────────────────────────────────────
+  // Only restrict when the profile explicitly limits to specific work modes.
+  // Prospector form stores "in-office" but job rows use "onsite" — normalise
+  // before comparing so in-office-only profiles are not silently skipped.
+  const wantedEnvs = profile.environments
+    .map((e) => {
+      const lower = e.toLowerCase().trim()
+      return lower === 'in-office' ? 'onsite' : lower
+    })
+    .filter((e) => e === 'remote' || e === 'hybrid' || e === 'onsite')
+
+  if (wantedEnvs.length > 0 && job.remote_type != null) {
+    if (!wantedEnvs.includes(job.remote_type.toLowerCase())) {
+      return false
+    }
+  }
+
+  // ── Job-type filter ───────────────────────────────────────────────────────
+  // SerpApi schedule_type: "Full-time" | "Part-time" | "Contractor" | "Internship"
+  // Profile job_types:     "full-time" | "part-time" | "contract" | "internship" | "intern"
+  if (profile.job_types.length > 0 && job.job_type != null) {
+    const normalizeJobType = (jt: string): string => {
+      switch (jt.toLowerCase().trim()) {
+        case 'full-time':
+        case 'fulltime':
+          return 'full-time'
+        case 'part-time':
+        case 'parttime':
+          return 'part-time'
+        case 'contractor':
+        case 'contract':
+          return 'contract'
+        case 'internship':
+        case 'intern':
+          return 'internship'
+        default:
+          return jt.toLowerCase().trim()
+      }
+    }
+    const normalizedJobType = normalizeJobType(job.job_type)
+    const wanted = new Set(profile.job_types.map(normalizeJobType))
+    if (!wanted.has(normalizedJobType)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
  * Fetches SerpApi with exponential backoff on 429 (INT-RULE-003).
  * A non-retryable error (e.g. 401, 400) is thrown immediately.
  *
@@ -773,6 +876,80 @@ async function runForProfile(
   // Format newly-discovered JDs into clean Markdown at creation time (best-effort,
   // bounded). Failures never abort ingestion — unformatted jobs backfill lazily.
   await formatAndStoreNewJobs(supabase, profile.user_id, newJobs)
+
+  // ── ATS board-specific passes (Greenhouse / Ashby / Workday) ──────────────
+  // One additional SerpApi call per job title × ATS host. Errors on individual
+  // passes are logged and accumulated but never abort the overall run —
+  // the main Google Jobs loop already captured the bulk of results.
+  for (const jobTitle of profile.job_titles) {
+    for (const atsHost of ATS_BOARD_HOSTS) {
+      let atsSerpResults: SerpApiJobResult[]
+
+      try {
+        const atsUrl = buildAtsBoardUrl(jobTitle, profile, serpApiKey, atsHost)
+        console.log(`prospector-cron: querying ${atsHost} for profile ${profile.id}, title="${jobTitle}"`)
+        atsSerpResults = await fetchSerpApi(atsUrl)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn(`prospector-cron: ATS board search failed for ${atsHost}, title="${jobTitle}": ${msg}`)
+        stats.errors.push(`[${jobTitle}@${atsHost}] SerpApi error: ${msg}`)
+        if (stats.status === 'success') stats.status = 'partial'
+        continue
+      }
+
+      stats.jobs_fetched_raw += atsSerpResults.length
+      stats.jobs_found += atsSerpResults.length
+
+      for (const result of atsSerpResults) {
+        let mappedJob: JobInsert | null
+        let mappingFailed = false
+
+        try {
+          mappedJob = await mapJobResult(result, profile.user_id, supabase, profile.min_salary)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          stats.errors.push(`[${jobTitle}@${atsHost}] mapping error: ${msg}`)
+          if (stats.status === 'success') stats.status = 'partial'
+          mappingFailed = true
+          mappedJob = null
+        }
+
+        if (mappingFailed || !mappedJob) {
+          if (!mappedJob && !mappingFailed) stats.jobs_found -= 1
+          continue
+        }
+
+        // Post-filter: enforce profile environment and job-type restrictions.
+        // The `site:` operator prevents using query modifiers or chips in
+        // buildAtsBoardUrl, so profile filters are applied here instead.
+        if (!isAllowedByProfileFilters(mappedJob, profile)) {
+          stats.jobs_found -= 1
+          continue
+        }
+
+        const { data: atsUpsertedRows, error: upsertError } = await supabase
+          .from('jobs')
+          .upsert(mappedJob, {
+            onConflict: 'source_url',
+            ignoreDuplicates: true,
+          })
+          .select('id')
+
+        if (upsertError) {
+          stats.errors.push(`[${jobTitle}@${atsHost}] upsert error: ${upsertError.message}`)
+          if (stats.status === 'success') stats.status = 'partial'
+          continue
+        }
+
+        // ignoreDuplicates makes the upsert a no-op for an existing source_url
+        // (returning an empty set), so only count rows actually inserted — keeps
+        // jobs_queued a true "newly inserted" figure, matching the main loop.
+        if (atsUpsertedRows?.[0]?.id) {
+          stats.jobs_queued += 1
+        }
+      }
+    }
+  }
 
   // Resolve final status
   if (stats.jobs_found === 0 && stats.errors.length === 0) {

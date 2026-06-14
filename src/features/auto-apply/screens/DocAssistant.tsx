@@ -102,8 +102,8 @@ function DAChat({
       who: 'ai',
       text:
         type === 'resume'
-          ? `I read your resume and your pipeline — ${lastJob.company}'s ${lastJob.title} posting is your most recent target. Want help tightening anything?`
-          : `I can draft, tighten, or re-tone this letter. Your latest target is ${lastJob.title} at ${lastJob.company} — say the word and I'll tailor it.`,
+          ? `I read your resume and your pipeline. ${lastJob.company}'s ${lastJob.title} posting is your most recent target. Want help tightening anything?`
+          : `I can draft, tighten, or re-tone this letter. Your latest target is ${lastJob.title} at ${lastJob.company}. Say the word and I'll tailor it.`,
     },
   ])
   const [typing, setTyping] = useState(false)
@@ -160,9 +160,11 @@ function DAChat({
         },
       ])
     } catch (e: unknown) {
+      // e.message is now the function's real, friendly error (e.g. a missing-key
+      // notice) thanks to readEdgeFunctionError \u2014 surface it without the em-dash.
       setMsgs((ms) => [
         ...ms,
-        { who: 'ai', text: e instanceof Error ? `Sorry \u2014 ${e.message}` : 'Sorry, the writer is unavailable right now.' },
+        { who: 'ai', text: e instanceof Error ? e.message : 'The writer is unavailable right now. Please try again.' },
       ])
     } finally {
       setTyping(false)

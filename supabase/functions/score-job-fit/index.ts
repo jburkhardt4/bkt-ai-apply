@@ -84,6 +84,12 @@ const DEFAULT_SYSTEM_PROMPT = [
   'formula. strengths and gaps are short bullet phrases. reasoning_trace records',
   'why you assigned each sub-score. Base every judgement only on the provided',
   'job and profile; never invent facts.',
+  '',
+  'Calibration: credit transferable experience and adjacent skills, not just',
+  'exact keyword matches. If the candidate could plausibly perform the role given',
+  'their background, score it 60 or above (consideration). Reserve scores below 60',
+  'for clear mismatches in core skills, seniority, or domain. A role outside the',
+  'target metro that is remote, hybrid, or US-based is not a location penalty.',
 ].join('\n')
 
 function buildUserMessage(job: unknown, profile: unknown): string {

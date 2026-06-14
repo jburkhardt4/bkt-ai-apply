@@ -17,6 +17,7 @@ export interface AutoApplySettings {
   reviewMode: ReviewModeId
   paused: boolean
   lastTarget: SearchJob
+  autoSubmitScoreThreshold: number
 }
 
 const DEFAULT_TARGET: SearchJob = SEARCH_SEED.jobs.find((j) => j.id === 's7') ?? SEARCH_SEED.jobs[0]!
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: AutoApplySettings = {
   reviewMode: 'review',
   paused: false,
   lastTarget: DEFAULT_TARGET,
+  autoSubmitScoreThreshold: 80,
 }
 
 interface SettingsRow {
@@ -35,6 +37,7 @@ interface SettingsRow {
   review_mode: string | null
   paused: boolean | null
   last_target_job: Json | null
+  auto_submit_score_threshold: number | null
 }
 
 export async function fetchSettings(userId: string): Promise<AutoApplySettings> {
@@ -43,7 +46,7 @@ export async function fetchSettings(userId: string): Promise<AutoApplySettings> 
   try {
     const { data, error } = await supabase
       .from('user_settings')
-      .select('credits, monthly_budget_usd, review_mode, paused, last_target_job')
+      .select('credits, monthly_budget_usd, review_mode, paused, last_target_job, auto_submit_score_threshold')
       .eq('user_id', userId)
       .maybeSingle()
     if (error) throw new Error(error.message)
@@ -55,6 +58,7 @@ export async function fetchSettings(userId: string): Promise<AutoApplySettings> 
       reviewMode: (row.review_mode as ReviewModeId | null) ?? DEFAULT_SETTINGS.reviewMode,
       paused: row.paused ?? DEFAULT_SETTINGS.paused,
       lastTarget: (row.last_target_job as SearchJob | null) ?? DEFAULT_SETTINGS.lastTarget,
+      autoSubmitScoreThreshold: row.auto_submit_score_threshold ?? DEFAULT_SETTINGS.autoSubmitScoreThreshold,
     }
   } catch {
     return DEFAULT_SETTINGS

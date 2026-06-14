@@ -116,12 +116,13 @@ export function DocPaper({
           <div key={i} style={{ marginBottom: i === c.experience.length - 1 ? 0 : 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontWeight: 700 }}>
               <span>
-                {e.role} — {e.org}
+                {e.role}
+                {e.org ? <span style={{ fontWeight: 400 }}> · {e.org}</span> : null}
               </span>
               <span style={{ fontWeight: 400, color: '#52525b', whiteSpace: 'nowrap' }}>{e.when}</span>
             </div>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-              {e.bullets.map((b, j) => (
+              {e.bullets.filter(Boolean).map((b, j) => (
                 <li key={j} style={{ marginBottom: 2 }}>
                   {b}
                 </li>
@@ -137,7 +138,8 @@ export function DocPaper({
         {c.education.map((e, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <span>
-              <strong>{e.degree}</strong> — {e.org}
+              <strong>{e.degree}</strong>
+              {e.org ? <span> · {e.org}</span> : null}
             </span>
             <span style={{ color: '#52525b' }}>{e.when}</span>
           </div>

@@ -31,6 +31,7 @@ export type ColumnId =
   | 'salary'
   | 'posted'
   | 'dateCreated'
+  | 'source'
 
 export type FilterType = 'text' | 'select' | 'salary-range' | 'score' | 'none'
 
@@ -116,15 +117,24 @@ export const COLUMN_DEFS: Record<ColumnId, ColumnDef> = {
     widthClass: 'w-1/12',
     filterType: 'none',
   },
+  source: {
+    id: 'source',
+    label: 'Source',
+    sortKey: 'source_url',
+    widthClass: 'w-1/12',
+    minWidthClass: 'min-w-24',
+    filterType: 'text',
+  },
 }
 
 // ── Default column order (AC §2) ──────────────────────────────────────────────
-// Exact order: Job Title, Company, Match Score, Job Type, Environment, Salary,
-// Date Posted, Date Created
+// Exact order: Job Title, Company, Source, Match Score, Job Type, Environment,
+// Salary, Date Posted, Date Created
 
 export const DEFAULT_COLUMN_ORDER: ColumnId[] = [
   'title',
   'company',
+  'source',
   'matchScore',
   'jobType',
   'environment',
@@ -135,7 +145,7 @@ export const DEFAULT_COLUMN_ORDER: ColumnId[] = [
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 
-const LS_KEY = 'prospector_column_order_v2'
+const LS_KEY = 'prospector_column_order_v3'
 
 function readFromStorage(): ColumnId[] | null {
   try {

@@ -48,13 +48,23 @@ function isDocumentType(value: unknown): value is DocumentType {
 // Default per-type instruction sets, used when the client does not pass its own
 // system prompt. Both ask for the final document text only (no commentary) so
 // the response `content` is ready to store/render verbatim.
+// House style note shared by both prompts. Em/en dashes are a well-known AI
+// "tell"; this pipeline must never produce them in candidate-facing copy. The
+// client also runs a sanitizer (textSanitizer.ts) as a safety net.
+const NO_EM_DASH_RULE = [
+  'Write in a natural, human voice. NEVER use em-dashes (—) or en-dashes',
+  '(–) anywhere. Use commas, periods, colons, or split the sentence instead.',
+  'Avoid stock AI phrasing and filler; lead with concrete, specific detail.',
+].join('\n')
+
 const COVER_LETTER_SYSTEM_PROMPT = [
   'You are an expert cover-letter writer for a job-application pipeline.',
   'Write a tailored, compelling cover letter for the candidate and the specific',
   'role described. Ground every claim in the candidate master profile; never',
   'invent experience, employers, or credentials. Match the tone to the company',
   'and seniority. Keep it concise (3-5 short paragraphs).',
-  'Return ONLY the finished cover-letter text — no preamble, no notes, no code',
+  NO_EM_DASH_RULE,
+  'Return ONLY the finished cover-letter text. No preamble, no notes, no code',
   'fences, no placeholders like [Your Name] unless the profile lacks the value.',
 ].join('\n')
 
@@ -65,7 +75,8 @@ const RESUME_SYSTEM_PROMPT = [
   "keywords naturally. Ground every line in the candidate master profile; never",
   'fabricate roles, dates, metrics, or skills. Prefer strong action verbs and',
   'quantified impact where the profile supports it.',
-  'Return ONLY the finished resume text — no preamble, no notes, no code fences.',
+  NO_EM_DASH_RULE,
+  'Return ONLY the finished resume text. No preamble, no notes, no code fences.',
 ].join('\n')
 
 function systemPromptFor(documentType: DocumentType): string {

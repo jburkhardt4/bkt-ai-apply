@@ -3,9 +3,10 @@
 // Phase 2 data backbone: credits / budget / review-mode / paused / last
 // auto-apply target are now backed by the `user_settings` row (via
 // <AutoApplySettingsProvider> + ../settings-context), so they persist
-// server-side and survive across devices. The remaining seed-tracking
-// hooks (submitted delta, applied/saved search ids) stay in localStorage
-// until Phase 2b swaps Search/Saved onto real `jobs`/`saved_jobs` rows.
+// server-side and survive across devices. The submitted count now derives
+// from `applications` DB truth (Phase 2b); the remaining demo-mode overlay
+// hooks (applied/saved search ids) stay in localStorage so the design-review
+// UAT stays interactive without Supabase.
 import { useCallback } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { usePersistentState } from './hooks/useAutoApplyData'
@@ -43,12 +44,11 @@ export function useLastTarget() {
   return useSettingField('lastTarget')
 }
 
-/* ---------------- localStorage (Phase 2b will move these to the DB) ------- */
+/* ---------------- localStorage (demo-mode overlay only) ------------------ */
 
-/** Extra submissions made this session/device on top of the seeded stat. */
-export function useSubmittedDelta() {
-  return usePersistentState<number>('submitted-delta', 0)
-}
+// Phase 2b retired `useSubmittedDelta`: the dashboard's submitted count now
+// derives from `applications` DB truth (applicationService.fetchSubmittedCount
+// + submittedCount.ts), so the localStorage `submitted-delta` is gone.
 
 /** Job-board postings auto-applied from Search/Saved (ids). */
 export function useAppliedSearchIds() {

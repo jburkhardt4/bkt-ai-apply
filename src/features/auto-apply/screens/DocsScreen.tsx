@@ -262,13 +262,15 @@ function DocRow({
 export interface DocsHomeProps {
   type: DocType
   docs: DocsData
+  /** Authenticated user id — enables real LLM generation in the builder. */
+  userId: string | null
   lastJob: AiTargetJob
   dateOrder?: 'dmy' | 'mdy'
   aiVariant?: 'rail' | 'floating'
   onToast: ToastFn
 }
 
-export function DocsHome({ type, docs, lastJob, dateOrder = 'mdy', aiVariant = 'rail', onToast }: DocsHomeProps) {
+export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVariant = 'rail', onToast }: DocsHomeProps) {
   const copy = DOC_COPY[type]
   const seed = type === 'resume' ? docs.resumes : docs.letters
   const [items, setItems] = useState<DocItem[]>(seed)
@@ -322,6 +324,7 @@ export function DocsHome({ type, docs, lastJob, dateOrder = 'mdy', aiVariant = '
         item={builder.item}
         autoAlign={builder.autoAlign}
         initialContent={builder.item ? contentOf(builder.item) : type === 'resume' ? docs.resumeContent : docs.letterContent}
+        userId={userId}
         lastJob={lastJob}
         aiVariant={aiVariant}
         onToast={onToast}

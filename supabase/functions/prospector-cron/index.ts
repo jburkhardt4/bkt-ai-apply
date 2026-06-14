@@ -876,8 +876,6 @@ async function runForProfile(
   // Format newly-discovered JDs into clean Markdown at creation time (best-effort,
   // bounded). Failures never abort ingestion — unformatted jobs backfill lazily.
   await formatAndStoreNewJobs(supabase, profile.user_id, newJobs)
-    }
-  }
 
   // ── ATS board-specific passes (Greenhouse / Ashby / Workday) ──────────────
   // One additional SerpApi call per job title × ATS host. Errors on individual

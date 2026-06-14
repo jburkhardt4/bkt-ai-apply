@@ -139,13 +139,15 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'not_claimable');
   END IF;
 
-  -- FIX 2 / BR-005: load application + its job, ENFORCING ownership — the
-  -- application must belong to the queue row's user_id. A mismatch (or a
-  -- missing application) is never submitted and never charged.
+  -- FIX 2 / BR-005: load application + its job, ENFORCING ownership — both
+  -- the application AND the job must belong to the queue row's user_id. A
+  -- mismatch on either (or a missing row) is never submitted and never charged.
+  -- FIX 7: j.user_id = v_user_id prevents a client who knows a foreign job UUID
+  -- from having the worker submit using that other user's source_url.
   SELECT a.match_score, a.submitted_at, a.job_id, j.application_method, j.source_url
     INTO v_match_score, v_submitted_at, v_job_id, v_application_method, v_source_url
     FROM public.applications a
-    JOIN public.jobs j ON j.id = a.job_id
+    JOIN public.jobs j ON j.id = a.job_id AND j.user_id = v_user_id
    WHERE a.id = v_application_id
      AND a.user_id = v_user_id;
 
@@ -250,7 +252,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.claim_submission(uuid) IS
-  'ADR-006 / BR-005,130,131,132,135,136,148: service-role-only. Per-user advisory-locked. Re-validates autonomy guardrails server-side (ownership, pause, credits, daily cap incl. in-flight, no-resubmit) and authorizes submission ONLY via an explicit approval event OR server-side review_mode+score (never the client queued_by). Charges one credit and claims an approved application_queue row into submitting. Returns {ok,...}. Never callable by clients.';
+  'ADR-006 / BR-005,130,131,132,135,136,148: service-role-only. Per-user advisory-locked. Re-validates autonomy guardrails server-side (ownership of application AND job, pause, credits, daily cap incl. in-flight, no-resubmit) and authorizes submission ONLY via an explicit approval event OR server-side review_mode+score (never the client queued_by). Charges one credit and claims an approved application_queue row into submitting. Returns {ok,...}. Never callable by clients.';
 
 REVOKE EXECUTE ON FUNCTION public.claim_submission(uuid) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.claim_submission(uuid) TO service_role;
@@ -521,3 +523,97 @@ CREATE POLICY "Application queue: insert own"
          AND a.user_id = (SELECT auth.uid())
     )
   );
+
+
+-- ============================================================
+-- 5) Tighten application_events INSERT policy + write_approval_event RPC
+--    (FIX 6 / BR-130/131 — server-trusted approval signal)
+--
+--    The existing 'App events: insert own' policy (migration 20260603000010)
+--    allows authenticated clients to INSERT any event_type for their own
+--    applications, including event_type='approval'. A client in review mode
+--    could therefore forge an approval event directly, enqueue an 'approved'
+--    queue row, and have the submission worker submit without going through
+--    the approvePreparedPacket / document-approval flow.
+--
+--    Fix: drop and recreate the INSERT policy adding event_type <> 'approval'
+--    to the WITH CHECK clause. Approval events are SERVER-TRUSTED ONLY and
+--    must be written via the write_approval_event SECURITY DEFINER RPC below,
+--    which re-checks application ownership before inserting.
+--
+--    All other event types (note_added, score_override, etc.) remain
+--    insertable by authenticated clients for their own applications.
+-- ============================================================
+DROP POLICY IF EXISTS "App events: insert own" ON public.application_events;
+
+CREATE POLICY "App events: insert own"
+  ON public.application_events FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    -- Approval events are server-trusted only; use write_approval_event() RPC.
+    AND event_type <> 'approval'
+  );
+
+
+-- ============================================================
+-- 6) public.write_approval_event(p_application_id uuid,
+--                                p_metadata jsonb DEFAULT '{}')
+--      RETURNS void
+--
+--    Server-trusted path for writing application_events rows with
+--    event_type='approval'. Direct client inserts of approval events are
+--    now blocked by the tightened 'App events: insert own' policy above;
+--    this SECURITY DEFINER RPC is the only authorized write path.
+--
+--    Guarantees:
+--      - Caller must be authenticated (auth.uid() is not null).
+--      - Application must exist and belong to the caller.
+--      - Writes exactly one 'approval' event with actor='jb_manual'.
+--    Callable by authenticated users (not just service_role) so the
+--    client-side approvePreparedPacket flow can still trigger approval.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.write_approval_event(
+  p_application_id uuid,
+  p_metadata       jsonb DEFAULT '{}'::jsonb
+)
+  RETURNS void
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+BEGIN
+  v_user_id := auth.uid();
+
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'write_approval_event: caller is not authenticated';
+  END IF;
+
+  -- Ownership check: only write for applications belonging to the caller.
+  IF NOT EXISTS (
+    SELECT 1
+      FROM public.applications a
+     WHERE a.id      = p_application_id
+       AND a.user_id = v_user_id
+  ) THEN
+    RAISE EXCEPTION 'write_approval_event: application not found or not owned by caller';
+  END IF;
+
+  INSERT INTO public.application_events
+    (user_id, application_id, event_type, actor, reason, metadata)
+  VALUES
+    (v_user_id, p_application_id, 'approval', 'jb_manual',
+     'Submission packet approved by JB.',
+     coalesce(p_metadata, '{}'::jsonb));
+END;
+$$;
+
+COMMENT ON FUNCTION public.write_approval_event(uuid, jsonb) IS
+  'ADR-006 / BR-130/131: server-trusted path for approval events. Verifies application ownership via auth.uid() then inserts an application_events row with event_type=approval. Direct client inserts of approval events are blocked by the tightened App events: insert own RLS policy. Callable by authenticated users.';
+
+-- Public/anon cannot call this function.
+REVOKE EXECUTE ON FUNCTION public.write_approval_event(uuid, jsonb) FROM PUBLIC, anon;
+-- Authenticated users (approvePreparedPacket flow) may call it.
+GRANT  EXECUTE ON FUNCTION public.write_approval_event(uuid, jsonb) TO authenticated;

@@ -773,8 +773,6 @@ async function runForProfile(
   // Format newly-discovered JDs into clean Markdown at creation time (best-effort,
   // bounded). Failures never abort ingestion — unformatted jobs backfill lazily.
   await formatAndStoreNewJobs(supabase, profile.user_id, newJobs)
-    }
-  }
 
   // Resolve final status
   if (stats.jobs_found === 0 && stats.errors.length === 0) {

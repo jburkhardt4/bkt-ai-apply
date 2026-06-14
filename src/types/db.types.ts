@@ -344,6 +344,54 @@ export type Database = {
           },
         ]
       }
+      candidate_profiles: {
+        Row: {
+          created_at: string
+          eeo_disclosures: Json
+          email: string
+          full_name: string
+          id: string
+          linkedin_url: string | null
+          location: string
+          master_resume_path: string | null
+          phone: string
+          updated_at: string
+          user_id: string
+          website_url: string | null
+          work_authorization: string
+        }
+        Insert: {
+          created_at?: string
+          eeo_disclosures?: Json
+          email?: string
+          full_name?: string
+          id?: string
+          linkedin_url?: string | null
+          location?: string
+          master_resume_path?: string | null
+          phone?: string
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+          work_authorization?: string
+        }
+        Update: {
+          created_at?: string
+          eeo_disclosures?: Json
+          email?: string
+          full_name?: string
+          id?: string
+          linkedin_url?: string | null
+          location?: string
+          master_resume_path?: string | null
+          phone?: string
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+          work_authorization?: string
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -1067,6 +1115,69 @@ export type Database = {
           },
         ]
       }
+      submission_previews: {
+        Row: {
+          application_id: string
+          channel: string
+          created_at: string
+          endpoint: string | null
+          id: string
+          job_id: string | null
+          missing: Json
+          request_payload: Json
+          resume_path: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          vendor: string | null
+        }
+        Insert: {
+          application_id: string
+          channel?: string
+          created_at?: string
+          endpoint?: string | null
+          id?: string
+          job_id?: string | null
+          missing?: Json
+          request_payload?: Json
+          resume_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          vendor?: string | null
+        }
+        Update: {
+          application_id?: string
+          channel?: string
+          created_at?: string
+          endpoint?: string | null
+          id?: string
+          job_id?: string | null
+          missing?: Json
+          request_payload?: Json
+          resume_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_previews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_previews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_settings: {
         Row: {
           auto_submit_score_threshold: number
@@ -1146,6 +1257,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_submission: { Args: { p_queue_id: string }; Returns: Json }
+      expire_stuck_submitting: {
+        Args: { p_older_than?: string }
+        Returns: number
+      }
+      finalize_submission: {
+        Args: {
+          p_channel: string
+          p_error?: string
+          p_metadata?: Json
+          p_queue_id: string
+          p_success: boolean
+        }
+        Returns: undefined
+      }
       transition_stage: {
         Args: {
           p_actor?: string
@@ -1158,10 +1284,7 @@ export type Database = {
         Returns: undefined
       }
       write_approval_event: {
-        Args: {
-          p_application_id: string
-          p_metadata?: Json
-        }
+        Args: { p_application_id: string; p_metadata?: Json }
         Returns: undefined
       }
     }

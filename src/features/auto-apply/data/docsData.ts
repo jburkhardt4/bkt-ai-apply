@@ -29,7 +29,7 @@ export const DOCS_SEED: DocsData = {
   /* ---- builder seed: the base resume ---- */
   resumeContent: {
     name: 'John Burkhardt',
-    contact: 'Charlotte, NC · john@bktadvisory.com · (704) 555-0188 · linkedin.com/in/jburkhardt',
+    contact: 'Los Angeles, CA · john@bktadvisory.com · (213) 555-0188 · linkedin.com/in/jburkhardt',
     headline: 'Salesforce Consulting Leader · Business Architect',
     summary: 'Consulting leader with 12+ years designing and delivering Salesforce platforms for enterprise clients. Founder of BKT Advisory, where I lead discovery-to-go-live engagements across Sales, Service, and Revenue Cloud, translating business strategy into systems that ship. Known for pragmatic architecture, clean governance, and teams that deliver on time.',
     experience: [
@@ -55,7 +55,7 @@ export const DOCS_SEED: DocsData = {
   /* ---- builder seed: the base cover letter ---- */
   letterContent: {
     name: 'John Burkhardt',
-    contact: 'Charlotte, NC · john@bktadvisory.com · (704) 555-0188',
+    contact: 'Los Angeles, CA · john@bktadvisory.com · (213) 555-0188',
     date: '6/10/2026',
     recipient: 'Hiring Team',
     company: 'PwC',

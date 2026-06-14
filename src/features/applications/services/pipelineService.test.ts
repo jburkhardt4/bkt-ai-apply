@@ -254,6 +254,34 @@ describe('scoreJobFit — Expected-Target scoring', () => {
     expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
   })
 
+  it('awards full Location/Auth (10) when the JD mentions US (abbreviation)', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Based in the US' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD mentions USA', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Anywhere in USA' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD mentions U.S.', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Open to candidates in the U.S.' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD says US-based', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ title: 'US-based Software Engineer' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
   it('falls back to the baseline Location/Auth (5) when neither remote nor target location match', () => {
     const profile = buildProfile({ targetLocation: 'Austin, TX' })
     const parsed = buildParsed({ location: 'New York, NY' })

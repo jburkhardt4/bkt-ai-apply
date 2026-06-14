@@ -696,6 +696,7 @@ async function runForProfile(
         continue
       }
 
+      stats.jobs_fetched_raw += atsSerpResults.length
       stats.jobs_found += atsSerpResults.length
 
       for (const result of atsSerpResults) {

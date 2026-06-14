@@ -40,7 +40,7 @@ const BROWSERBASE_SESSIONS_ENDPOINT = 'https://api.browserbase.com/v1/sessions'
 
 export async function browserAdapter(
   input: SubmissionInput,
-  _candidate: CandidatePayload | null = null,
+  candidate: CandidatePayload | null = null,
 ): Promise<SubmissionOutcome> {
   const apiKey = Deno.env.get('BROWSERBASE_API_KEY')
   const projectId = Deno.env.get('BROWSERBASE_PROJECT_ID')
@@ -120,6 +120,9 @@ export async function browserAdapter(
       browserbaseSessionId: sessionId ?? null,
       connectInfo,
       sourceUrl: input.sourceUrl,
+      // Recorded for the deferred Stagehand spike: whether candidate PII was
+      // resolved at handoff time (the form-driver will need it downstream).
+      candidateReady: candidate != null,
       note: 'Stagehand form-driving is the GAP-010 follow-up spike',
     },
   }

@@ -1,0 +1,53 @@
+name: CI
+
+# Gate every PR (and pushes to main) on the same checks as `pnpm validate`.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: validate (typecheck · lint · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm validate
+
+  e2e:
+    name: e2e (Playwright)
+    needs: validate
+    runs-on: ubuntu-latest
+    # The SPA throws at init without Supabase env, so e2e can only run once the
+    # VITE_SUPABASE_* repo secrets exist. Gate the whole job on an opt-in repo
+    # variable (Settings → Secrets and variables → Actions → Variables →
+    # RUN_E2E=true) so it SKIPS (not fails) by default and reports real signal
+    # once the secrets + variable are configured.
+    if: ${{ vars.RUN_E2E == 'true' }}
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

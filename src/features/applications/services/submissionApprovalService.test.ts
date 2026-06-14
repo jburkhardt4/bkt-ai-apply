@@ -29,11 +29,10 @@ describe('submissionApprovalService', () => {
   })
 
   it('writes approval event with actor and event_type required by AC-006-04', async () => {
-    const insert = vi.fn().mockResolvedValue({ error: null })
-    const from = vi.fn(() => ({ insert }))
+    const rpc = vi.fn().mockResolvedValue({ error: null })
 
     mockGetSupabaseClient.mockReturnValue({
-      from,
+      rpc,
     } as unknown as ReturnType<typeof getSupabaseClient>)
 
     await writeApprovalEvent({
@@ -45,22 +44,19 @@ describe('submissionApprovalService', () => {
       approvedAtIso: '2026-06-05T10:00:00.000Z',
     })
 
-    expect(insert).toHaveBeenCalledWith(
+    expect(rpc).toHaveBeenCalledWith(
+      'write_approval_event',
       expect.objectContaining({
-        user_id: 'user-1',
-        application_id: 'app-1',
-        event_type: 'approval',
-        actor: 'jb_manual',
+        p_application_id: 'app-1',
       }),
     )
   })
 
   it('links documents before writing the approval event', async () => {
-    const insert = vi.fn().mockResolvedValue({ error: null })
-    const from = vi.fn(() => ({ insert }))
+    const rpc = vi.fn().mockResolvedValue({ error: null })
 
     mockGetSupabaseClient.mockReturnValue({
-      from,
+      rpc,
     } as unknown as ReturnType<typeof getSupabaseClient>)
 
     await approvePreparedPacket({
@@ -78,6 +74,6 @@ describe('submissionApprovalService', () => {
       resumeDocumentId: 'resume-doc-1',
       coverLetterDocumentId: 'cover-doc-1',
     })
-    expect(insert).toHaveBeenCalledTimes(1)
+    expect(rpc).toHaveBeenCalledTimes(1)
   })
 })

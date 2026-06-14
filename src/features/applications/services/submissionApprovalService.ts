@@ -209,13 +209,13 @@ export async function writeApprovalEvent(input: ApprovalInput): Promise<void> {
   const approvedAtIso = input.approvedAtIso ?? new Date().toISOString()
   const metadata = buildApprovalMetadata(input, approvedAtIso)
 
-  const { error } = await supabase.from('application_events').insert({
-    user_id: input.userId,
-    application_id: input.applicationId,
-    event_type: 'approval',
-    actor: 'jb_manual',
-    reason: 'Submission packet approved by JB.',
-    metadata,
+  // Approval events must be written via the server-side RPC (BR-130/131).
+  // Direct client inserts of event_type='approval' are blocked by RLS
+  // (migration 20260613000004, section 5). The RPC re-checks ownership
+  // via auth.uid() before inserting.
+  const { error } = await supabase.rpc('write_approval_event', {
+    p_application_id: input.applicationId,
+    p_metadata: metadata as unknown as Record<string, unknown>,
   })
 
   if (error) {

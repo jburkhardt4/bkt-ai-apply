@@ -1157,6 +1157,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      write_approval_event: {
+        Args: {
+          p_application_id: string
+          p_metadata?: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

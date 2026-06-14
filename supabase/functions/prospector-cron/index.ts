@@ -303,6 +303,62 @@ const ATS_BOARD_HOSTS = [
 ] as const
 
 /**
+ * Returns false when a mapped job conflicts with the profile's explicit
+ * environment or job-type restrictions.
+ *
+ * Used as a post-filter for ATS board passes where the `site:` operator
+ * prevents combining env query modifiers and employment-type chips in a
+ * single SerpApi call (see buildAtsBoardUrl comments).
+ */
+function isAllowedByProfileFilters(
+  job: JobInsert,
+  profile: ProspectingProfile,
+): boolean {
+  // ── Environment / work-mode filter ───────────────────────────────────────
+  // Only restrict when the profile explicitly limits to specific work modes.
+  const wantedEnvs = profile.environments
+    .map((e) => e.toLowerCase().trim())
+    .filter((e) => e === 'remote' || e === 'hybrid' || e === 'onsite')
+
+  if (wantedEnvs.length > 0 && job.remote_type != null) {
+    if (!wantedEnvs.includes(job.remote_type.toLowerCase())) {
+      return false
+    }
+  }
+
+  // ── Job-type filter ───────────────────────────────────────────────────────
+  // SerpApi schedule_type: "Full-time" | "Part-time" | "Contractor" | "Internship"
+  // Profile job_types:     "full-time" | "part-time" | "contract" | "internship" | "intern"
+  if (profile.job_types.length > 0 && job.job_type != null) {
+    const normalizeJobType = (jt: string): string => {
+      switch (jt.toLowerCase().trim()) {
+        case 'full-time':
+        case 'fulltime':
+          return 'full-time'
+        case 'part-time':
+        case 'parttime':
+          return 'part-time'
+        case 'contractor':
+        case 'contract':
+          return 'contract'
+        case 'internship':
+        case 'intern':
+          return 'internship'
+        default:
+          return jt.toLowerCase().trim()
+      }
+    }
+    const normalizedJobType = normalizeJobType(job.job_type)
+    const wanted = new Set(profile.job_types.map(normalizeJobType))
+    if (!wanted.has(normalizedJobType)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
  * Fetches SerpApi with exponential backoff on 429 (INT-RULE-003).
  * A non-retryable error (e.g. 401, 400) is thrown immediately.
  *
@@ -715,6 +771,14 @@ async function runForProfile(
 
         if (mappingFailed || !mappedJob) {
           if (!mappedJob && !mappingFailed) stats.jobs_found -= 1
+          continue
+        }
+
+        // Post-filter: enforce profile environment and job-type restrictions.
+        // The `site:` operator prevents using query modifiers or chips in
+        // buildAtsBoardUrl, so profile filters are applied here instead.
+        if (!isAllowedByProfileFilters(mappedJob, profile)) {
+          stats.jobs_found -= 1
           continue
         }
 

@@ -261,6 +261,34 @@ describe('scoreJobFit — Expected-Target scoring', () => {
     expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(5)
   })
 
+  it('awards full Location/Auth (10) when the JD mentions "US"', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'US (all states)' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD mentions "USA"', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'USA only' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD mentions "U.S."', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Open to candidates based in the U.S.' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('does not false-positive on lowercase "us" pronoun (e.g. "contact us")', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Reach out to us at Berlin, Germany' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(5)
+  })
+
   // -------------------------------------------------------------------------
   // Guard: expectedTarget <= 0 returns 0 (no divide-by-zero)
   // -------------------------------------------------------------------------

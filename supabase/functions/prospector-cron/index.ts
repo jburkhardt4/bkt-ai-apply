@@ -295,6 +295,34 @@ function buildAtsBoardUrl(
   return `${SERPAPI_BASE}?${params.toString()}`
 }
 
+/**
+ * Post-filter for ATS-board-specific passes. The `site:` operator prevents
+ * chips/q-modifiers from working reliably on Google Jobs, so profile
+ * environment and job-type constraints are enforced after mapping instead of
+ * at the query level. Null fields (Google couldn't determine the value) pass
+ * through so we don't over-filter sparse ATS listings.
+ */
+function jobMatchesProfileFilters(job: JobInsert, profile: ProspectingProfile): boolean {
+  // remote_type: 'remote' | 'hybrid' | 'onsite' | null
+  if (profile.environments.length > 0 && job.remote_type !== null) {
+    if (!profile.environments.includes(job.remote_type)) return false
+  }
+
+  // job_type: SerpApi schedule_type ("Full-time", "Contractor", etc.) → profile values
+  if (profile.job_types.length > 0 && job.job_type !== null) {
+    const scheduleToProfile: Record<string, string> = {
+      'full-time': 'full-time',
+      'part-time': 'part-time',
+      'contractor': 'contract',
+      'internship': 'internship',
+    }
+    const normalized = scheduleToProfile[job.job_type.toLowerCase()] ?? job.job_type.toLowerCase()
+    if (!profile.job_types.map((t) => t.toLowerCase()).includes(normalized)) return false
+  }
+
+  return true
+}
+
 /** ATS job boards to target explicitly in addition to the general Google Jobs query. */
 const ATS_BOARD_HOSTS = [
   'boards.greenhouse.io',
@@ -715,6 +743,11 @@ async function runForProfile(
 
         if (mappingFailed || !mappedJob) {
           if (!mappedJob && !mappingFailed) stats.jobs_found -= 1
+          continue
+        }
+
+        if (!jobMatchesProfileFilters(mappedJob, profile)) {
+          stats.jobs_found -= 1
           continue
         }
 

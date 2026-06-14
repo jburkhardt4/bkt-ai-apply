@@ -118,6 +118,7 @@ export function scoreJobFit(parsed: ParsedJobDescription, profile: CandidateProf
       lowerCombined.includes('hybrid') ||
       lowerCombined.includes('anywhere') ||
       lowerCombined.includes('united states') ||
+      /\b(US|U\.S\.?|USA|US-based)\b/.test(combined) ||
       (targetMetro.length > 0 && lowerCombined.includes(targetMetro)),
   )
 

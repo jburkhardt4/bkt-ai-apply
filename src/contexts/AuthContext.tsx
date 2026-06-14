@@ -7,7 +7,7 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { AuthContext, type AuthContextValue } from './auth-context'
-import { getSupabaseClient } from '../lib/supabase'
+import { getSupabaseClientSafe, getSupabaseConfigState } from '../lib/supabase'
 
 interface AuthProviderProps {
   children: ReactNode
@@ -16,10 +16,15 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  // When Supabase is not configured there is nothing to load — start ready.
+  const [loading, setLoading] = useState(getSupabaseConfigState().isConfigured)
 
   useEffect(() => {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+
+    if (!supabase) {
+      return
+    }
 
     let isMounted = true
 
@@ -63,7 +68,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const signOut = useCallback(async () => {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+    if (!supabase) return
     const { error } = await supabase.auth.signOut()
 
     if (error) {

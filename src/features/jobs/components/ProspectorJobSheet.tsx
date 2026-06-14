@@ -103,69 +103,71 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
 
   const jobId = job?.id ?? null
   const raw = (job?.description ?? '').trim()
-  const cached = jobId ? formattedJdCache.get(jobId) : undefined
 
   // Fetch the formatted JD when the sheet opens for a job that has a description,
   // isn't cached, and we have an authenticated user. The effect does NO synchronous
-  // setState (display state is derived during render below, avoiding the cascading
-  // re-renders flagged by react-hooks/set-state-in-effect); it records the async
-  // result via setAsyncJd inside the promise callbacks only.
+  // setState — all setState calls are inside promise callbacks — so the
+  // react-hooks/set-state-in-effect rule is not triggered. Cache hits, the
+  // no-user fallback, and the empty-description case are all handled in the
+  // derived render logic below.
   useEffect(() => {
-    if (!open || !job) return
-
-    const rawDescription = (job.description ?? '').trim()
-    if (rawDescription.length === 0) return
-    if (formattedJdCache.get(job.id)) return
+    // Nothing to format: derived render logic below handles the empty case.
+    if (!open || jobId == null || raw.length === 0) return
+    if (formattedJdCache.get(jobId)) return
     // Without an authenticated user we can't call the JWT-gated function; the
     // render-time derivation falls back to the raw description.
     if (!userId) return
 
     let cancelled = false
-    formatJobDescription({ userId, rawDescription })
+    formatJobDescription({ userId, rawDescription: raw })
       .then((result) => {
         if (cancelled) return
-        formattedJdCache.set(job.id, result)
-        setAsyncJd({ jobId: job.id, markdown: result.markdown, source: result.source })
+        formattedJdCache.set(jobId, result)
+        setAsyncJd({ jobId, markdown: result.markdown, source: result.source })
       })
       .catch(() => {
         if (cancelled) return
-        setAsyncJd({ jobId: job.id, markdown: rawDescription, source: 'fallback' })
+        setAsyncJd({ jobId, markdown: raw, source: 'fallback' })
       })
 
     return () => {
       cancelled = true
     }
-  }, [open, job, userId])
-
-  // Derive display state during render (cache hits render instantly; the cost gate
-  // + usage logging live in the service).
-  const asyncForThisJob = asyncJd && asyncJd.jobId === jobId ? asyncJd : null
-  let formatted: string | null
-  let source: 'llm' | 'fallback' | null
-  let formatting: boolean
-  if (!open || !job || raw.length === 0) {
-    formatted = null
-    source = null
-    formatting = false
-  } else if (cached) {
-    formatted = cached.markdown
-    source = cached.source
-    formatting = false
-  } else if (!userId) {
-    formatted = raw
-    source = 'fallback'
-    formatting = false
-  } else if (asyncForThisJob) {
-    formatted = asyncForThisJob.markdown
-    source = asyncForThisJob.source
-    formatting = false
-  } else {
-    formatted = null
-    source = null
-    formatting = true
-  }
+  }, [open, jobId, raw, userId])
 
   if (!job) return null
+
+  // Derive the effective display values so the empty-description case and
+  // cache hits don't need any synchronous setState inside the effect.
+  const hasRaw = open && raw.length > 0
+  const cached = jobId ? formattedJdCache.get(jobId) : undefined
+  const asyncForThisJob = asyncJd?.jobId === jobId ? asyncJd : null
+
+  let effectiveFormatted: string | null
+  let effectiveSource: 'llm' | 'fallback' | null
+  let effectiveFormatting: boolean
+
+  if (!hasRaw || !open) {
+    effectiveFormatted = null
+    effectiveSource = null
+    effectiveFormatting = false
+  } else if (cached) {
+    effectiveFormatted = cached.markdown
+    effectiveSource = cached.source
+    effectiveFormatting = false
+  } else if (!userId) {
+    effectiveFormatted = raw
+    effectiveSource = 'fallback'
+    effectiveFormatting = false
+  } else if (asyncForThisJob) {
+    effectiveFormatted = asyncForThisJob.markdown
+    effectiveSource = asyncForThisJob.source
+    effectiveFormatting = false
+  } else {
+    effectiveFormatted = null
+    effectiveSource = null
+    effectiveFormatting = true
+  }
 
   const comp = formatCompensation(job.compensation_min, job.compensation_max)
   const dateLabel = formatRelativeDate(job.posted_at)
@@ -230,17 +232,17 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
         {/* ── Scrollable description body ────────────────────────────── */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {job.description ? (
-            formatting ? (
+            effectiveFormatting ? (
               <JobDescriptionSkeleton />
             ) : (
               <div className="space-y-3">
-                {source === 'llm' && (
+                {effectiveSource === 'llm' && (
                   <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                     <Sparkles className="h-3.5 w-3.5 text-primary" />
                     Formatted for readability
                   </div>
                 )}
-                <JobDescriptionMarkdown markdown={formatted ?? job.description} />
+                <JobDescriptionMarkdown markdown={effectiveFormatted ?? job.description} />
               </div>
             )
           ) : (

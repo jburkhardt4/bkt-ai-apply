@@ -41,19 +41,12 @@ interface CompanyLogoProps {
 
 export function CompanyLogo({ companyName, domain, className }: CompanyLogoProps) {
   const host = normalizeDomain(domain)
-  const [imgFailed, setImgFailed] = useState(false)
-  const [prevHost, setPrevHost] = useState(host)
-
-  // Reset the failure flag when the host changes (sidebar reused for a new job).
-  // React "adjust state during render" idiom (avoids react-hooks/set-state-in-effect):
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  if (host !== prevHost) {
-    setPrevHost(host)
-    setImgFailed(false)
-  }
+  // Track which host the failure applies to; a new host implicitly clears it
+  // (sidebar reused for a new job).
+  const [failedHost, setFailedHost] = useState<string | null>(null)
 
   const initials = getInitials(companyName)
-  const showImg = host != null && !imgFailed
+  const showImg = host != null && failedHost !== host
 
   return (
     <div
@@ -69,7 +62,7 @@ export function CompanyLogo({ companyName, domain, className }: CompanyLogoProps
           className="h-full w-full bg-white object-contain p-1"
           loading="lazy"
           referrerPolicy="no-referrer"
-          onError={() => setImgFailed(true)}
+          onError={() => setFailedHost(host)}
         />
       ) : initials ? (
         <span className="text-base font-semibold tracking-wide">{initials}</span>

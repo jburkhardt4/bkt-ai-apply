@@ -78,9 +78,14 @@ export async function graduateProspectorMatches(params: {
 
   // Take the latest score per job (first occurrence, since rows are scored_at DESC),
   // then apply the ready-queue threshold so only current >= 60 scores are graduated.
+  // `seen` is marked on the FIRST (latest) row for each job regardless of its value,
+  // so a stale higher score can never shadow a more-recent sub-threshold one: a job
+  // rescored 85 -> 45 must NOT graduate at 85 (BR-020 latest-score-wins).
   const bestByJob = new Map<string, number>()
+  const seen = new Set<string>()
   for (const raw of (scoreRows ?? []) as unknown as ScoreRow[]) {
-    if (bestByJob.has(raw.job_id)) continue  // already recorded the latest for this job
+    if (seen.has(raw.job_id)) continue  // keep only the latest row per job
+    seen.add(raw.job_id)
     if (raw.overall_score >= READY_QUEUE_MIN_SCORE) {
       bestByJob.set(raw.job_id, raw.overall_score)
     }

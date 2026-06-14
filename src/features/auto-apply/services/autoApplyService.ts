@@ -72,6 +72,7 @@ interface LiveJobJoin {
   skills: string[] | null
   compensation_min: number | null
   compensation_max: number | null
+  source_url: string | null
   companies: LiveCompanyRow | null
   ai_scores: LiveScoreRow[] | null
 }
@@ -109,6 +110,7 @@ function mapApplication(row: LiveApplicationRow): JobMatch {
     keyMatches: score?.strengths ?? undefined,
     keyGaps: score?.gaps ?? undefined,
     about,
+    source_url: job?.source_url ?? undefined,
   }
 }
 
@@ -119,7 +121,7 @@ export async function fetchJobMatches(userId: string | null): Promise<{ source: 
     const { data, error } = await supabase
       .from('applications')
       .select(
-        'id, stage, match_score, updated_at, jobs(id, title, location, description, skills, compensation_min, compensation_max, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps))',
+        'id, stage, match_score, updated_at, jobs(id, title, location, description, skills, compensation_min, compensation_max, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps))',
       )
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
@@ -276,7 +278,7 @@ export async function fetchInbox(userId: string | null): Promise<{ source: DataS
 /* ---------------- search / saved board (Phase 2 data backbone) ---------------- */
 
 const JOB_SELECT =
-  'id, title, location, description, skills, compensation_min, compensation_max, remote_type, job_type, posted_at, created_at, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps)'
+  'id, title, location, description, skills, compensation_min, compensation_max, remote_type, job_type, posted_at, created_at, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps)'
 
 interface LiveSearchJobRow {
   id: string
@@ -290,6 +292,7 @@ interface LiveSearchJobRow {
   job_type: string | null
   posted_at: string | null
   created_at: string
+  source_url: string | null
   companies: LiveCompanyRow | null
   ai_scores: LiveScoreRow[] | null
 }
@@ -317,6 +320,7 @@ function mapJob(row: LiveSearchJobRow): SearchJob {
     keyMatches: score?.strengths ?? undefined,
     keyGaps: score?.gaps ?? undefined,
     about,
+    source_url: row.source_url ?? undefined,
   }
 }
 

@@ -415,7 +415,14 @@ function SearchJobCard({
             variant="ghost"
             size="md"
             iconRight={<Icon name="external-link" size={14} />}
-            onClick={() => onToast(`Opening listing — ${job.company}`, 'external-link', 'var(--bkt-blue-300)')}
+            disabled={!job.source_url}
+            onClick={() => {
+              if (job.source_url) {
+                window.open(job.source_url, '_blank', 'noopener,noreferrer')
+              } else {
+                onToast(`No listing URL available — ${job.company}`, 'external-link', 'var(--bkt-zinc-400)')
+              }
+            }}
           >
             Go to Listing
           </BktButton>

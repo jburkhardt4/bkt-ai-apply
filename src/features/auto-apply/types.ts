@@ -28,6 +28,8 @@ export interface JobMatch {
   keyMatches?: string[]
   keyGaps?: string[]
   about?: string
+  /** Direct URL to the original job posting. */
+  source_url?: string
   /** Live rows carry the pipeline ids needed for stage transitions. */
   applicationId?: string
   stage?: string
@@ -86,6 +88,8 @@ export interface SearchJob {
   keyMatches?: string[]
   keyGaps?: string[]
   about?: string
+  /** Direct URL to the original job posting. */
+  source_url?: string
 }
 
 export interface SearchData {

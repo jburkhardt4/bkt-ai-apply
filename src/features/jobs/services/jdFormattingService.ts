@@ -16,7 +16,9 @@ import { getSupabaseClient } from '@/lib/supabase'
 import { getModelPricing, logAiUsage, routeAiTask } from '@/lib/ai-router'
 
 const JD_FORMATTING_TASK = 'jd_formatting' as const
-const MAX_OUTPUT_TOKENS = 1536
+// Sized so a fully reformatted (not summarized) description rarely truncates
+// mid-section. Mirrors JD_FORMAT_MAX_TOKENS in supabase/functions/_shared/jd-format.ts.
+const MAX_OUTPUT_TOKENS = 2048
 
 interface EdgeFormatJdResponse {
   markdown: string

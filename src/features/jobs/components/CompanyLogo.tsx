@@ -1,9 +1,17 @@
 /**
- * CompanyLogo — the JD sidebar's primary brand anchor. Renders the company's
- * favicon (derived from its domain) when available, falling back to a branded
- * BKT-blue monogram of the company initials. Used at the top of the Prospector
- * JD sheet so every job — regardless of source board — gets a consistent,
- * on-brand company identity.
+ * CompanyLogo — the JD sidebar's primary brand anchor. Resolves a logo through a
+ * three-step visual hierarchy so every job — regardless of source board — gets a
+ * consistent, on-brand identity:
+ *
+ *   1. Company domain favicon  — the employer's own logo (from companies.domain).
+ *   2. Source-board favicon    — a recognizable LinkedIn / Dice / Greenhouse icon
+ *                                (from `fallbackDomain`, derived from source_url)
+ *                                when the company has no resolvable favicon.
+ *   3. Branded monogram        — BKT-blue initials, then a generic glyph, when no
+ *                                favicon resolves at all.
+ *
+ * Favicons are fetched via Google's s2 service; each candidate is attempted in
+ * order and an onError advances to the next, falling through to the monogram.
  */
 import { useState } from 'react'
 import { Building2 } from 'lucide-react'
@@ -35,18 +43,36 @@ function normalizeDomain(domain: string | null | undefined): string | null {
 
 interface CompanyLogoProps {
   companyName: string | null
+  /** The employer's own web domain (companies.domain) — tried first. */
   domain?: string | null
+  /** Secondary host (e.g. the source board from source_url), tried when the
+   *  company domain has no resolvable favicon. */
+  fallbackDomain?: string | null
   className?: string
 }
 
-export function CompanyLogo({ companyName, domain, className }: CompanyLogoProps) {
-  const host = normalizeDomain(domain)
-  // Track which host the failure applies to; a new host implicitly clears it
-  // (sidebar reused for a new job).
-  const [failedHost, setFailedHost] = useState<string | null>(null)
+export function CompanyLogo({ companyName, domain, fallbackDomain, className }: CompanyLogoProps) {
+  // Ordered, de-duplicated favicon candidates: company domain first (its true
+  // logo), then the source-board host as a recognizable secondary.
+  const hosts = [normalizeDomain(domain), normalizeDomain(fallbackDomain)].filter(
+    (h): h is string => h != null,
+  )
+  const candidates = [...new Set(hosts)]
+  const signature = candidates.join('|')
+
+  // Index of the favicon candidate currently being attempted; advancing past the
+  // end falls through to the monogram. Reset at render time (NOT in an effect, to
+  // respect react-hooks/set-state-in-effect) whenever the candidate set changes —
+  // i.e. when the sidebar is reused for a different job.
+  const [attempt, setAttempt] = useState(0)
+  const [attemptSig, setAttemptSig] = useState(signature)
+  if (attemptSig !== signature) {
+    setAttemptSig(signature)
+    setAttempt(0)
+  }
 
   const initials = getInitials(companyName)
-  const showImg = host != null && failedHost !== host
+  const activeHost = attempt < candidates.length ? candidates[attempt] : null
 
   return (
     <div
@@ -55,14 +81,15 @@ export function CompanyLogo({ companyName, domain, className }: CompanyLogoProps
         className,
       )}
     >
-      {showImg ? (
+      {activeHost ? (
         <img
-          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`}
+          key={activeHost}
+          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(activeHost)}&sz=128`}
           alt={companyName ? `${companyName} logo` : 'Company logo'}
           className="h-full w-full bg-white object-contain p-1"
           loading="lazy"
           referrerPolicy="no-referrer"
-          onError={() => setFailedHost(host)}
+          onError={() => setAttempt((n) => n + 1)}
         />
       ) : initials ? (
         <span className="text-base font-semibold tracking-wide">{initials}</span>

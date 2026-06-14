@@ -102,24 +102,28 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
   } | null>(null)
 
   const jobId = job?.id ?? null
+  // Prefer the description normalized at creation time (or lazily backfilled):
+  // when present it renders instantly — no LLM round-trip, no spinner.
+  const stored = (job?.description_formatted ?? '').trim()
   const raw = (job?.description ?? '').trim()
 
-  // Fetch the formatted JD when the sheet opens for a job that has a description,
-  // isn't cached, and we have an authenticated user. The effect does NO synchronous
-  // setState — all setState calls are inside promise callbacks — so the
-  // react-hooks/set-state-in-effect rule is not triggered. Cache hits, the
-  // no-user fallback, and the empty-description case are all handled in the
-  // derived render logic below.
+  // Lazily format the JD only for older jobs that have NO precomputed
+  // description_formatted. Passing jobId persists the result back to the row
+  // (backfill) so the next view — for any user — is instant. The effect does NO
+  // synchronous setState (all setState is inside promise callbacks), so the
+  // react-hooks/set-state-in-effect rule is not triggered. The stored-instant
+  // path, cache hits, the no-user fallback, and the empty-description case are
+  // all handled in the derived render logic below.
   useEffect(() => {
-    // Nothing to format: derived render logic below handles the empty case.
-    if (!open || jobId == null || raw.length === 0) return
+    // Instant path / nothing to format — handled by the derived logic below.
+    if (!open || jobId == null || raw.length === 0 || stored.length > 0) return
     if (formattedJdCache.get(jobId)) return
     // Without an authenticated user we can't call the JWT-gated function; the
     // render-time derivation falls back to the raw description.
     if (!userId) return
 
     let cancelled = false
-    formatJobDescription({ userId, rawDescription: raw })
+    formatJobDescription({ userId, rawDescription: raw, jobId })
       .then((result) => {
         if (cancelled) return
         formattedJdCache.set(jobId, result)
@@ -133,13 +137,15 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
     return () => {
       cancelled = true
     }
-  }, [open, jobId, raw, userId])
+  }, [open, jobId, raw, stored, userId])
 
   if (!job) return null
 
-  // Derive the effective display values so the empty-description case and
-  // cache hits don't need any synchronous setState inside the effect.
+  // Derive the effective display values so the stored-instant path, empty
+  // description, and cache hits don't need any synchronous setState in the effect.
+  const hasStored = open && stored.length > 0
   const hasRaw = open && raw.length > 0
+  const hasContent = hasStored || hasRaw
   const cached = jobId ? formattedJdCache.get(jobId) : undefined
   const asyncForThisJob = asyncJd?.jobId === jobId ? asyncJd : null
 
@@ -147,7 +153,12 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
   let effectiveSource: 'llm' | 'fallback' | null
   let effectiveFormatting: boolean
 
-  if (!hasRaw || !open) {
+  if (hasStored) {
+    // Normalized at creation time (or backfilled) — render immediately, no spinner.
+    effectiveFormatted = stored
+    effectiveSource = 'llm'
+    effectiveFormatting = false
+  } else if (!hasRaw) {
     effectiveFormatted = null
     effectiveSource = null
     effectiveFormatting = false
@@ -188,6 +199,7 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
             <CompanyLogo
               companyName={job.company_name}
               domain={job.company_domain}
+              fallbackDomain={job.source_url}
               className="h-12 w-12"
             />
             <div className="min-w-0">
@@ -231,7 +243,7 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
 
         {/* ── Scrollable description body ────────────────────────────── */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          {job.description ? (
+          {hasContent ? (
             effectiveFormatting ? (
               <JobDescriptionSkeleton />
             ) : (
@@ -242,7 +254,7 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
                     Formatted for readability
                   </div>
                 )}
-                <JobDescriptionMarkdown markdown={effectiveFormatted ?? job.description} />
+                <JobDescriptionMarkdown markdown={effectiveFormatted ?? job.description ?? ''} />
               </div>
             )
           ) : (
@@ -254,7 +266,7 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
         <div className="shrink-0 border-t border-border bg-card px-6 py-4">
           <Button
             asChild
-            className="w-full gap-2 bg-primary font-semibold text-zinc-50 shadow-sm hover:bg-primary/90"
+            className="h-11 w-full gap-2 rounded-lg bg-primary text-sm font-semibold text-zinc-50 shadow-sm transition-colors hover:bg-primary/90"
           >
             <a href={job.source_url} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />

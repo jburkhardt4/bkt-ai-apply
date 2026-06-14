@@ -76,6 +76,12 @@ const ROUTING_MATRIX: Record<AiTaskType, RoutingEntry> = {
     modelProvider: 'anthropic',
     isCritical: false,
   },
+  jd_formatting: {
+    taskType: 'jd_formatting',
+    modelName: 'Claude 3.5 Haiku',
+    modelProvider: 'anthropic',
+    isCritical: false,
+  },
 }
 
 export interface AiCostDecision {
@@ -263,6 +269,8 @@ const MODEL_PRICING_BY_NAME: Record<string, ModelPricing> = {
   'Gemini 2.5 Pro': { inputUsdPerToken: 1.25 / 1_000_000, outputUsdPerToken: 5 / 1_000_000 },
   // Mirrored in supabase/functions/gmail-sync/logic.ts (server-side classification logging)
   'Gemini 2.5 Flash': { inputUsdPerToken: 0.3 / 1_000_000, outputUsdPerToken: 2.5 / 1_000_000 },
+  // Low-latency JD normalization (jd_formatting). Anthropic list price for Haiku 3.5.
+  'Claude 3.5 Haiku': { inputUsdPerToken: 0.8 / 1_000_000, outputUsdPerToken: 4 / 1_000_000 },
 }
 
 const FALLBACK_PRICING: ModelPricing = {

@@ -92,10 +92,12 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
           <div style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
             <BktAvatar name={job.company ?? ''} src={companyLogo(job.domain)} size={48} square />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ font: '700 var(--text-lg)/1.25 var(--font-display)', letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
+              <span style={{ font: '700 var(--text-base)/1.25 var(--font-display)', letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
+                {job.company}
+              </span>
+              <span style={{ font: '600 var(--text-lg)/1.25 var(--font-display)', color: 'var(--text-muted)' }}>
                 {job.title}
               </span>
-              <span style={{ font: '500 var(--text-base)/1.3 var(--font-body)', color: 'var(--text-muted)' }}>{job.company}</span>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <BktButton variant="ghost" size="icon" aria-label="Flag">
@@ -264,9 +266,9 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
             Decline
           </BktButton>
           <BktButton
-            variant="success"
+            variant="primary"
             size="md"
-            style={{ borderRadius: 'var(--radius-pill)', minWidth: 110 }}
+            style={{ borderRadius: 'var(--radius-pill)', minWidth: 110, color: 'var(--bkt-zinc-50)' }}
             onClick={() => {
               onApply(job.id)
               onClose()

@@ -380,6 +380,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response('ok', { headers: CORS_HEADERS })
   }
 
+  // FIX 8 (P1): fail closed in live mode without a scheduler secret. The
+  // function is deployed --no-verify-jwt, so when CRON_SECRET is unset the
+  // endpoint is publicly invokable. That is tolerable ONLY in dry-run (the
+  // worker just counts approved rows, zero side effects). If SUBMISSION_LIVE=
+  // 'true' with no CRON_SECRET, any caller could drain approved rows and trigger
+  // REAL submissions outside the scheduler — so we refuse to run rather than
+  // leave a live, unauthenticated endpoint open.
+  if (isLive() && !Deno.env.get('CRON_SECRET')) {
+    console.error(
+      'submission-worker: refusing to run — SUBMISSION_LIVE=true requires CRON_SECRET ' +
+        'to gate the --no-verify-jwt endpoint. Set CRON_SECRET (and the matching ' +
+        'x-cron-secret header on the pg_cron call) before enabling live mode.',
+    )
+    return json(
+      { error: 'submission-worker is misconfigured: live mode requires CRON_SECRET' },
+      503,
+    )
+  }
+
   // FIX 5: scheduler shared-secret gate. The function is deployed
   // --no-verify-jwt, so this is the only auth on the endpoint when CRON_SECRET
   // is set. Checked before any work (and before touching the service-role key).

@@ -927,12 +927,13 @@ async function runForProfile(
           continue
         }
 
-        const { error: upsertError } = await supabase
+        const { data: atsUpsertedRows, error: upsertError } = await supabase
           .from('jobs')
           .upsert(mappedJob, {
             onConflict: 'source_url',
             ignoreDuplicates: true,
           })
+          .select('id')
 
         if (upsertError) {
           stats.errors.push(`[${jobTitle}@${atsHost}] upsert error: ${upsertError.message}`)
@@ -940,7 +941,12 @@ async function runForProfile(
           continue
         }
 
-        stats.jobs_queued += 1
+        // ignoreDuplicates makes the upsert a no-op for an existing source_url
+        // (returning an empty set), so only count rows actually inserted — keeps
+        // jobs_queued a true "newly inserted" figure, matching the main loop.
+        if (atsUpsertedRows?.[0]?.id) {
+          stats.jobs_queued += 1
+        }
       }
     }
   }

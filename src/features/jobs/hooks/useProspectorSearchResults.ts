@@ -21,6 +21,7 @@ export interface ProspectorSearchResult {
   id: string
   title: string
   company_name: string | null
+  company_domain: string | null
   location: string | null
   remote_type: string | null
   job_type: string | null
@@ -70,7 +71,8 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           source_url,
           created_at,
           companies (
-            name
+            name,
+            domain
           ),
           ai_scores (
             overall_score,
@@ -92,11 +94,13 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
         } else {
           const shaped: ProspectorSearchResult[] = (data ?? []).map((row) => {
             const companiesRaw = row.companies as unknown
-            const companyName = Array.isArray(companiesRaw)
-              ? ((companiesRaw[0] as { name?: string } | undefined)?.name ?? null)
+            const company = Array.isArray(companiesRaw)
+              ? (companiesRaw[0] as { name?: string; domain?: string | null } | undefined)
               : typeof companiesRaw === 'object' && companiesRaw != null
-                ? ((companiesRaw as { name?: string }).name ?? null)
-                : null
+                ? (companiesRaw as { name?: string; domain?: string | null })
+                : undefined
+            const companyName = company?.name ?? null
+            const companyDomain = company?.domain ?? null
 
             // Match score lives in ai_scores (versioned per job); take the most
             // recently scored row. Embedded ai_scores are RLS-scoped to the user.
@@ -112,6 +116,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
               id: row.id,
               title: row.title,
               company_name: companyName,
+              company_domain: companyDomain,
               location: row.location,
               remote_type: row.remote_type,
               job_type: row.job_type,

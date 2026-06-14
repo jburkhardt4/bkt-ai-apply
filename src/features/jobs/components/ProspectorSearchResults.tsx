@@ -61,6 +61,7 @@ import {
   formatCompensation,
   formatRelativeDate,
   formatJobType,
+  deriveSourceLabel,
 } from './prospectorJobFields'
 
 // ── Props contract — DO NOT change ───────────────────────────────────────────
@@ -306,6 +307,7 @@ function TableLoadingSkeletons() {
         <col className="w-1/12" />
         <col className="w-1/12" />
         <col className="w-1/12" />
+        <col className="w-1/12" />
         <col className="w-1/6" />
         <col className="w-1/12" />
         <col className="w-1/12" />
@@ -314,7 +316,7 @@ function TableLoadingSkeletons() {
       </colgroup>
       <thead>
         <tr>
-          {[80, 60, 48, 48, 48, 60, 44, 44, 28, 28].map((w, i) => (
+          {[80, 60, 48, 48, 48, 48, 60, 44, 44, 28, 28].map((w, i) => (
             <th key={i} className="px-3 pb-2 pt-1">
               <Skeleton className="h-3" style={{ width: `${w}%` }} />
             </th>
@@ -329,6 +331,10 @@ function TableLoadingSkeletons() {
               <Skeleton className="h-4 w-4/5" />
             </td>
             {/* Company */}
+            <td className="px-3 py-3">
+              <Skeleton className="h-3 w-3/4" />
+            </td>
+            {/* Source */}
             <td className="px-3 py-3">
               <Skeleton className="h-3 w-3/4" />
             </td>
@@ -571,6 +577,12 @@ function JobCell({ col, job }: CellProps) {
       return (
         <td className={cn(tdClass, 'whitespace-nowrap')}>
           <ScorePill score={job.match_score} />
+        </td>
+      )
+    case 'source':
+      return (
+        <td className={cn(tdClass, 'whitespace-nowrap text-sm text-muted-foreground')}>
+          {deriveSourceLabel(job.source_url)}
         </td>
       )
     default:
@@ -822,9 +834,9 @@ const ENVIRONMENT_OPTIONS = [
 function FilterCell({ col, controls, jobTypeOptions }: FilterCellProps) {
   switch (col.filterType) {
     case 'text': {
-      const field = col.id === 'title' ? 'title' : 'company'
-      const placeholder = col.id === 'title' ? 'Title...' : 'Company...'
-      const ariaLabel = col.id === 'title' ? 'Filter by job title' : 'Filter by company'
+      const field = col.id === 'title' ? 'title' : col.id === 'source' ? 'source' : 'company'
+      const placeholder = col.id === 'title' ? 'Title...' : col.id === 'source' ? 'Source...' : 'Company...'
+      const ariaLabel = col.id === 'title' ? 'Filter by job title' : col.id === 'source' ? 'Filter by source board' : 'Filter by company'
       return (
         <td className={cn('px-2 py-1', col.minWidthClass)}>
           <div className="relative">

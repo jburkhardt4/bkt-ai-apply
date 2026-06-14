@@ -14,6 +14,7 @@ import { useProspectorSearchResults } from './hooks/useProspectorSearchResults'
 import { useProspectorReadyQueue } from './hooks/useProspectorReadyQueue'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { useAutoApplySettings } from '@/features/auto-apply/settings-context'
 import { cn } from '@/lib/utils'
 import { runScoreForJob } from '@/features/applications/services/ingestionService'
 import {
@@ -28,6 +29,7 @@ const RUN_NOW_TIMEOUT_MS = 30_000
 
 export function ProspectorDashboard() {
   const { user } = useAuth()
+  const { settings } = useAutoApplySettings()
 
   // Live Supabase state — replaces all mock state (BR-004, BR-005, BR-008)
   const {
@@ -191,11 +193,44 @@ export function ProspectorDashboard() {
     let saved = 0
     let queued = 0
     let failed = 0
+    const supabase = getSupabaseClient()
     for (const job of unscored) {
       try {
         const result = await runScoreForJob({ userId: user.id, jobId: job.id })
-        if (result.status === 'queued') queued += 1
-        else saved += 1
+        if (result.status === 'queued') {
+          queued += 1
+        } else {
+          saved += 1
+
+          // Auto-queue into application_queue when assist/auto mode and score
+          // meets the user's submission threshold. 'review' mode requires explicit
+          // human approval — applications stay in 'discovery' for the Quick Review flow.
+          const shouldAutoQueue =
+            !settings.paused &&
+            result.overallScore >= settings.autoSubmitScoreThreshold &&
+            (settings.reviewMode === 'auto' || settings.reviewMode === 'assist')
+
+          if (shouldAutoQueue) {
+            const { data: appRow } = await supabase
+              .from('applications')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('job_id', job.id)
+              .maybeSingle()
+
+            if (appRow?.id) {
+              await supabase
+                .from('application_queue')
+                .insert({
+                  user_id: user.id,
+                  application_id: appRow.id,
+                  status: 'approved',
+                  queued_by: settings.reviewMode === 'auto' ? 'auto_mode' : 'assist_mode',
+                })
+              // 23505 = unique_violation: already queued from a previous run — fine.
+            }
+          }
+        }
       } catch {
         failed += 1
       }
@@ -218,7 +253,7 @@ export function ProspectorDashboard() {
     }
 
     setIsScoring(false)
-  }, [user, isScoring, searchResults, refetchSearchResults, refetchQueue])
+  }, [user, isScoring, searchResults, refetchSearchResults, refetchQueue, settings])
 
   // ── Loading skeleton ─────────────────────────────────────────
 

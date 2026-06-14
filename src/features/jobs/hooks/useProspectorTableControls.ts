@@ -18,6 +18,7 @@
 
 import { useCallback, useMemo, useReducer } from 'react'
 import type { ProspectorSearchResult } from './useProspectorSearchResults'
+import { deriveSourceLabel } from '../components/prospectorJobFields'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ export type SortKey =
   | 'posted_at'
   | 'match_score'
   | 'created_at'
+  | 'source_url'
 
 export type SortDir = 'asc' | 'desc'
 
@@ -46,6 +48,7 @@ export interface FilterState {
   salaryMin: string    // '' = unset; parsed to number on compare
   salaryMax: string    // '' = unset; parsed to number on compare
   scoreMin: string     // '' = unset; minimum match score on compare
+  source: string       // '' = all; substring match against derived source label
 }
 
 export interface UndoTarget {
@@ -84,6 +87,7 @@ const INITIAL_FILTERS: FilterState = {
   salaryMin: '',
   salaryMax: '',
   scoreMin: '',
+  source: '',
 }
 
 const INITIAL_STATE: ControlsState = {
@@ -203,6 +207,10 @@ function compareRows(
       av = a.created_at ? new Date(a.created_at).getTime() : null
       bv = b.created_at ? new Date(b.created_at).getTime() : null
       break
+    case 'source_url':
+      av = deriveSourceLabel(a.source_url)
+      bv = deriveSourceLabel(b.source_url)
+      break
   }
 
   // Null placement — see module docblock.
@@ -260,6 +268,8 @@ function passesFilter(job: ProspectorSearchResult, f: FilterState): boolean {
   if (scoreMin !== null && !isNaN(scoreMin)) {
     if (job.match_score === null || job.match_score < scoreMin) return false
   }
+
+  if (f.source && !contains(deriveSourceLabel(job.source_url), f.source)) return false
 
   return true
 }

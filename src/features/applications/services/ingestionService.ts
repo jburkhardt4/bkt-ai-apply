@@ -249,14 +249,38 @@ export async function runScoreForJob(params: {
     applicationId: params.applicationId,
   })
 
-  const { error: applicationUpdateError } = await supabase
+  // Update match_score on any existing application for this job. The `.select('id')`
+  // lets us detect whether a row existed (empty array = no application yet).
+  const { data: updatedRows, error: applicationUpdateError } = await supabase
     .from('applications')
     .update({ match_score: persisted.overallScore })
     .eq('user_id', params.userId)
     .eq('job_id', params.jobId)
+    .select('id')
 
   if (applicationUpdateError) {
     throw new Error(`Failed to update application score: ${applicationUpdateError.message}`)
+  }
+
+  // If no application row existed and the score meets the pipeline entry threshold
+  // (BR-020, >= 60), create a discovery entry. Prospector-discovered jobs are inserted
+  // into `jobs` by the Edge Function but never get an `applications` row until here.
+  // Sub-threshold jobs intentionally stay as untracked listings — they don't enter
+  // the apply pipeline.
+  if ((updatedRows ?? []).length === 0 && persisted.overallScore >= 60) {
+    const { error: insertError } = await supabase
+      .from('applications')
+      .insert({
+        user_id: params.userId,
+        job_id: params.jobId,
+        match_score: persisted.overallScore,
+        stage: 'discovery',
+      })
+    // 23505 = unique_violation: a concurrent scoring request created the row between
+    // our UPDATE (no-op) and this INSERT — the next call will update the score.
+    if (insertError && insertError.code !== '23505') {
+      throw new Error(`Failed to create application from score: ${insertError.message}`)
+    }
   }
 
   return {

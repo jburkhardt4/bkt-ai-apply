@@ -261,6 +261,48 @@ function buildSerpApiUrl(
 }
 
 /**
+ * Builds a SerpApi `google_jobs` URL that restricts results to a specific ATS
+ * job board using a `site:` operator in the query. This guarantees results from
+ * Greenhouse, Ashby, and Workday boards are included in each run rather than
+ * relying on Google's aggregator to surface them organically.
+ *
+ * No `chips` (employment-type) filter is applied for board-specific passes — the
+ * chip token interacts poorly with the `site:` operator on Google Jobs and tends
+ * to zero out results. Location is still applied when set.
+ */
+function buildAtsBoardUrl(
+  jobTitle: string,
+  profile: ProspectingProfile,
+  serpApiKey: string,
+  atsHost: string
+): string {
+  const params = new URLSearchParams()
+
+  params.set('engine', 'google_jobs')
+  params.set('api_key', serpApiKey)
+  params.set('google_domain', 'google.com')
+  params.set('num', String(SERPAPI_RESULTS_PER_PAGE))
+  params.set('hl', 'en')
+  params.set('gl', 'us')
+
+  params.set('q', `${jobTitle} site:${atsHost}`)
+
+  const primaryLocation = profile.locations.find((l) => l.trim().length > 0)
+  if (primaryLocation) {
+    params.set('location', primaryLocation)
+  }
+
+  return `${SERPAPI_BASE}?${params.toString()}`
+}
+
+/** ATS job boards to target explicitly in addition to the general Google Jobs query. */
+const ATS_BOARD_HOSTS = [
+  'boards.greenhouse.io',
+  'jobs.ashbyhq.com',
+  'myworkdayjobs.com',
+] as const
+
+/**
  * Fetches SerpApi with exponential backoff on 429 (INT-RULE-003).
  * A non-retryable error (e.g. 401, 400) is thrown immediately.
  *
@@ -631,6 +673,65 @@ async function runForProfile(
       }
 
       stats.jobs_queued += 1
+    }
+  }
+
+  // ── ATS board-specific passes (Greenhouse / Ashby / Workday) ──────────────
+  // One additional SerpApi call per job title × ATS host. Errors on individual
+  // passes are logged and accumulated but never abort the overall run —
+  // the main Google Jobs loop already captured the bulk of results.
+  for (const jobTitle of profile.job_titles) {
+    for (const atsHost of ATS_BOARD_HOSTS) {
+      let atsSerpResults: SerpApiJobResult[]
+
+      try {
+        const atsUrl = buildAtsBoardUrl(jobTitle, profile, serpApiKey, atsHost)
+        console.log(`prospector-cron: querying ${atsHost} for profile ${profile.id}, title="${jobTitle}"`)
+        atsSerpResults = await fetchSerpApi(atsUrl)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn(`prospector-cron: ATS board search failed for ${atsHost}, title="${jobTitle}": ${msg}`)
+        stats.errors.push(`[${jobTitle}@${atsHost}] SerpApi error: ${msg}`)
+        if (stats.status === 'success') stats.status = 'partial'
+        continue
+      }
+
+      stats.jobs_found += atsSerpResults.length
+
+      for (const result of atsSerpResults) {
+        let mappedJob: JobInsert | null
+        let mappingFailed = false
+
+        try {
+          mappedJob = await mapJobResult(result, profile.user_id, supabase, profile.min_salary)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          stats.errors.push(`[${jobTitle}@${atsHost}] mapping error: ${msg}`)
+          if (stats.status === 'success') stats.status = 'partial'
+          mappingFailed = true
+          mappedJob = null
+        }
+
+        if (mappingFailed || !mappedJob) {
+          if (!mappedJob && !mappingFailed) stats.jobs_found -= 1
+          continue
+        }
+
+        const { error: upsertError } = await supabase
+          .from('jobs')
+          .upsert(mappedJob, {
+            onConflict: 'source_url',
+            ignoreDuplicates: true,
+          })
+
+        if (upsertError) {
+          stats.errors.push(`[${jobTitle}@${atsHost}] upsert error: ${upsertError.message}`)
+          if (stats.status === 'success') stats.status = 'partial'
+          continue
+        }
+
+        stats.jobs_queued += 1
+      }
     }
   }
 

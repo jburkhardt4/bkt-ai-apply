@@ -77,6 +77,8 @@ export interface SearchJob {
   score: number
   level?: string
   location?: string
+  comp?: string
+  updated?: string
   overview?: string
   skills?: string[]
   preferred?: string[]

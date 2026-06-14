@@ -89,13 +89,23 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
       >
         {/* header */}
         <div style={{ padding: '22px 26px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', gap: 13, alignItems: 'flex-start' }}>
-            <BktAvatar name={job.company ?? ''} src={companyLogo(job.domain)} size={48} square />
+          <div
+            style={{
+              display: 'flex',
+              gap: 13,
+              alignItems: 'flex-start',
+              background: 'var(--bkt-slate-50)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-xl)',
+              padding: '12px 13px',
+            }}
+          >
+            <BktAvatar name={job.company ?? ''} src={companyLogo(job.domain)} size={52} square />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ font: '700 var(--text-base)/1.25 var(--font-display)', letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
+              <span style={{ font: '700 var(--text-sm)/1.2 var(--font-display)', letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
                 {job.company}
               </span>
-              <span style={{ font: '600 var(--text-lg)/1.25 var(--font-display)', color: 'var(--text-muted)' }}>
+              <span style={{ font: '600 var(--text-lg)/1.25 var(--font-display)', color: 'var(--text-body)' }}>
                 {job.title}
               </span>
             </div>
@@ -117,6 +127,16 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
             {job.location && (
               <ChipPill icon="map-pin" style={{ height: 30 }}>
                 {job.location}
+              </ChipPill>
+            )}
+            {job.comp && (
+              <ChipPill icon="badge-dollar-sign" style={{ height: 30 }}>
+                {job.comp}
+              </ChipPill>
+            )}
+            {job.updated && (
+              <ChipPill icon="clock-3" style={{ height: 30 }}>
+                {job.updated}
               </ChipPill>
             )}
             <BktBadge tone="brand" appearance="soft">
@@ -249,7 +269,16 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
         </div>
 
         {/* footer */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 26px', borderTop: '1px solid var(--border)' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '14px 26px',
+            borderTop: '1px solid var(--border)',
+            background: 'var(--surface)',
+          }}
+        >
           <BktButton variant="outline" size="md" style={{ borderRadius: 'var(--radius-pill)' }} iconRight={<Icon name="external-link" size={15} />}>
             View Job
           </BktButton>
@@ -268,7 +297,7 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
           <BktButton
             variant="primary"
             size="md"
-            style={{ borderRadius: 'var(--radius-pill)', minWidth: 110, color: 'var(--bkt-zinc-50)' }}
+            style={{ borderRadius: 'var(--radius-pill)', minWidth: 124, color: 'var(--bkt-zinc-50)', boxShadow: 'var(--shadow-brand)' }}
             onClick={() => {
               onApply(job.id)
               onClose()

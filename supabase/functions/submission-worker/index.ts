@@ -58,6 +58,27 @@ function batchSize(): number {
 }
 
 /**
+ * Constant-time string equality. Both inputs are SHA-256 digested to fixed
+ * 32-byte buffers first, then compared with a branchless XOR fold, so neither
+ * the comparison time nor the loop length reveals anything about the secret
+ * (including its length). Plain `===` short-circuits on the first differing
+ * byte and can in theory leak timing about the secret. crypto.subtle is
+ * available in the Deno edge runtime.
+ */
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder()
+  const [ah, bh] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ])
+  const av = new Uint8Array(ah)
+  const bv = new Uint8Array(bh)
+  let diff = 0
+  for (let i = 0; i < av.length; i++) diff |= av[i] ^ bv[i]
+  return diff === 0
+}
+
+/**
  * Shared-secret gate for the scheduler (FIX 5). The worker is deployed with
  * verify_jwt disabled (--no-verify-jwt) so pg_cron can invoke it without a user
  * JWT — matching prospector-cron / gmail-sync. To avoid leaving the endpoint
@@ -67,17 +88,18 @@ function batchSize(): number {
  *     otherwise the request is rejected (401).
  *   - If CRON_SECRET is UNSET, the request is allowed (backward-compatible /
  *     dry-run-safe — mirrors the pre-secret behavior).
+ * The secret is compared in constant time (timingSafeEqual).
  * Returns true when the request is authorized to proceed.
  */
-function isCronAuthorized(req: Request): boolean {
+async function isCronAuthorized(req: Request): Promise<boolean> {
   const secret = Deno.env.get('CRON_SECRET')
   if (!secret) return true // unset → open (backward-compatible)
 
   const headerSecret = req.headers.get('x-cron-secret')
-  if (headerSecret && headerSecret === secret) return true
+  if (headerSecret && (await timingSafeEqual(headerSecret, secret))) return true
 
   const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization')
-  if (authHeader && authHeader === `Bearer ${secret}`) return true
+  if (authHeader && (await timingSafeEqual(authHeader, `Bearer ${secret}`))) return true
 
   return false
 }
@@ -361,7 +383,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // FIX 5: scheduler shared-secret gate. The function is deployed
   // --no-verify-jwt, so this is the only auth on the endpoint when CRON_SECRET
   // is set. Checked before any work (and before touching the service-role key).
-  if (!isCronAuthorized(req)) {
+  if (!(await isCronAuthorized(req))) {
     return json({ error: 'unauthorized' }, 401)
   }
 

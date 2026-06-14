@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useAutoApplySettings } from '@/features/auto-apply/settings-context'
 import { cn } from '@/lib/utils'
 import { runScoreForJob } from '@/features/applications/services/ingestionService'
+import { graduateProspectorMatches } from './services/prospectorGraduationService'
 import {
   summarizeRunResults,
   type ProspectorRunResponse,
@@ -29,7 +30,7 @@ const RUN_NOW_TIMEOUT_MS = 30_000
 
 export function ProspectorDashboard() {
   const { user } = useAuth()
-  const { settings } = useAutoApplySettings()
+  const { settings, loading: settingsLoading } = useAutoApplySettings()
 
   // Live Supabase state — replaces all mock state (BR-004, BR-005, BR-008)
   const {
@@ -193,47 +194,24 @@ export function ProspectorDashboard() {
     let saved = 0
     let queued = 0
     let failed = 0
-    const supabase = getSupabaseClient()
     for (const job of unscored) {
       try {
         const result = await runScoreForJob({ userId: user.id, jobId: job.id })
-        if (result.status === 'queued') {
-          queued += 1
-        } else {
-          saved += 1
-
-          // Auto-queue into application_queue when assist/auto mode and score
-          // meets the user's submission threshold. 'review' mode requires explicit
-          // human approval — applications stay in 'discovery' for the Quick Review flow.
-          const shouldAutoQueue =
-            !settings.paused &&
-            result.overallScore >= settings.autoSubmitScoreThreshold &&
-            (settings.reviewMode === 'auto' || settings.reviewMode === 'assist')
-
-          if (shouldAutoQueue) {
-            const { data: appRow } = await supabase
-              .from('applications')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('job_id', job.id)
-              .maybeSingle()
-
-            if (appRow?.id) {
-              await supabase
-                .from('application_queue')
-                .insert({
-                  user_id: user.id,
-                  application_id: appRow.id,
-                  status: 'approved',
-                  queued_by: settings.reviewMode === 'auto' ? 'auto_mode' : 'assist_mode',
-                })
-              // 23505 = unique_violation: already queued from a previous run — fine.
-            }
-          }
-        }
+        if (result.status === 'queued') queued += 1
+        else saved += 1
       } catch {
         failed += 1
       }
+    }
+
+    // Graduate the freshly-scored jobs into the pipeline: create discovery
+    // applications for matches >= 60 and (in assist/auto mode) enqueue those
+    // at/above the user's threshold. Idempotent and mode-aware — review mode
+    // enqueues nothing. The worker's claim_submission re-validates server-side.
+    try {
+      await graduateProspectorMatches({ userId: user.id, reviewMode: settings.reviewMode })
+    } catch {
+      // Non-fatal: scoring still succeeded; the ready queue will catch up on reload.
     }
 
     // Scoring writes ai_scores (search results) and may update
@@ -254,6 +232,30 @@ export function ProspectorDashboard() {
 
     setIsScoring(false)
   }, [user, isScoring, searchResults, refetchSearchResults, refetchQueue, settings])
+
+  // ── Graduate already-scored matches into the pipeline (once per mount) ──
+  // Prospector jobs scored in earlier sessions never created applications, so
+  // the Ready Queue could stay empty despite strong matches. This backfills
+  // them (and enqueues per review mode) the first time the dashboard mounts.
+  const graduatedRef = useRef(false)
+  useEffect(() => {
+    if (!user || settingsLoading || graduatedRef.current) return
+    graduatedRef.current = true
+    graduateProspectorMatches({ userId: user.id, reviewMode: settings.reviewMode })
+      .then((result) => {
+        if (result.created > 0 || result.enqueued > 0) {
+          refetchQueue()
+          if (result.created > 0) {
+            toast.success(
+              `${result.created} ${result.created === 1 ? 'match' : 'matches'} added to your pipeline`,
+            )
+          }
+        }
+      })
+      .catch(() => {
+        // Non-fatal: the ready queue still reflects whatever already exists.
+      })
+  }, [user, settingsLoading, settings.reviewMode, refetchQueue])
 
   // ── Loading skeleton ─────────────────────────────────────────
 

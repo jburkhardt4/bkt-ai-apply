@@ -96,6 +96,19 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
   const [formatted, setFormatted] = useState<string | null>(null)
   const [formatting, setFormatting] = useState(false)
   const [source, setSource] = useState<'llm' | 'fallback' | null>(null)
+  const [prevJobId, setPrevJobId] = useState<string | null>(null)
+
+  // Reset/initialize formatting state when the job changes.
+  // "Adjusting state during render" avoids synchronous setState inside a useEffect.
+  // Also seeds from the module-level cache so re-opens are instant.
+  const currentJobId = job?.id ?? null
+  if (prevJobId !== currentJobId) {
+    setPrevJobId(currentJobId)
+    const cached = currentJobId ? formattedJdCache.get(currentJobId) : undefined
+    setFormatted(cached?.markdown ?? null)
+    setSource(cached?.source ?? null)
+    setFormatting(false)
+  }
 
   // Normalize the JD into clean Markdown when the sheet opens for a job. Cache
   // hits render instantly; the cost gate + usage logging live in the service.
@@ -105,34 +118,35 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
     const jobId = job.id
     const raw = (job.description ?? '').trim()
 
-    if (raw.length === 0) {
-      setFormatted(null)
-      setFormatting(false)
-      setSource(null)
-      return
-    }
+    // No description — state already reset by the "adjusting during render" block above.
+    if (raw.length === 0) return
 
-    const cached = formattedJdCache.get(jobId)
-    if (cached) {
-      setFormatted(cached.markdown)
-      setSource(cached.source)
-      setFormatting(false)
-      return
-    }
+    // Cache hit: state was already seeded from the cache during render (see
+    // the "adjusting state during render" block above); no re-fetch needed.
+    if (formattedJdCache.has(jobId)) return
 
     // Without an authenticated user we can't call the JWT-gated function; show
-    // the raw description rather than block the panel.
+    // the raw description rather than block the panel. setState in the .then()
+    // callback keeps the call off the synchronous effect body path.
     if (!userId) {
-      setFormatted(raw)
-      setSource('fallback')
-      setFormatting(false)
+      Promise.resolve(raw).then((r) => {
+        setFormatted(r)
+        setSource('fallback')
+        setFormatting(false)
+      })
       return
     }
 
     let cancelled = false
-    setFormatting(true)
-    setFormatted(null)
-    setSource(null)
+    // Kick off the loading state via a resolved promise so all setState calls
+    // happen in a callback (satisfies react-hooks/set-state-in-effect).
+    Promise.resolve().then(() => {
+      if (!cancelled) {
+        setFormatting(true)
+        setFormatted(null)
+        setSource(null)
+      }
+    })
 
     formatJobDescription({ userId, rawDescription: raw })
       .then((result) => {

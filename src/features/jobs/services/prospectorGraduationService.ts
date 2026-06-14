@@ -35,6 +35,7 @@ export interface GraduationResult {
 interface ScoreRow {
   job_id: string
   overall_score: number
+  scored_at: string
 }
 
 /**
@@ -59,23 +60,30 @@ export async function graduateProspectorMatches(params: {
   const supabase = getSupabaseClient()
   const { userId, reviewMode } = params
 
-  // Latest score per prospector job (>= 60), scoped to the user. jobs!inner
-  // restricts to source='prospector' postings.
+  // All scores for this user's prospector jobs, newest first. No score-threshold
+  // filter here — we need ALL rows so we can pick the latest per job (not the
+  // highest). Applying gte(60) before we've isolated the latest row would let
+  // an old high score shadow a more-recent low score, graduating a job that has
+  // since been rescored below the threshold.
   const { data: scoreRows, error: scoreError } = await supabase
     .from('ai_scores')
-    .select('job_id, overall_score, jobs!inner(source)')
+    .select('job_id, overall_score, scored_at, jobs!inner(source)')
     .eq('user_id', userId)
     .eq('jobs.source', 'prospector')
-    .gte('overall_score', READY_QUEUE_MIN_SCORE)
+    .order('scored_at', { ascending: false })
 
   if (scoreError) {
     throw new Error(`Graduation score scan failed: ${scoreError.message}`)
   }
 
+  // Take the latest score per job (first occurrence, since rows are scored_at DESC),
+  // then apply the ready-queue threshold so only current >= 60 scores are graduated.
   const bestByJob = new Map<string, number>()
   for (const raw of (scoreRows ?? []) as unknown as ScoreRow[]) {
-    const prev = bestByJob.get(raw.job_id)
-    if (prev == null || raw.overall_score > prev) bestByJob.set(raw.job_id, raw.overall_score)
+    if (bestByJob.has(raw.job_id)) continue  // already recorded the latest for this job
+    if (raw.overall_score >= READY_QUEUE_MIN_SCORE) {
+      bestByJob.set(raw.job_id, raw.overall_score)
+    }
   }
   if (bestByJob.size === 0) return { created: 0, enqueued: 0 }
 

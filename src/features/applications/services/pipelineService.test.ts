@@ -233,6 +233,27 @@ describe('scoreJobFit — Expected-Target scoring', () => {
     expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
   })
 
+  it('awards full Location/Auth (10) when the JD mentions hybrid', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Hybrid, Austin TX' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD mentions anywhere', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'Work from anywhere in the US' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
+  it('awards full Location/Auth (10) when the JD mentions United States', () => {
+    const profile = buildProfile({ targetLocation: 'Austin, TX' })
+    const parsed = buildParsed({ location: 'United States (any state)' })
+
+    expect(scoreJobFit(parsed, profile).breakdown.locationAuth).toBe(10)
+  })
+
   it('falls back to the baseline Location/Auth (5) when neither remote nor target location match', () => {
     const profile = buildProfile({ targetLocation: 'Austin, TX' })
     const parsed = buildParsed({ location: 'New York, NY' })

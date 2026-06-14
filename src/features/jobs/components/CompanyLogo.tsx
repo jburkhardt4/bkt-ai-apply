@@ -5,7 +5,7 @@
  * JD sheet so every job — regardless of source board — gets a consistent,
  * on-brand company identity.
  */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -42,11 +42,14 @@ interface CompanyLogoProps {
 export function CompanyLogo({ companyName, domain, className }: CompanyLogoProps) {
   const host = normalizeDomain(domain)
   const [imgFailed, setImgFailed] = useState(false)
+  const [prevHost, setPrevHost] = useState(host)
 
   // Reset the failure flag when the host changes (sidebar reused for a new job).
-  useEffect(() => {
+  // "Adjusting state during render" avoids a synchronous setState in an effect.
+  if (prevHost !== host) {
+    setPrevHost(host)
     setImgFailed(false)
-  }, [host])
+  }
 
   const initials = getInitials(companyName)
   const showImg = host != null && !imgFailed

@@ -296,8 +296,9 @@ export async function runScoreForJob(params: {
   // (BR-020, >= 60), create a discovery entry. Prospector-discovered jobs are inserted
   // into `jobs` by the Edge Function but never get an `applications` row until here.
   // Sub-threshold jobs intentionally stay as untracked listings — they don't enter
-  // the apply pipeline.
-  if ((updatedRows ?? []).length === 0 && persisted.overallScore >= 60) {
+  // the apply pipeline. Only create when the score was actually persisted (not queued
+  // for the cost cap) so the Ready Queue never shows a job whose AI scoring was deferred.
+  if ((updatedRows ?? []).length === 0 && persisted.status === 'saved' && persisted.overallScore >= 60) {
     const { error: insertError } = await supabase
       .from('applications')
       .insert({

@@ -7,19 +7,29 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { AuthContext, type AuthContextValue } from './auth-context'
-import { getSupabaseClient } from '../lib/supabase'
+import { getSupabaseClientSafe } from '../lib/supabase'
 
 interface AuthProviderProps {
   children: ReactNode
 }
 
+// Resolve once at module level — env vars are static for the lifetime of the
+// page, so this never changes. Using it as the useState initializer avoids a
+// synchronous setState inside the effect (lint: set-state-in-effect).
+const supabaseAvailable = getSupabaseClientSafe() !== null
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  // When Supabase is not configured there is nothing to load — start ready.
+  const [loading, setLoading] = useState(supabaseAvailable)
 
   useEffect(() => {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+
+    if (!supabase) {
+      return
+    }
 
     let isMounted = true
 
@@ -63,7 +73,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const signOut = useCallback(async () => {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+    if (!supabase) return
     const { error } = await supabase.auth.signOut()
 
     if (error) {

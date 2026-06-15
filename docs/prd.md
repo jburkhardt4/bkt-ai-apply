@@ -157,13 +157,15 @@ Users must be able to:
 
 System shall:
 
-1. Identify eligible jobs.
-2. Generate tailored materials.
+1. Identify eligible jobs (match_score ≥ 60 → Consideration; match_score ≥ 80 → Auto-Submit prep).
+2. Generate tailored resume and cover letter.
 3. Prepare application packet.
-4. Flag readiness status.
-5. Require explicit approval for submission where API not available.
-6. Log submission metadata.
-7. Record timestamp + source confirmation.
+4. Submit via three autonomy modes controlled by `user_settings.review_mode` (ADR-006):
+   - `review` — explicit JB approval required per application
+   - `assist` — scores ≥ threshold auto-queue as approved; JB reviews queue
+   - `auto` — scores ≥ threshold submit autonomously within server-enforced guardrails
+5. Log submission metadata and write `application_events` row on every stage transition.
+6. Record timestamp + source confirmation.
 
 System shall NOT:
 
@@ -351,15 +353,17 @@ Frontend auto-refresh without polling.
 
 ## Model Providers
 
-* OpenAI
-* Claude
-* Future plug-ins
+* Anthropic (Claude Opus 4.6, Claude Sonnet 4.6)
+* OpenAI (GPT-5)
+* Google (Gemini 2.5 Pro, Gemini 2.5 Flash)
+
+See `docs/conventions/model-routing.md` for the pinned routing matrix.
 
 ## Router Modes
 
-* Manual selection
-* Automatic topic-based routing
-* Cost-optimized routing
+* Automatic task-type-based routing (primary)
+* User-selectable chat model (JB manual override)
+* Cost-optimized fallback routing at $75/month cap (BR-050)
 
 ## Agent Types
 
@@ -417,12 +421,14 @@ Process:
 
 * Gmail API
 * Google Calendar API
+* SerpApi / Google Jobs (job discovery — prospector-cron)
 * LinkedIn (approved APIs only)
 * Workday (approved integrations only)
 * Greenhouse API
 * Ashby API
-* ZipRecruiter API
 * Indeed partner feeds (where permitted)
+
+> **Note:** ZipRecruiter removed from MVP integration set (SIGN-OFF-002).
 
 ---
 
@@ -504,12 +510,13 @@ Permissions:
 Includes:
 
 * Job ingestion (API + manual upload)
-* RAG job scoring
-* Resume generation
-* Gmail parsing
-* Calendar parsing
-* Manual approval submission workflow
-* Dashboard
+* RAG job scoring (match_score 0–100; ≥ 60 Consideration; ≥ 80 Auto-Submit prep — SIGN-OFF-005)
+* Automated Job Prospector — background cron discovery pipeline (F-017)
+* Resume and cover letter generation
+* Gmail intelligence (email classification + stage transitions)
+* Calendar intelligence (interview detection)
+* Submission workflow with three autonomy modes: review / assist / auto (ADR-006)
+* Real-time dashboard
 * Audit logging
 
 Excludes:
@@ -517,6 +524,7 @@ Excludes:
 * Multi-user SaaS
 * Advanced analytics
 * Enterprise billing
+* Browser automation via Stagehand for ATS form fill (Post-MVP — SIGN-OFF-004 partially superseded by ADR-006; browser channel exists but full Stagehand form automation is Post-MVP)
 
 ---
 
@@ -577,7 +585,11 @@ Excludes:
 
 ---
 
-# 23b. Epic — Automated Job Prospector
+# 27. F-017 Epic — Automated Job Prospector
+
+> **Status: Implemented.** Migration `20260607000001_add_prospecting_tables.sql` applied.
+> UI implemented in `src/features/jobs/` and `src/pages/ProspectorPage.tsx`.
+> Full spec: `docs/features/prospector-schema-proposal.md`, `docs/features/prospector-ui-spec.md`.
 
 ## Feature Definition and Goals
 
@@ -690,21 +702,21 @@ Prospecting run logged to prospecting_runs (id, profile_id, user_id, run_at, job
 
 ---
 
-# 27. Open Questions
+# 28. Open Questions
 
 1. Which job boards provide official APIs at required scale?
 2. What is acceptable daily submission limit?
-3. Should browser-assisted workflow be MVP?
-4. What is preferred AI cost ceiling per month?
+3. ~~Should browser-assisted workflow be MVP?~~ — Resolved: ADR-006 implements browser channel via Browserbase + Stagehand; full form automation is Post-MVP.
+4. ~~What is preferred AI cost ceiling per month?~~ — Resolved: $75/month hard cap (SIGN-OFF-001, BR-050).
 5. Is enterprise SaaS a future strategic objective?
 
 ---
 
-# 28. Assumptions
+# 29. Assumptions
 
 * JB is sole initial user.
 * All integrations must be compliant.
-* AI routing is configurable.
+* AI task routing is automatic (task-type → model) with JB-selectable override for the chat assistant.
 * Supabase remains primary infrastructure.
 
 ---

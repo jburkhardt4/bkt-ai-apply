@@ -1,10 +1,17 @@
-# Prospector UI Spec — Locked
+# Prospector UI Spec — Implemented
 
 **feature:** F-017 — Automated Job Prospector
-**status:** LOCKED — no implementation until this spec is approved by JB
+**status:** IMPLEMENTED — fully built and shipped
 **spec_date:** 2026-06-07
+**implemented_date:** 2026-06-07
 **authored_by:** Ui-Ux Agent (dispatched by Orchestrator WO-20260607-automated-job-prospector)
-**depends_on:** docs/prd.md §23b, docs/domain/business-rules.md BR-100 through BR-107
+**depends_on:** docs/prd.md §27, docs/domain/business-rules.md BR-100 through BR-107
+
+> **Implementation note:** Navigation is registered in the redesigned `AppShell.tsx`
+> (sidebar nav key `'prospector'`) and in `src/App.tsx`'s `RoutedPage` switch. The
+> original `AppSidebar.tsx` referenced below was replaced by the UI/UX redesign
+> (AppShell + AutoApplySidebar). The Prospector feature surface (`src/features/jobs/`)
+> and page (`src/pages/ProspectorPage.tsx`) are fully implemented.
 
 ---
 

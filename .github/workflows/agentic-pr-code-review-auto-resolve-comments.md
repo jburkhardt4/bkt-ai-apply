@@ -84,18 +84,22 @@ For each `AUTO_FIXABLE` comment thread:
 
 Before using `push-to-pull-request-branch`, validate your changes:
 
-- Run `pnpm typecheck` to ensure no TypeScript errors were introduced.
-- Run `pnpm lint` to ensure no lint violations were introduced.
-- If validation fails, **do not push**. Note the failure in your internal log and
-  move on to the next comment. Report failed attempts in the final summary.
+- Run `pnpm install --frozen-lockfile` first so validation has dependencies available in a clean checkout.
+- Apply all `AUTO_FIXABLE` changes you intend to keep before validating.
+- Run `pnpm typecheck` and `pnpm lint` once across the combined changes to ensure no TypeScript
+  or lint errors were introduced.
+- If combined validation fails, identify the change(s) causing the failure, discard them, revert
+  those files, and re-run validation on the remaining fixes. Report discarded fixes in the final
+  summary.
 
 ## Step 3 — Push and Resolve
 
-For each comment whose fix passed validation:
+For the batch of fixes whose combined validation passed:
 
-1. Use `push-to-pull-request-branch` to commit the fix to the PR's head branch.
+1. Use `push-to-pull-request-branch` exactly once to commit all validated fixes to the PR's head
+   branch.
    Only files under `src/`, `supabase/`, `e2e/`, and `docs/` may be pushed.
-2. Once the push succeeds, use `resolve-pull-request-review-thread` to mark the specific
+2. Once the push succeeds, use `resolve-pull-request-review-thread` to mark each corresponding
    comment thread as resolved.
 
 ## Step 4 — Final Summary

@@ -8,6 +8,7 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { BktCheckbox, BktSkeleton } from '@/components/bkt/BktCheckbox'
 import { BktInput } from '@/components/bkt/BktInput'
 import { companyLogo } from '@/components/bkt/format'
+import { openSourceUrl } from '../openSourceUrl'
 import type { ToastFn } from '@/components/bkt/toast'
 import type { SearchData, SearchJob } from '../types'
 
@@ -317,7 +318,6 @@ function SearchJobCard({
   onShowDetails,
   onAutoApply,
   onToggleSave,
-  onToast,
 }: {
   job: SearchJob
   saved: boolean
@@ -325,7 +325,6 @@ function SearchJobCard({
   onShowDetails: (job: SearchJob) => void
   onAutoApply: (job: SearchJob) => void
   onToggleSave: (job: SearchJob) => void
-  onToast: ToastFn
 }) {
   const [hover, setHover] = useState(false)
   return (
@@ -416,11 +415,7 @@ function SearchJobCard({
             size="md"
             iconRight={<Icon name="external-link" size={14} />}
             disabled={!job.sourceUrl}
-            onClick={() => {
-              if (job.sourceUrl && /^https?:\/\//i.test(job.sourceUrl)) {
-                window.open(job.sourceUrl, '_blank', 'noopener,noreferrer')
-              }
-            }}
+            onClick={() => openSourceUrl(job.sourceUrl)}
           >
             Go to Listing
           </BktButton>
@@ -722,7 +717,6 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
                   onShowDetails={onShowDetails}
                   onAutoApply={onAutoApply}
                   onToggleSave={onToggleSave}
-                  onToast={onToast}
                 />
               ))}
             </div>

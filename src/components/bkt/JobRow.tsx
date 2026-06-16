@@ -22,11 +22,14 @@ export interface JobRowProps {
   onDecline?: () => void
   onClick?: () => void
   selected?: boolean
+  /** Success-button label. Becomes "Mark as applied" for in-progress manual rows. */
+  applyLabel?: string
   style?: CSSProperties
 }
 
 const STATUS_TONE: Record<JobStatus, BktBadgeTone> = {
   Review: 'brand',
+  'In progress': 'warning',
   Applied: 'success',
   Declined: 'danger',
 }
@@ -43,6 +46,7 @@ export function JobRow({
   onDecline,
   onClick,
   selected = false,
+  applyLabel = 'Apply',
   style = {},
 }: JobRowProps) {
   const [hover, setHover] = useState(false)
@@ -137,7 +141,7 @@ export function JobRow({
             onApply?.()
           }}
         >
-          Apply
+          {applyLabel}
         </BktButton>
       </div>
     </div>

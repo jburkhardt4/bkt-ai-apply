@@ -55,6 +55,22 @@ interface LiveScoreRow {
   overall_score: number
   strengths: string[] | null
   gaps: string[] | null
+  recommendation: string | null
+  reasoning_trace: Record<string, unknown> | null
+}
+
+/** A real LLM score vs an estimated one. 'heuristic_fallback' with a cost_cap
+ *  reason means the full AI scoring was deferred under the monthly cap (BR-052,
+ *  BR-104); any other heuristic fallback is an estimate from an Edge error. */
+function deriveScoreSource(score: LiveScoreRow | null): string | undefined {
+  const source = score?.reasoning_trace?.source
+  return typeof source === 'string' ? source : undefined
+}
+
+/** Narrows the persisted recommendation (BR-142: derived from overall_score)
+ *  to the UI union; anything unexpected is treated as absent. */
+function toRecommendation(value: string | null | undefined): 'apply' | 'consider' | 'reject' | undefined {
+  return value === 'apply' || value === 'consider' || value === 'reject' ? value : undefined
 }
 
 interface LiveCompanyRow {
@@ -85,7 +101,7 @@ interface LiveApplicationRow {
   jobs: LiveJobJoin | null
 }
 
-function mapApplication(row: LiveApplicationRow): JobMatch {
+function mapApplication(row: LiveApplicationRow, manualInProgressIds?: Set<string>): JobMatch {
   const job = row.jobs
   const company = job?.companies ?? null
   const score = job?.ai_scores?.[0] ?? null
@@ -93,6 +109,9 @@ function mapApplication(row: LiveApplicationRow): JobMatch {
     company && (company.industry || company.size_range)
       ? [company.industry, company.size_range].filter(Boolean).join(' · ')
       : undefined
+  // A discovery-stage application JB has opened for a manual apply surfaces as
+  // 'In progress' (overlay only); every other stage maps via stageToStatus.
+  const manualInProgress = row.stage === 'discovery' && manualInProgressIds?.has(row.id) === true
   return {
     id: row.id,
     applicationId: row.id,
@@ -101,7 +120,7 @@ function mapApplication(row: LiveApplicationRow): JobMatch {
     company: company?.name ?? 'Unknown company',
     title: job?.title ?? 'Untitled role',
     score: Math.round(score?.overall_score ?? row.match_score ?? 0),
-    status: stageToStatus(row.stage),
+    status: manualInProgress ? 'In progress' : stageToStatus(row.stage),
     updated: relativeTime(row.updated_at),
     comp: formatComp(job?.compensation_min ?? null, job?.compensation_max ?? null),
     location: job?.location ?? undefined,
@@ -109,6 +128,8 @@ function mapApplication(row: LiveApplicationRow): JobMatch {
     skills: job?.skills ?? undefined,
     keyMatches: score?.strengths ?? undefined,
     keyGaps: score?.gaps ?? undefined,
+    recommendation: toRecommendation(score?.recommendation),
+    scoreSource: deriveScoreSource(score),
     about,
     sourceUrl: job?.source_url ?? undefined,
   }
@@ -121,14 +142,41 @@ export async function fetchJobMatches(userId: string | null): Promise<{ source: 
     const { data, error } = await supabase
       .from('applications')
       .select(
-        'id, stage, match_score, updated_at, jobs(id, title, location, description, skills, compensation_min, compensation_max, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps))',
+        'id, stage, match_score, updated_at, jobs(id, title, location, description, skills, compensation_min, compensation_max, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace))',
       )
       .eq('user_id', userId)
+      // Embedded ai_scores are versioned per job; order desc by scored_at and
+      // take only the latest so score?.[0] is the current score, not arbitrary.
+      .order('scored_at', { ascending: false, referencedTable: 'jobs.ai_scores' })
+      .limit(1, { referencedTable: 'jobs.ai_scores' })
       .order('updated_at', { ascending: false })
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as unknown as LiveApplicationRow[]
     if (rows.length === 0) return { source: 'demo', jobs: JOBS_SEED.jobs }
-    return { source: 'live', jobs: rows.map(mapApplication) }
+
+    // Overlay: discovery-stage applications JB has opened for a manual apply
+    // (review/assist modes) carry a `submission_attempt` marker event. One
+    // extra scoped query resolves which of the discovery rows are 'In progress'.
+    const discoveryIds = rows.filter((r) => r.stage === 'discovery').map((r) => r.id)
+    let manualInProgressIds: Set<string> | undefined
+    if (discoveryIds.length > 0) {
+      const markers = await supabase
+        .from('application_events')
+        .select('application_id')
+        .eq('user_id', userId)
+        .eq('event_type', 'submission_attempt')
+        .eq('metadata->>outcome', 'in_progress')
+        .eq('metadata->>source', 'manual-apply')
+        .in('application_id', discoveryIds)
+      if (!markers.error) {
+        manualInProgressIds = new Set(
+          ((markers.data ?? []) as { application_id: string | null }[])
+            .map((m) => m.application_id)
+            .filter((id): id is string => id != null),
+        )
+      }
+    }
+    return { source: 'live', jobs: rows.map((row) => mapApplication(row, manualInProgressIds)) }
   } catch {
     return { source: 'demo', jobs: JOBS_SEED.jobs }
   }
@@ -145,6 +193,45 @@ export async function applyToJob(job: JobMatch, userId: string | null): Promise<
     fromStage: (job.stage ?? 'discovery') as PipelineStage,
     toStage: 'applied',
     reason: 'Approved via Auto-Apply dashboard',
+  })
+}
+
+/** Manual-apply (review/assist modes): JB opened the original posting to apply
+ *  by hand. The application stays at stage 'discovery'; this records a
+ *  best-effort `submission_attempt` marker event so the row surfaces as
+ *  'In progress' across reloads/devices (derived in fetchJobMatches). It is
+ *  NOT a stage transition, so it does not use the transition_stage RPC. Errors
+ *  are swallowed — a missing marker must never break the optimistic UI. Demo
+ *  rows (no applicationId / no Supabase) are a client-side no-op. */
+export async function markManualInProgress(job: JobMatch, userId: string | null): Promise<void> {
+  if (!job.applicationId || !userId) return
+  const supabase = getSupabaseClientSafe()
+  if (!supabase) return
+  try {
+    await supabase.from('application_events').insert({
+      user_id: userId,
+      application_id: job.applicationId,
+      event_type: 'submission_attempt',
+      actor: 'jb_manual',
+      reason: 'Opened source posting for manual apply',
+      metadata: { outcome: 'in_progress', channel: 'manual_open', source: 'manual-apply' },
+    })
+  } catch {
+    // Best-effort marker — ignore failures so the manual-apply UX is unaffected.
+  }
+}
+
+/** Confirm a manual apply (review/assist modes): transition discovery → applied
+ *  via the transition_stage RPC (writes the audited application_events row).
+ *  Demo rows are a client-side no-op (caller updates local state). */
+export async function markManualApplied(job: JobMatch, userId: string | null): Promise<void> {
+  if (!job.applicationId || !userId) return
+  await transitionStage({
+    applicationId: job.applicationId,
+    userId,
+    fromStage: (job.stage ?? 'discovery') as PipelineStage,
+    toStage: 'applied',
+    reason: 'Marked as applied (manual)',
   })
 }
 
@@ -278,7 +365,7 @@ export async function fetchInbox(userId: string | null): Promise<{ source: DataS
 /* ---------------- search / saved board (Phase 2 data backbone) ---------------- */
 
 const JOB_SELECT =
-  'id, title, location, description, skills, compensation_min, compensation_max, remote_type, job_type, posted_at, created_at, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps)'
+  'id, title, location, description, skills, compensation_min, compensation_max, remote_type, job_type, posted_at, created_at, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace)'
 
 interface LiveSearchJobRow {
   id: string
@@ -319,6 +406,8 @@ function mapJob(row: LiveSearchJobRow): SearchJob {
     skills: row.skills ?? undefined,
     keyMatches: score?.strengths ?? undefined,
     keyGaps: score?.gaps ?? undefined,
+    recommendation: toRecommendation(score?.recommendation),
+    scoreSource: deriveScoreSource(score),
     about,
     sourceUrl: row.source_url ?? undefined,
   }
@@ -341,7 +430,17 @@ export async function fetchSearchBoard(userId: string | null): Promise<SearchBoa
   if (!supabase || !userId) return demo
   try {
     const [jobsResult, appsResult, savedResult] = await Promise.all([
-      supabase.from('jobs').select(JOB_SELECT).eq('user_id', userId).order('created_at', { ascending: false }).limit(60),
+      supabase
+        .from('jobs')
+        .select(JOB_SELECT)
+        .eq('user_id', userId)
+        // Latest ai_scores row only (versioned per job) so mapJob's score?.[0]
+        // is the current score. Ordering the embedded resource needs both the
+        // referenced .order and .limit (PostgREST).
+        .order('scored_at', { ascending: false, referencedTable: 'ai_scores' })
+        .limit(1, { referencedTable: 'ai_scores' })
+        .order('created_at', { ascending: false })
+        .limit(60),
       supabase.from('applications').select('job_id').eq('user_id', userId),
       supabase.from('saved_jobs').select('job_id').eq('user_id', userId),
     ])
@@ -392,6 +491,9 @@ export async function fetchSavedJobs(userId: string | null): Promise<{ source: D
       .from('saved_jobs')
       .select(`job_id, created_at, jobs(${JOB_SELECT})`)
       .eq('user_id', userId)
+      // Latest embedded ai_scores row only (nested two levels: jobs.ai_scores).
+      .order('scored_at', { ascending: false, referencedTable: 'jobs.ai_scores' })
+      .limit(1, { referencedTable: 'jobs.ai_scores' })
       .order('created_at', { ascending: false })
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as unknown as LiveSavedRow[]

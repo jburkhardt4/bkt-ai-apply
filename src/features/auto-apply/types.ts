@@ -4,7 +4,11 @@
 // into these shapes in services/autoApplyService.ts; the same shapes
 // are used by the demo seed data in ./data.
 
-export type JobStatus = 'Review' | 'Applied' | 'Declined'
+// 'In progress' is a view-model-only overlay status: the application row stays
+// at stage 'discovery' while JB completes a manual apply (opened via the
+// posting's source URL in review/assist modes). It is derived from a
+// `submission_attempt` marker event, never stored on `applications.stage`.
+export type JobStatus = 'Review' | 'In progress' | 'Applied' | 'Declined'
 
 /** One row of the Your Jobs table / Quick Review deck. */
 export interface JobMatch {
@@ -27,6 +31,11 @@ export interface JobMatch {
   why?: string
   keyMatches?: string[]
   keyGaps?: string[]
+  /** Persisted AI recommendation (BR-142: derived from overall_score). */
+  recommendation?: 'apply' | 'consider' | 'reject'
+  /** reasoning_trace.source — distinguishes a real LLM score ('llm') from an
+   *  estimated one ('heuristic_fallback', e.g. cost-capped). Undefined = unknown. */
+  scoreSource?: string
   about?: string
   /** Direct URL to the original job posting. */
   sourceUrl?: string
@@ -87,6 +96,11 @@ export interface SearchJob {
   why?: string
   keyMatches?: string[]
   keyGaps?: string[]
+  /** Persisted AI recommendation (BR-142: derived from overall_score). */
+  recommendation?: 'apply' | 'consider' | 'reject'
+  /** reasoning_trace.source — distinguishes a real LLM score ('llm') from an
+   *  estimated one ('heuristic_fallback', e.g. cost-capped). Undefined = unknown. */
+  scoreSource?: string
   about?: string
   /** Direct URL to the original job posting. */
   sourceUrl?: string

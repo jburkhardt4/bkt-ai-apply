@@ -75,3 +75,11 @@ body {
 #root {
   min-height: 100svh;
 }
+
+/* JobFitPanel chip reveal — staggered (delay set inline), GPU-only opacity +
+   translateY, strong ease-out under 300ms. Reuses the bkt-fade-up keyframe,
+   which the global prefers-reduced-motion block already collapses to instant. */
+.bkt-fit-chip {
+  opacity: 0;
+  animation: bkt-fade-up 240ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}

@@ -3,6 +3,7 @@ import { masterProfile } from '../data/masterProfile'
 import type { CandidateProfile } from '../../../types/pipeline'
 import { parseJobDescription, scoreJobFit } from './pipelineService'
 import { scoreJobFitWithLlm } from './aiScoringService'
+import { fetchCandidateResumeText } from './candidateProfileService'
 import {
   dedupeBySourceUrl,
   parseIngestionCsv,
@@ -18,17 +19,33 @@ import {
  * Called by runScoreForJob. All other masterProfile fields (seniority, domain,
  * tooling, constraints) are kept as-is — only the fields the Prospector form
  * exposes are overridden.
+ *
+ * `resumeText`, when provided, is attached so the LLM profile payload carries
+ * the user's real master resume (authoritative over the keyword lists). It is
+ * omitted entirely when null/empty, so the heuristic scorer is unaffected.
  */
-export function buildScoringProfile(override?: {
-  locations?: string[] | null
-  keywords?: string[] | null
-} | null): CandidateProfile {
+export function buildScoringProfile(
+  override?: {
+    locations?: string[] | null
+    keywords?: string[] | null
+  } | null,
+  resumeText?: string | null,
+): CandidateProfile {
   const location = override?.locations?.[0]?.trim() || masterProfile.targetLocation
   const extraKeywords = (override?.keywords ?? [])
     .map((k) => k.toLowerCase().trim())
     .filter(Boolean)
   const mergedSkills = Array.from(new Set([...masterProfile.skillKeywords, ...extraKeywords]))
-  return { ...masterProfile, targetLocation: location, skillKeywords: mergedSkills }
+  const profile: CandidateProfile = {
+    ...masterProfile,
+    targetLocation: location,
+    skillKeywords: mergedSkills,
+  }
+  const trimmedResume = resumeText?.trim()
+  if (trimmedResume) {
+    profile.resumeText = trimmedResume
+  }
+  return profile
 }
 
 export interface IngestionResultRow {
@@ -259,7 +276,12 @@ export async function runScoreForJob(params: {
     throw new Error(`Failed to load job for scoring: ${jobError.message}`)
   }
 
-  const scoringProfile = buildScoringProfile(params.prospectorProfile)
+  // Best-effort: enrich the scoring profile with the user's master resume text
+  // when a plain-text resume exists in storage. On null (PDF-only, no resume, or
+  // any failure) scoring behaves exactly as before. This only grows the LLM
+  // profile payload; the cost-cap path in scoreJobFitWithLlm is untouched.
+  const resumeText = await fetchCandidateResumeText(params.userId)
+  const scoringProfile = buildScoringProfile(params.prospectorProfile, resumeText)
   const textToScore = job.description?.trim() ? job.description : job.title
   const parsed = parseJobDescription(textToScore, scoringProfile)
   // Deterministic heuristic — kept as the explicit cost-cap / Edge-error

@@ -33,7 +33,7 @@ test.describe('Explorer: autonomous agent @explorer', () => {
   // Override to 5 minutes for this agent-loop test
   test.setTimeout(300_000)
 
-  test('autonomous agent explores the authenticated app and reports findings', async ({}, testInfo) => {
+  test('autonomous agent explores the authenticated app and reports findings', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

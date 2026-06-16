@@ -2,7 +2,7 @@
 
 **task_id:** BKT-AIAPPLY-PHASE1-REQS-LOCK-002
 **status:** LIVING DOCUMENT — append only; never delete rules; supersede with new rule ID
-**last_updated:** 2026-06-13
+**last_updated:** 2026-06-16
 
 ---
 
@@ -194,3 +194,13 @@
 | BR-143 | Document generation runs through the thin `generate-document` Edge Function (routed `cover_letter_generation` → anthropic Opus, `resume_rewriting` → openai GPT-5). The function performs no DB writes and uses no service-role key; cost-gating, persistence, and usage logging stay client-side in `documentGenerationService`. On any Edge error the deterministic template builder is the fallback, flagged `metadata.source = 'template_fallback'` | ADR-008, BR-122, BR-052 |
 | BR-144 | Generated documents are persisted to the `documents` table only when persistence is explicitly requested (the DocBuilder align path), reusing `documentStorageService.createDocumentVersion` (Storage + versioned row, content_hash, RLS, BR-070/071); the submission-packet flow persists and links separately, so generation never double-writes | ADR-008, BR-070, BR-071, BR-007 |
 | BR-145 | The auto-apply dashboard "Applications Submitted" stat is derived from `applications` DB truth — an application counts as submitted when `submitted_at` is set or its stage is a post-`discovery` happy-path stage (applied … hired) — never from client/localStorage state; demo mode shows a stable seed figure | BR-135, BR-013 |
+
+---
+
+## Manual Apply & Apply-Macro Rules (ADR-009)
+
+| ID | Rule | Source |
+| --- | --- | --- |
+| BR-149 | In `review`/`assist` (Hybrid) modes, the Dashboard green "Apply" and the dashboard JD-sidebar Apply buttons open the job's `source_url` in a new tab and move the application to a view-model **Manual / In-progress** status. The application's `stage` stays `discovery`; the in-progress marker is a client-written `application_events` row (`event_type='submission_attempt'`, `actor='jb_manual'`, `metadata.outcome='in_progress'`, `metadata.source='manual-apply'`). A follow-up **"Mark as applied"** action fires the audited `discovery → applied` transition via the `transition_stage` RPC. No new pipeline stage is introduced (BR-002/BR-013 unaffected); in `auto` mode the button keeps its existing auto-apply behavior | ADR-009, BR-002, BR-130, BR-135 |
+| BR-150 | Match-scoring **input** prefers the user's uploaded master-resume text (read from the `documents` bucket when a `.txt` resume exists, via `fetchCandidateResumeText`) over the hardcoded `masterProfile` keyword set; when no extractable text exists it falls back to the keyword profile (no client-side PDF parsing). Resume text is length-capped (≈12k chars) to bound `tokens_in`; the `$75/user/month` cost cap (BR-052) and the heuristic fallback (BR-141) are unchanged. Populating a pre-extracted `master_resume_text` via real PDF extraction is a documented follow-up | ADR-009, ADR-007, BR-140, BR-141 |
+| BR-151 | The Apply-Macro browser extension is **human-in-the-loop only**: it autofills ATS form fields from the user's own (RLS-scoped) profile/resume but **never auto-submits** (`submit.autoClick = false`), never bypasses CAPTCHAs, auth walls, or rate limits, and embeds **no** LLM or service-role key — match scoring is brokered through the JWT-gated `score-job-fit` Edge Function (keys stay Supabase secrets). Anything the macro cannot complete is left for the human. This complements, and does not reverse, ADR-006's deferral of autonomous browser submission | ADR-009, BR-032, BR-033, BR-034, BR-122 |

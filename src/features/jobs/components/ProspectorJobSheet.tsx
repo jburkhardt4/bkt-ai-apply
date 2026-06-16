@@ -11,9 +11,11 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import type { ProspectorSearchResult } from '../hooks/useProspectorSearchResults'
+import { useJobFitScore } from '../hooks/useJobFitScore'
 import { formatJobDescription } from '../services/jdFormattingService'
 import { CompanyLogo } from './CompanyLogo'
 import { JobDescriptionMarkdown } from './JobDescriptionMarkdown'
+import { JobFitPanel } from './JobFitPanel'
 import {
   REMOTE_BADGE_CLASSES,
   formatCompensation,
@@ -102,6 +104,11 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
   } | null>(null)
 
   const jobId = job?.id ?? null
+
+  // AI fit score for the open job (latest ai_scores row, RLS-scoped). Gated on a
+  // userId + open job inside the hook; degrades to unscored/error otherwise.
+  const fit = useJobFitScore(open ? userId : null, open ? jobId : null)
+
   // Prefer the description normalized at creation time (or lazily backfilled):
   // when present it renders instantly — no LLM round-trip, no spinner.
   const stored = (job?.description_formatted ?? '').trim()
@@ -243,6 +250,24 @@ export function ProspectorJobSheet({ job, open, onOpenChange }: ProspectorJobShe
 
         {/* ── Scrollable description body ────────────────────────────── */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {/* AI fit match — shown before the JD so the score is seen pre-Apply.
+              Gated on an authenticated user (the score is RLS-scoped). */}
+          {userId && (
+            <div className="mb-6 rounded-xl border border-border bg-card p-5">
+              <div className="mb-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
+                AI match
+              </div>
+              <JobFitPanel
+                score={fit.data.score}
+                recommendation={fit.data.recommendation}
+                matched={fit.data.matched}
+                missing={fit.data.missing}
+                state={fit.loading ? 'loading' : fit.data.state}
+              />
+            </div>
+          )}
+
           {hasContent ? (
             effectiveFormatting ? (
               <JobDescriptionSkeleton />

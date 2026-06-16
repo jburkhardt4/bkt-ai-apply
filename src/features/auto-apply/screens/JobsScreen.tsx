@@ -64,6 +64,7 @@ export function JobsScreen({
   const [query, setQuery] = useState('')
 
   const reviewCount = jobs.filter((j) => j.status === 'Review').length
+  const inProgressCount = jobs.filter((j) => j.status === 'In progress').length
   const declinedCount = jobs.filter((j) => j.status === 'Declined').length
 
   const visible = jobs.filter((j) => {
@@ -72,9 +73,11 @@ export function JobsScreen({
         ? true
         : filter === 'Review Matches'
           ? j.status === 'Review'
-          : filter === 'Applied'
-            ? j.status === 'Applied'
-            : j.status === 'Declined'
+          : filter === 'In progress'
+            ? j.status === 'In progress'
+            : filter === 'Applied'
+              ? j.status === 'Applied'
+              : j.status === 'Declined'
     const q = query.trim().toLowerCase()
     return f && (!q || j.company.toLowerCase().includes(q) || j.title.toLowerCase().includes(q))
   })
@@ -105,6 +108,7 @@ export function JobsScreen({
       <div style={{ display: 'flex', alignItems: 'center', gap: 22, borderBottom: '1px solid var(--border)' }}>
         <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => setFilter('All')} />
         <FilterTab label="Review Matches" count={reviewCount} active={filter === 'Review Matches'} onClick={() => setFilter('Review Matches')} />
+        <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => setFilter('In progress')} />
         <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => setFilter('Applied')} />
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => setFilter('Declined')} />
         <div style={{ flex: 1 }}></div>
@@ -158,6 +162,7 @@ export function JobsScreen({
               comp={showComp ? j.comp || '—' : null}
               updatedAt={j.updated}
               selected={selectedId === j.id}
+              applyLabel={j.status === 'In progress' ? 'Mark as applied' : 'Apply'}
               onClick={() => onOpenJob(j.id)}
               onApply={() => onApply(j.id)}
               onDecline={() => onDecline(j.id)}

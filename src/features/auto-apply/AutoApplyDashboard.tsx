@@ -7,7 +7,15 @@
 import { useState } from 'react'
 import { useBktToast } from '@/components/bkt/toast-context'
 import { useAuth } from '@/contexts/auth-context'
-import { applyToJob, declineJob, fetchApplicationTimeline, fetchJobMatches } from './services/autoApplyService'
+import {
+  applyToJob,
+  declineJob,
+  fetchApplicationTimeline,
+  fetchJobMatches,
+  markManualApplied,
+  markManualInProgress,
+} from './services/autoApplyService'
+import { openSourceUrl } from './openSourceUrl'
 import { fetchSubmittedCount } from '@/features/applications/services/applicationService'
 import { useAsyncData } from './hooks/useAutoApplyData'
 import { useBudget, useCredits, usePaused, useReviewMode } from './state'
@@ -58,13 +66,50 @@ export function AutoApplyDashboard() {
   const apply = (id: JobMatch['id']) => {
     const j = jobs.find((x) => x.id === id)
     if (!j) return
-    setStatus(id, 'Applied')
-    setCredits((c) => Math.max(0, c - 1))
-    toast(`Application queued — ${j.company}`, 'circle-check', 'var(--bkt-success)')
+
+    // Auto mode: the dashboard queues the application for autonomous submission
+    // (unchanged behavior — spends a credit, optimistic Applied).
+    if (reviewMode === 'auto') {
+      setStatus(id, 'Applied')
+      setCredits((c) => Math.max(0, c - 1))
+      toast(`Application queued — ${j.company}`, 'circle-check', 'var(--bkt-success)')
+      if (live) {
+        applyToJob(j, userId)
+          .then(() => reloadSubmitted())
+          .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
+      }
+      return
+    }
+
+    // Review / Assist (Hybrid) modes: JB applies by hand on the source posting.
+    if (j.status === 'In progress') {
+      // Second click on an in-progress row confirms the manual apply.
+      setStatus(id, 'Applied')
+      toast(`Marked as applied — ${j.company}`, 'circle-check', 'var(--bkt-success)')
+      if (live) {
+        markManualApplied(j, userId)
+          .then(() => {
+            reload()
+            reloadSubmitted()
+          })
+          .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
+      }
+      return
+    }
+
+    // First click: open the original posting and move the row to In progress.
+    // A manual open is not a submission, so no credit is spent.
+    const opened = openSourceUrl(j.sourceUrl)
+    setStatus(id, 'In progress')
+    if (opened) {
+      toast(`Opened ${j.company} — mark as applied when done`, 'external-link', 'var(--bkt-blue-300)')
+    } else {
+      toast('No source link — mark as applied manually', 'circle-alert', 'var(--bkt-warning)')
+    }
     if (live) {
-      applyToJob(j, userId)
-        .then(() => reloadSubmitted())
-        .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
+      markManualInProgress(j, userId)
+        .then(() => reload())
+        .catch(() => undefined)
     }
   }
 

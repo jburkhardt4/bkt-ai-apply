@@ -8,12 +8,12 @@
  */
 import { test, expect } from '@playwright/test'
 import { z } from 'zod'
-import { makeStagehand, loginWithTestUser, hasTestCredentials, UAT_BASE_URL } from './_helpers/setup'
+import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers/setup'
 
 test.describe('Auth: AI-driven login + session @auth', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('AI agent logs in and describes the authenticated landing page', async ({}, testInfo) => {
+  test('AI agent logs in and describes the authenticated landing page', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -63,7 +63,7 @@ test.describe('Auth: AI-driven login + session @auth', () => {
     }
   })
 
-  test('AI agent can navigate to all main pages without errors', async ({}, testInfo) => {
+  test('AI agent can navigate to all main pages without errors', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
     const pageResults: Array<{ page: string; url: string; hasErrors: boolean; errorText?: string }> =

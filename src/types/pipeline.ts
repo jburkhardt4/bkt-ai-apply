@@ -62,6 +62,11 @@ export interface CandidateProfile {
   domainKeywords: string[]
   toolingKeywords: string[]
   quantifiedOutcomes: string[]
+  /** The user's uploaded master resume as plain text, when retrievable from the
+   *  documents bucket (PDF-only resumes are not parsed — left undefined).
+   *  Backward-compatible: the heuristic scorer ignores it; only the LLM profile
+   *  payload carries it, where it is authoritative over the keyword lists. */
+  resumeText?: string
   constraints: {
     requireHumanApprovalForSubmit: boolean
     autoApplyThreshold: number

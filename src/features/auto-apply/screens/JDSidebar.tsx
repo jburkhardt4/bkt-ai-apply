@@ -8,6 +8,7 @@ import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import { ChipPill, QualLine, SkillTag } from '@/components/bkt/bits'
 import { companyLogo } from '@/components/bkt/format'
+import { openSourceUrl } from '../openSourceUrl'
 import type { TimelineEvent } from '../services/autoApplyService'
 import type { JobMatch, SearchJob } from '../types'
 
@@ -71,6 +72,17 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
     setTab('overview')
   }
   if (!job) return null
+
+  // Dashboard JobMatch rows mid manual-apply (review/assist) get the follow-up
+  // label; SearchJob has no status, so /search keeps "Apply".
+  const applyLabel = 'status' in job && job.status === 'In progress' ? 'Mark as applied' : 'Apply'
+
+  // Job Fit tab states: a 0 score with no matches/gaps means no AI score has
+  // been persisted yet; a heuristic_fallback source means the shown score is an
+  // estimate (e.g. full AI scoring queued under the monthly cap, BR-141).
+  const fitUnscored =
+    job.score === 0 && (job.keyMatches ?? []).length === 0 && (job.keyGaps ?? []).length === 0
+  const fitEstimated = job.scoreSource === 'heuristic_fallback'
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', justifyContent: 'flex-end' }}>
@@ -215,9 +227,24 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
               </div>
             ))}
 
-          {tab === 'fit' && (
+          {tab === 'fit' && fitUnscored && (
+            <div
+              style={{
+                border: '1px dashed var(--border-strong)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '26px 20px',
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+                font: '400 var(--text-sm)/1.5 var(--font-body)',
+              }}
+            >
+              Not scored yet. This role has not been matched against your profile.
+            </div>
+          )}
+
+          {tab === 'fit' && !fitUnscored && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <span style={{ font: '700 var(--text-2xl)/1 var(--font-display)', letterSpacing: 'var(--tracking-tighter)', color: 'var(--text-strong)' }}>
                   {job.score}/100
                 </span>
@@ -230,6 +257,20 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
                 >
                   {job.score >= 80 ? 'Perfect fit' : job.score >= 65 ? 'Strong fit' : 'Possible fit'}
                 </span>
+                {fitEstimated && (
+                  <span
+                    style={{
+                      font: '600 var(--text-xs)/1 var(--font-body)',
+                      color: 'var(--text-muted)',
+                      background: 'var(--bkt-slate-100)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-pill)',
+                      padding: '5px 10px',
+                    }}
+                  >
+                    Estimated — full AI scoring queued
+                  </span>
+                )}
               </div>
               <div
                 style={{
@@ -285,9 +326,7 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
             style={{ borderRadius: 'var(--radius-pill)' }}
             iconRight={<Icon name="external-link" size={15} />}
             disabled={!job.sourceUrl}
-            onClick={() => {
-              if (job.sourceUrl && /^https?:\/\//i.test(job.sourceUrl)) window.open(job.sourceUrl, '_blank', 'noopener,noreferrer')
-            }}
+            onClick={() => openSourceUrl(job.sourceUrl)}
           >
             View Job
           </BktButton>
@@ -312,7 +351,7 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
               onClose()
             }}
           >
-            Apply
+            {applyLabel}
           </BktButton>
         </div>
       </section>

@@ -13,7 +13,7 @@ import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers
 test.describe('AI Chat: assistant interaction @ai-chat', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('AI agent opens chat panel and sends a test message', async ({}, testInfo) => {
+  test('AI agent opens chat panel and sends a test message', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -81,7 +81,7 @@ test.describe('AI Chat: assistant interaction @ai-chat', () => {
     }
   })
 
-  test('AI agent checks chat input handles Ctrl+Enter without newline', async ({}, testInfo) => {
+  test('AI agent checks chat input handles Ctrl+Enter without newline', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

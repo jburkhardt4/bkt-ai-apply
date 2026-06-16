@@ -7,6 +7,9 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import type { ToastFn } from '@/components/bkt/toast'
 import { brandAsset } from '../assets'
+import { REVIEW_MODES } from '../reviewModes'
+import { useReviewMode } from '../state'
+import type { ReviewModeId } from '../types'
 
 /* ─────────────── COMPENSATION CONVERSION HELPERS ─────────────── */
 // Standard US work year used for hourly⇄salary conversion.
@@ -444,31 +447,34 @@ interface LocationPref {
   hybrid: boolean
 }
 
-function ModeCards({ appMode, setAppMode, stack = false }: { appMode: string; setAppMode: (m: string) => void; stack?: boolean }) {
+// The three preference cards map onto the same review-mode setting as the
+// dashboard toggle (user_settings.review_mode). "Hybrid" is the human label for
+// the 'assist' mode; the human copy/badges are unchanged from the design kit.
+function ModeCards({ mode, onChange, stack = false }: { mode: ReviewModeId; onChange: (m: ReviewModeId) => void; stack?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: stack ? 'column' : 'row', gap: 16, flexWrap: 'wrap' }}>
       <PrefModeCard
         icon="user-round"
         title="Hybrid mode"
         badge="Best of both worlds"
-        active={appMode === 'hybrid'}
-        onClick={() => setAppMode('hybrid')}
+        active={mode === 'assist'}
+        onClick={() => onChange('assist')}
         description="Best balance of speed and control. We auto-apply to high-fit jobs instantly, and queue lower-fit jobs for your review before sending."
       />
       <PrefModeCard
         icon="zap"
         title="Auto mode"
         badge="Save time"
-        active={appMode === 'auto'}
-        onClick={() => setAppMode('auto')}
+        active={mode === 'auto'}
+        onClick={() => onChange('auto')}
         description="Save time, no approval needed. We apply to all matching jobs automatically as they appear, so you never miss an opportunity."
       />
       <PrefModeCard
         icon="eye"
         title="Review mode"
         badge="Stay in control"
-        active={appMode === 'review'}
-        onClick={() => setAppMode('review')}
+        active={mode === 'review'}
+        onClick={() => onChange('review')}
         description="Review and approve each job before we apply. Perfect if you want full visibility on every application that goes out."
       />
     </div>
@@ -529,8 +535,15 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   const [phone, setPhone] = useState('(555) 867-5309')
   const [email, setEmail] = useState('john@bktadvisory.com')
   const [relocation, setRelocation] = useState(false)
-  const [appMode, setAppMode] = useState('hybrid')
+  // Same setting as the dashboard ReviewModeMenu (user_settings.review_mode),
+  // so the mode cards and the dashboard toggle stay in lockstep.
+  const [reviewMode, setReviewMode] = useReviewMode()
   const [emailCopies, setEmailCopies] = useState(true)
+
+  const changeReviewMode = (m: ReviewModeId) => {
+    setReviewMode(m)
+    onToast(`Switched to ${REVIEW_MODES.find((x) => x.id === m)?.label ?? m}`, 'settings-2', 'var(--bkt-blue-300)')
+  }
 
   const addCity = (idx: number, city: string) => setLocations((ls) => ls.map((l, i) => (i === idx ? { ...l, cities: [...l.cities, city] } : l)))
   const removeCity = (idx: number, city: string) => setLocations((ls) => ls.map((l, i) => (i === idx ? { ...l, cities: l.cities.filter((c) => c !== city) } : l)))
@@ -708,7 +721,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               <p style={{ margin: 0, font: '400 var(--text-sm)/1.6 var(--font-body)', color: 'var(--text-muted)', maxWidth: 620 }}>
                 How should we apply to jobs for you? Pick the mode that best fits your style.
               </p>
-              <ModeCards appMode={appMode} setAppMode={setAppMode} />
+              <ModeCards mode={reviewMode} onChange={changeReviewMode} />
               <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
             </PrefSection>
           </div>
@@ -990,7 +1003,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               {/* Mirror the compensation treatment — half-width block with the
                   mode cards stacked rather than stretched across the section. */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
-                <ModeCards appMode={appMode} setAppMode={setAppMode} stack />
+                <ModeCards mode={reviewMode} onChange={changeReviewMode} stack />
                 <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
               </div>
             </PrefSection>

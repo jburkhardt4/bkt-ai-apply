@@ -1,0 +1,39 @@
+%% Domain-level call/dispatch graph. Entry points (▶) are deployment-defined:
+%% SPA bootstrap (main.tsx) + Edge Function handlers; ⏰ = pg_cron scheduled.
+graph TD
+  classDef entry fill:#cc785c,stroke:#fff,color:#fff;
+
+  SHELL["▶ App Shell & Auth"]:::entry
+  PROS["⏰ Job Discovery & Prospector"]:::entry
+  GMAIL["⏰ Gmail Integration"]:::entry
+  PIPE["Applications Pipeline & Events"]
+  AUTO["Auto-Apply Workspace & Settings"]
+  DOCS["Documents"]
+  CHAT["Conversational AI Assistant"]
+  SETT["Settings & Provider Status"]
+  AIRT["AI Routing & Scoring"]
+  SUB["Auto-Submission Engine"]
+  DB["Data Schema & RLS Migrations"]
+
+  PIPE --> SHELL
+  PROS --> AIRT
+  PROS --> SUB
+  AUTO --> PIPE
+  AUTO --> GMAIL
+  DOCS --> AIRT
+  CHAT --> AIRT
+  SETT --> AIRT
+  SUB --> PIPE
+  SUB --> DOCS
+  GMAIL --> PIPE
+  GMAIL --> AIRT
+  SHELL --> DB
+  PIPE --> DB
+  PROS --> DB
+  AUTO --> DB
+  DOCS --> DB
+  CHAT --> DB
+  AIRT --> DB
+  SUB --> DB
+  GMAIL --> DB
+  SETT --> DB

@@ -419,8 +419,6 @@ function SearchJobCard({
             onClick={() => {
               if (job.source_url && /^https?:\/\//i.test(job.source_url)) {
                 window.open(job.source_url, '_blank', 'noopener,noreferrer')
-              } else {
-                onToast(`No listing URL available — ${job.company}`, 'external-link', 'var(--bkt-zinc-400)')
               }
             }}
           >

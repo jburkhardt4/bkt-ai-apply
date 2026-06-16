@@ -34,8 +34,24 @@ export function encodeBase64Url(input: string): string {
   return encodeBase64(input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+/**
+ * Reject header field values containing CR/LF — prevents RFC 5322 header
+ * injection (a crafted `to`/`subject` smuggling e.g. a `Bcc:` line into mail
+ * sent from the connected account). Header values never span lines; the body
+ * (everything after the blank line) is not a header and is unaffected.
+ */
+export function assertHeaderSafe(value: string, field: string): void {
+  if (/[\r\n]/.test(value)) {
+    throw new Error(`gmail-send: illegal CR/LF in "${field}" header value (possible header injection)`)
+  }
+}
+
 /** Builds the full RFC 2822 message (CRLF line endings, UTF-8 plain text). */
 export function buildMimeMessage(input: MimeMessageInput): string {
+  assertHeaderSafe(input.from, 'From')
+  assertHeaderSafe(input.to, 'To')
+  assertHeaderSafe(input.subject, 'Subject')
+  if (input.inReplyTo) assertHeaderSafe(input.inReplyTo, 'In-Reply-To')
   const headers: string[] = [
     `From: ${input.from}`,
     `To: ${input.to}`,

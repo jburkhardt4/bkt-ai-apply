@@ -1,0 +1,26 @@
+%% Critical path: the highest-stakes business flow (real-world side effect).
+%% "A job seeker approves an application and it is auto-submitted."
+%% No production telemetry available — wall-clock p50/p99 annotations omitted (see ASSESSMENT.md §4).
+flowchart TD
+  A["Job seeker reviews packet at submission gate<br/><i>SubmissionGatePanel.tsx</i>"]
+  B["Record approval as immutable event + enqueue<br/><i>submissionApprovalService.ts → transition_stage()</i><br/>writes application_events, application_queue"]
+  C{"SUBMISSION_LIVE == 'true'?"}
+  D["Dry run / shadow — no external send<br/><i>submission-worker (kill-default)</i>"]
+  E["Worker drains approved rows<br/><i>submission-worker/index.ts</i>"]
+  F{"Resolve channel<br/><i>resolveChannel.ts</i>"}
+  G["ATS API submit (Greenhouse/Lever/Ashby)<br/><i>atsAdapters.ts</i>"]
+  H["Browser fallback (Browserbase/Stagehand)<br/><i>browserAdapter.ts</i>"]
+  I["Manual fallback (no channel)"]
+  J["Notify seeker of outcome<br/><i>notify.ts → notifications</i>"]
+
+  A --> B --> C
+  C -- no --> D
+  C -- yes --> E
+  E --> F
+  F -- api/ats --> G
+  F -- browser --> H
+  F -- none --> I
+  G --> J
+  H --> J
+  I --> J
+  D --> J

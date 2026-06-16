@@ -26,7 +26,7 @@ const KNOWN_STAGES = [
 test.describe('Pipeline: AI exploration @pipeline', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('AI agent reports pipeline page state', async (_fixtures, testInfo) => {
+  test('AI agent reports pipeline page state', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -75,7 +75,7 @@ test.describe('Pipeline: AI exploration @pipeline', () => {
     }
   })
 
-  test('AI agent checks for unexpected stage labels', async (_fixtures, testInfo) => {
+  test('AI agent checks for unexpected stage labels', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

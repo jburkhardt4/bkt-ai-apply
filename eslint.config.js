@@ -34,4 +34,13 @@ export default defineConfig([
       globals: globals.node,
     },
   },
+  {
+    // Playwright requires the test callback's first argument to be a destructuring
+    // pattern; specs that use only `testInfo` need an empty one — `async ({}, testInfo)`.
+    // Allow that empty *parameter* pattern (real empty destructurings still error).
+    files: ['e2e/**/*.{ts,tsx}'],
+    rules: {
+      'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }],
+    },
+  },
 ])

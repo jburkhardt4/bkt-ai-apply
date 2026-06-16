@@ -21,7 +21,7 @@ import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers
 test.describe('Apply Handoff: manual source-link apply @apply-handoff', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('the review-mode control is present on the dashboard', async (_fixtures, testInfo) => {
+  test('the review-mode control is present on the dashboard', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -53,7 +53,7 @@ test.describe('Apply Handoff: manual source-link apply @apply-handoff', () => {
     }
   })
 
-  test('JD sidebar exposes an Apply action and a View Job link', async (_fixtures, testInfo) => {
+  test('JD sidebar exposes an Apply action and a View Job link', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

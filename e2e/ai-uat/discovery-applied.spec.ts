@@ -26,7 +26,7 @@ const UAT_JOB_TITLE = '[UAT] Senior Salesforce Administrator'
 test.describe('Discovery → Applied: manual apply on a real session @discovery-applied', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('drives the seeded UAT job from discovery to applied', async (_fixtures, testInfo) => {
+  test('drives the seeded UAT job from discovery to applied', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

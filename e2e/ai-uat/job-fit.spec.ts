@@ -19,7 +19,7 @@ import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers
 test.describe('Job Fit: Match Score + Fit Summary @job-fit', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('dashboard JD sidebar Job Fit tab renders a score or unscored state', async (_fixtures, testInfo) => {
+  test('dashboard JD sidebar Job Fit tab renders a score or unscored state', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -75,7 +75,7 @@ test.describe('Job Fit: Match Score + Fit Summary @job-fit', () => {
     }
   })
 
-  test('Prospector job sheet renders the fit panel without errors', async (_fixtures, testInfo) => {
+  test('Prospector job sheet renders the fit panel without errors', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

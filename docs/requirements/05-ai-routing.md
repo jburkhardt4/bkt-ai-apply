@@ -38,6 +38,12 @@
 | Intent routing | Gemini 2.5 Flash | Google | Primary | Chat intent detection |
 | General Q&A | Claude Sonnet 4.6 | Anthropic | Primary | Cost-efficient general chat |
 
+> **Superseded (2026-06-16, ADR-010):** `match_scoring`, `cover_letter_generation`, and
+> `interview_prep` standardized from Claude Opus 4.6 to **Claude Sonnet 4.6**; `jd_formatting`
+> (added post-lock) moved from the retired Claude 3.5 Haiku to **Claude Sonnet 4.6** — the fix for
+> the `format-jd` 502. Non-Anthropic routes unchanged. Implementation mirror:
+> `docs/conventions/model-routing.md`.
+
 ---
 
 ## Routing Rules

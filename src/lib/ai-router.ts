@@ -18,19 +18,19 @@ interface RoutingEntry {
 const ROUTING_MATRIX: Record<AiTaskType, RoutingEntry> = {
   cover_letter_generation: {
     taskType: 'cover_letter_generation',
-    modelName: 'Claude Opus 4.6',
+    modelName: 'Claude Sonnet 4.6',
     modelProvider: 'anthropic',
     isCritical: false,
   },
   interview_prep: {
     taskType: 'interview_prep',
-    modelName: 'Claude Opus 4.6',
+    modelName: 'Claude Sonnet 4.6',
     modelProvider: 'anthropic',
     isCritical: false,
   },
   match_scoring: {
     taskType: 'match_scoring',
-    modelName: 'Claude Opus 4.6',
+    modelName: 'Claude Sonnet 4.6',
     modelProvider: 'anthropic',
     isCritical: false,
   },
@@ -78,7 +78,7 @@ const ROUTING_MATRIX: Record<AiTaskType, RoutingEntry> = {
   },
   jd_formatting: {
     taskType: 'jd_formatting',
-    modelName: 'Claude 3.5 Haiku',
+    modelName: 'Claude Sonnet 4.6',
     modelProvider: 'anthropic',
     isCritical: false,
   },

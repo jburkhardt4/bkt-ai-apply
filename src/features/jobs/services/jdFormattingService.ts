@@ -86,8 +86,23 @@ export async function formatJobDescription(
   })
 
   if (error || !data || typeof data.markdown !== 'string' || data.markdown.length === 0) {
-    // Edge Function unreachable or returned a normalized error — render the raw
-    // description so the panel stays usable.
+    // Edge Function unreachable or returned a normalized error. The sidebar must
+    // stay usable, so we still render the raw description — but no longer
+    // silently: log the specific provider `{ code }` from the normalized
+    // `{ error, code, provider }` body (mirrors aiScoringService observability)
+    // so JD-format outages (e.g. a stale model route) are diagnosable.
+    if (error) {
+      let code = 'unknown'
+      try {
+        const body = (await (error as { context?: { json?: () => Promise<unknown> } }).context?.json?.()) as
+          | { code?: string }
+          | undefined
+        code = body?.code ?? 'unknown'
+      } catch {
+        /* ignore — keep the raw-text fallback regardless */
+      }
+      console.error(`[format-jd] ${route.modelProvider} ${code}: ${error.message}`)
+    }
     return { markdown: raw, source: 'fallback' }
   }
 

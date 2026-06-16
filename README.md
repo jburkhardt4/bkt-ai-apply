@@ -11,7 +11,7 @@ best model per task type.
 ## Stack
 
 | Layer | Technology |
-|---|---|
+| --- | --- |
 | Frontend | React 19 + Vite + TypeScript (strict) |
 | Styling | Tailwind CSS v4 |
 | Backend | Supabase (PostgreSQL + Auth + Realtime + Storage + Edge Functions) |
@@ -21,7 +21,7 @@ best model per task type.
 
 ## Pipeline
 
-```
+```text
 Discovery → Applied → Screening → Interview Scheduled → Interview Complete → Offer → Hired
                                                                                    ↘ Rejected
                                                                                    ↘ Ghosted
@@ -44,7 +44,7 @@ pnpm dev
 
 `.env` requires at minimum:
 
-```
+```text
 VITE_SUPABASE_URL=https://<your-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
@@ -70,7 +70,7 @@ pnpm validate     # all of the above in sequence
 ## Key docs
 
 | Topic | Path |
-|---|---|
+| --- | --- |
 | Agent entry point (read first) | `CLAUDE.md` |
 | Architecture + data flow | `docs/architecture.md` |
 | Database schema | `docs/requirements/03-data-entities.md` |
@@ -87,7 +87,7 @@ pnpm validate     # all of the above in sequence
 Set via `supabase secrets set NAME=value` (never in `.env` for Edge Functions):
 
 | Secret | Purpose |
-|---|---|
+| --- | --- |
 | `ANTHROPIC_KEY` | Claude models |
 | `OPENAI_KEY` | GPT models |
 | `GEMINI_KEY` | Gemini models |

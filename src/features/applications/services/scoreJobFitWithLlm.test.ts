@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { scoreJobFitWithLlm } from './aiScoringService'
+import { persistScoreFallback, ScoreJobFitEdgeError, scoreJobFitWithLlm } from './aiScoringService'
 import { getModelPricing, logAiUsage, routeAiTask } from '../../../lib/ai-router'
 import { getSupabaseClient } from '../../../lib/supabase'
 import type { MatchResult } from '../../../types/pipeline'
@@ -120,11 +120,39 @@ describe('scoreJobFitWithLlm', () => {
     expect(usageArg.estimated_cost_usd).toBeCloseTo(0.045, 6)
   })
 
-  it('falls back to the heuristic (flagged) when the Edge Function errors', async () => {
+  it('throws a typed ScoreJobFitEdgeError carrying the provider code when the Edge Function errors', async () => {
     mockRouteAiTask.mockResolvedValue(route(false))
-    invoke.mockResolvedValue({ data: null, error: { message: 'boom' } })
+    // supabase-js v2 surfaces a FunctionsHttpError whose .context is the Response;
+    // .json() yields the normalized { error, code, provider } body.
+    invoke.mockResolvedValue({
+      data: null,
+      error: {
+        message: 'Edge Function returned a non-2xx status code',
+        context: {
+          json: async () => ({
+            code: 'auth',
+            provider: 'anthropic',
+            error: 'The Anthropic API key is missing or invalid.',
+          }),
+        },
+      },
+    })
 
-    const result = await scoreJobFitWithLlm(baseInput)
+    await expect(scoreJobFitWithLlm(baseInput)).rejects.toBeInstanceOf(ScoreJobFitEdgeError)
+
+    // No masking: the thrown error carries the real provider code (not a fallback).
+    await expect(scoreJobFitWithLlm(baseInput)).rejects.toMatchObject({
+      code: 'auth',
+      provider: 'anthropic',
+    })
+    // The error is thrown at the source; no ai_scores row is persisted here.
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('persistScoreFallback inserts a flagged heuristic ai_scores row tagged with the reason', async () => {
+    mockRouteAiTask.mockResolvedValue(route(false))
+
+    const result = await persistScoreFallback(baseInput, 'edge_function_error:auth')
 
     expect(result.status).toBe('saved')
     if (result.status === 'saved') {
@@ -135,9 +163,9 @@ describe('scoreJobFitWithLlm', () => {
     expect(insertArg.overall_score).toBe(55)
     expect(insertArg.reasoning_trace).toMatchObject({
       source: 'heuristic_fallback',
-      reason: 'edge_function_error',
+      reason: 'edge_function_error:auth',
     })
-    // Heuristic logs zero-cost usage (no LLM call).
+    // Heuristic makes no LLM call → zero-cost usage logged (BR-054).
     expect(mockLogAiUsage.mock.calls[0][0].estimated_cost_usd).toBe(0)
   })
 

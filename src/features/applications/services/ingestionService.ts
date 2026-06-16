@@ -2,7 +2,12 @@ import { getSupabaseClient } from '../../../lib/supabase'
 import { masterProfile } from '../data/masterProfile'
 import type { CandidateProfile } from '../../../types/pipeline'
 import { parseJobDescription, scoreJobFit } from './pipelineService'
-import { scoreJobFitWithLlm } from './aiScoringService'
+import {
+  persistScoreFallback,
+  ScoreJobFitEdgeError,
+  scoreJobFitWithLlm,
+  type ScoreJobFitWithLlmResult,
+} from './aiScoringService'
 import { fetchCandidateResumeText } from './candidateProfileService'
 import {
   dedupeBySourceUrl,
@@ -290,8 +295,8 @@ export async function runScoreForJob(params: {
 
   // Prefer the routed LLM scorer (BR-103: match_scoring → score-job-fit Edge
   // Function); it persists ai_scores via the same persistAiScore path and falls
-  // back to the heuristic above on cost cap or Edge error.
-  const persisted = await scoreJobFitWithLlm({
+  // back to the heuristic above on cost cap.
+  const scoreInput = {
     userId: params.userId,
     jobId: params.jobId,
     job: { id: job.id, title: job.title, source_url: job.source_url, description: job.description, text: textToScore },
@@ -299,7 +304,24 @@ export async function runScoreForJob(params: {
     heuristicMatch,
     heuristicReasoningTrace: buildReasoningTrace(job),
     applicationId: params.applicationId,
-  })
+  }
+
+  // scoreJobFitWithLlm THROWS on Edge-Function failure (it no longer masks the
+  // cause). Catch it here so batch ingestion stays resilient: log the specific
+  // provider code in real time, then persist a degraded-but-specific heuristic
+  // fallback tagged `edge_function_error:<code>` (not the generic string). The
+  // success path below is identical for LLM and fallback results.
+  let persisted: ScoreJobFitWithLlmResult
+  try {
+    persisted = await scoreJobFitWithLlm(scoreInput)
+  } catch (err) {
+    if (err instanceof ScoreJobFitEdgeError) {
+      console.error(`[score-job-fit] ${err.provider} ${err.code}: ${err.message}`)
+      persisted = await persistScoreFallback(scoreInput, `edge_function_error:${err.code}`)
+    } else {
+      throw err
+    }
+  }
 
   // Update match_score on any existing application for this job. The `.select('id')`
   // lets us detect whether a row existed (empty array = no application yet).

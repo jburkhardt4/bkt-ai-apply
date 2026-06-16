@@ -16,6 +16,7 @@ Summary (Phase 2a). **All of Part 4 must hold before Phase 2b (the Chrome extens
 pnpm install        # if needed
 pnpm dev            # Vite
 ```
+
 - Codespace URL: open the forwarded port from the **Ports** panel. In this session the dev server is
   on **:5174** → `https://vigilant-space-adventure-pjp4vv9vvvrv264vp-5174.app.github.dev`
   (5173 was already in use; either serves the same working tree).
@@ -46,6 +47,7 @@ via the JobsScreen filter tabs. Identify jobs by title.
 > the cleanup query in §5.
 
 **Not reproducible on current real data (no fixtures, per decision):**
+
 - **Phase 1 no‑link path** (`No source link — mark as applied manually` + "View Job" disabled) — JB
   has 0 link‑less jobs.
 - **Prospector "queued" state** — needs an `ai_scores` row with `reasoning_trace.reason='cost_cap'`;
@@ -57,12 +59,14 @@ via the JobsScreen filter tabs. Identify jobs by title.
 ## 3. Manual criteria (must PASS)
 
 ### 3.1 Mode toggle unification
+
 - [ ] Dashboard top‑right **ReviewModeMenu** shows current mode; switching toasts `Switched to <label>`.
 - [ ] **Preferences → Application/Quick Settings** cards reflect the same value after navigation, and
       a change there is mirrored back in the Dashboard menu. (Hybrid↔`assist`, Review↔`review`,
       Auto↔`auto`; persisted to `user_settings.review_mode`.)
 
 ### 3.2 Phase 1 handoff — Review/Assist mode (Dashboard)
+
 - [ ] Apply on a discovery job **with** a link → opens the posting in a **new tab** + toast
       `Opened <company> — mark as applied when done`; row → **In progress** (warning tone); the
       **In progress** filter count increments.
@@ -72,31 +76,37 @@ via the JobsScreen filter tabs. Identify jobs by title.
       **"Apply"**; **"View Job"** opens the posting (disabled only when there's no link).
 
 ### 3.3 Phase 1 auto‑mode regression (test on a job you're OK auto‑applying to)
+
 - [ ] In **Auto** mode, Apply does **not** do the handoff — it sets **Applied**, spends a credit, and
       toasts `Application queued — <company>` (the existing autonomous path).
 
 ### 3.4 Phase 2a Fit panel — dashboard JD sidebar (also /search)
+
 - [ ] **Ready** job → `<score>/100` + label (**≥80 Perfect / ≥65 Strong / else Possible**), "Why this
       might be a good fit", **Key Matches**, **Key Gaps** — visible before Apply, no errors.
 - [ ] **Estimated** job → **"Estimated — full AI scoring queued"** chip present.
 - [ ] **Unscored** job → **"Not scored yet. This role has not been matched against your profile."**
 
 ### 3.5 Phase 2a Fit panel — Prospector job sheet
+
 - [ ] Opening a scored job renders the fit panel (score + matched + missing + recommendation),
       `ready`, no errors. (Cost‑cap `queued` not reproducible on real data — see §2/§6.)
 
 ### 3.6 Event‑sourcing audit (verify in SQL — BR‑002 / BR‑149)
+
 - [ ] After first Apply: `application_events` row `event_type='submission_attempt'`,
       `actor='jb_manual'`, `metadata.outcome='in_progress'`, `metadata.source='manual-apply'`,
       `from_stage/to_stage` NULL; `applications.stage` still `discovery`.
 - [ ] After "Mark as applied": `stage_transition` row `discovery→applied`, `actor='jb_manual'`,
       reason `Marked as applied (manual)`; `applications.stage='applied'`.
+
 ```sql
 select event_type, actor, from_stage, to_stage, reason, metadata, created_at
 from application_events where application_id = '<APP_ID>' order by created_at desc;
 ```
 
 ### 3.7 Non‑functional / regression
+
 - [ ] `pnpm validate` green.  - [ ] No console errors on /your‑jobs, /search, /prospector, /settings.
 - [ ] Responsive desktop + mobile (≤640px).  - [ ] `git diff` touches no `supabase/migrations/**` or
       `src/types/db.types.ts`.  - [ ] After `pnpm build`, no LLM key in `dist/`.
@@ -104,45 +114,70 @@ from application_events where application_id = '<APP_ID>' order by created_at de
 ---
 
 ## 4. Phase‑2b gate (all must hold)
+
 - [ ] All §3 criteria PASS (incl. §3.6 audit rows).
 - [ ] `pnpm validate` green.
 - [ ] `pnpm test:uat:smoke` green (no creds needed).
-- [ ] `e2e/ai-uat/job-fit.spec.ts` + `apply-handoff.spec.ts` pass in a **credentialed** run.
+- [ ] `e2e/ai-uat/job-fit.spec.ts`, `apply-handoff.spec.ts`, and `discovery-applied.spec.ts` pass in a **credentialed** run.
 - [ ] No migration / no `db.types.ts` change / no LLM key in `dist/`.
 
 ### Running the automated specs
-They `test.skip` without credentials. Run with:
+
+They `test.skip` without credentials. Point `TEST_USER_*` at **<uat-test@bktadvisory.com>** — its
+`[UAT] Senior Salesforce Administrator` fixture is seeded (discovery + a ready 88 score), so the
+destructive Discovery→Applied flow runs there and never touches `john@`:
+
 ```bash
-TEST_USER_EMAIL=<account> TEST_USER_PASSWORD=<…> \
+TEST_USER_EMAIL=uat-test@bktadvisory.com TEST_USER_PASSWORD=<set in Supabase dashboard> \
 ANTHROPIC_KEY=<…> AI_UAT_BASE_URL=http://localhost:5174 \
-pnpm test:uat              # all ai-uat except @explorer, incl. @job-fit + @apply-handoff
+pnpm test:uat              # ai-uat except @explorer: @job-fit + @apply-handoff + @discovery-applied
 ```
-A dedicated `uat-test@bktadvisory.com` account exists but currently has **no jobs**, so the specs
-soft‑skip their data assertions against it; point `TEST_USER_*` at an account with data (or seed
-`uat-test@`) for meaningful coverage. Browserbase keys optional (falls back to local Playwright).
+
+`uat-test@` needs a password set first (Supabase dashboard → Authentication → Users). Browserbase
+keys optional (falls back to local Playwright). Re-arm the destructive fixture between runs — see §5.
 
 ---
 
 ## 5. Reset / cleanup
+
 Reset an In‑progress marker back to **Review** (stage was never changed, so this fully reverts the
 first click):
+
 ```sql
 delete from application_events
 where application_id = '<APP_ID>'
   and event_type = 'submission_attempt' and actor = 'jb_manual'
   and metadata->>'source' = 'manual-apply';
 ```
+
 Undoing a `discovery→applied` transition requires a **compensating** transition (re‑open), not a
 delete — which is why §2 recommends doing the full apply only on jobs you mean to apply to.
+
+**Re-arm the `uat-test@` Discovery→Applied fixture** (reset to a clean discovery state before each
+destructive automated run — safe, it's a throwaway account):
+
+```sql
+update applications a set stage='discovery', submitted_at=null
+from jobs j
+where a.job_id=j.id and a.user_id='dd1124da-a571-4216-a5f7-b61578149ddd' and j.title like '[UAT]%';
+delete from application_events e using applications a, jobs j
+where e.application_id=a.id and a.job_id=j.id
+  and a.user_id='dd1124da-a571-4216-a5f7-b61578149ddd' and j.title like '[UAT]%'
+  and e.event_type in ('submission_attempt','stage_transition');
+```
 
 ---
 
 ## 6. Watch‑items (surface, triage — not all are Phase‑1/2a blockers)
-1. **Most AI scores are error‑fallbacks.** 25 of 46 of JB's scores are
-   `reasoning_trace.source='heuristic_fallback'` with `reason='edge_function_error'` — i.e. the
-   `score-job-fit` Edge Function is failing for most jobs and degrading to the heuristic. Phase 2a is
-   wired correctly, but the **scores it shows are mostly heuristic estimates right now.** Triage the
-   Edge Function (logs/secrets) before relying on the numbers.
+
+1. **Stale error‑fallback scores — root‑caused & fixed.** ~25 of `john@`'s tracked scores were
+   `heuristic_fallback / reason='edge_function_error'` from a **transient 6/14–6/15 outage**; the
+   function has since recovered (live LLM 200s today). The related `format-jd` 502 was a **stale
+   model** (`Claude 3.5 Haiku`, retired) — fixed by standardizing Anthropic tasks on **Sonnet 4.6**
+   ([ADR‑010](../adr/010-claude-sonnet-standardization-and-scoring-observability.md)). Observability
+   now logs the specific provider code and persists `reasoning_trace.reason='edge_function_error:<code>'`
+   instead of the generic string. **Action:** run `scripts/rescore-stale.ts` (with `john@` creds) to
+   refresh the 25 stale rows so their "Estimated" chips become live scores.
 2. **"Estimated" chip mislabels error‑fallbacks.** The JD sidebar shows
    `Estimated — full AI scoring queued` for **any** `heuristic_fallback` (`JDSidebar.tsx:85`), so the
    25 *errored* scores read as "queued". The Prospector panel only treats `reason='cost_cap'` as

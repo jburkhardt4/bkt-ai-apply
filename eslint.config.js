@@ -26,4 +26,12 @@ export default defineConfig([
       }],
     },
   },
+  {
+    // Node-run one-off scripts (e.g. scripts/rescore-stale.ts via `npx tsx`).
+    // These run under Node, not the browser, so expose Node globals (process).
+    files: ['scripts/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

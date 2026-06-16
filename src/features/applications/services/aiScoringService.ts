@@ -160,6 +160,47 @@ export interface ScoreJobFitWithLlmInput {
   applicationId?: string
 }
 
+/**
+ * Thrown when the `score-job-fit` Edge Function fails. Carries the normalized
+ * provider error so callers can log the specific cause and tag the persisted
+ * fallback (e.g. `edge_function_error:auth`) instead of a generic string.
+ */
+export class ScoreJobFitEdgeError extends Error {
+  readonly code: string
+  readonly provider: string
+  readonly status?: number
+
+  constructor(message: string, details: { code: string; provider: string; status?: number }) {
+    super(message)
+    this.name = 'ScoreJobFitEdgeError'
+    this.code = details.code
+    this.provider = details.provider
+    this.status = details.status
+  }
+}
+
+/** The normalized error body the `score-job-fit` Edge Function returns on failure. */
+interface EdgeErrorBody {
+  error?: string
+  code?: string
+  provider?: string
+}
+
+/**
+ * supabase-js v2 surfaces a `FunctionsHttpError` whose `.context` is the
+ * `Response`. Read the normalized `{ error, code, provider }` JSON body
+ * defensively (never throws; returns null when it cannot be parsed).
+ */
+async function readEdgeErrorBody(error: unknown): Promise<EdgeErrorBody | null> {
+  const context = (error as { context?: { json?: () => Promise<unknown> } }).context
+  try {
+    const body = await context?.json?.()
+    return (body as EdgeErrorBody | undefined) ?? null
+  } catch {
+    return null
+  }
+}
+
 export type ScoreJobFitWithLlmResult =
   | {
       status: 'queued'
@@ -195,8 +236,11 @@ function edgeScoreToMatchResult(score: EdgeJobFitScore, heuristic: MatchResult):
   }
 }
 
-/** Persists the deterministic heuristic score (flagged) as the explicit fallback. */
-async function persistHeuristicFallback(
+/** Persists the deterministic heuristic score (flagged) as the explicit fallback.
+ *  Exported so callers (e.g. ingestionService) can persist a degraded-but-specific
+ *  score after catching a ScoreJobFitEdgeError, tagged with the real reason
+ *  (`edge_function_error:<code>`). Threshold logic stays inside persistAiScore. */
+export async function persistScoreFallback(
   input: ScoreJobFitWithLlmInput,
   reason: string,
 ): Promise<ScoreJobFitWithLlmResult> {
@@ -252,8 +296,9 @@ async function persistHeuristicFallback(
  * 2. Otherwise invoke the Edge Function with the routed provider/model.
  * 3. On success: map score→MatchResult, price usage via getModelPricing, and
  *    persist with reasoning_trace = the model's reasoning_trace (BR-024).
- * 4. On Edge-Function error: persist the heuristic fallback (flagged) so the
- *    dashboard still gets a score.
+ * 4. On Edge-Function error: THROW a ScoreJobFitEdgeError carrying the real
+ *    provider code. Callers log the specific cause and persist a
+ *    degraded-but-specific fallback via persistScoreFallback (no silent mask).
  */
 export async function scoreJobFitWithLlm(
   input: ScoreJobFitWithLlmInput,
@@ -263,7 +308,7 @@ export async function scoreJobFitWithLlm(
   // BR-052 / BR-104: under the monthly cap, non-critical scoring is queued. We
   // persist the heuristic fallback; persistAiScore re-routes and returns queued.
   if (route.costDecision.shouldBlock) {
-    return persistHeuristicFallback(input, 'cost_cap')
+    return persistScoreFallback(input, 'cost_cap')
   }
 
   const supabase = getSupabaseClient()
@@ -276,10 +321,26 @@ export async function scoreJobFitWithLlm(
     },
   })
 
-  if (error || !data) {
-    // Edge Function unreachable or returned a normalized error — fall back so
-    // the dashboard still gets a score (flagged for QA / audit).
-    return persistHeuristicFallback(input, 'edge_function_error')
+  if (error) {
+    // Edge Function returned a normalized error body `{ error, code, provider }`.
+    // THROW the real cause (no masking) so callers log the specific provider
+    // code and persist a degraded-but-specific fallback (BR observability).
+    const body = await readEdgeErrorBody(error)
+    throw new ScoreJobFitEdgeError(
+      body?.error ?? (error as Error).message ?? 'score-job-fit failed',
+      {
+        code: body?.code ?? 'unknown',
+        provider: body?.provider ?? route.modelProvider,
+      },
+    )
+  }
+
+  if (!data) {
+    // No transport error but an empty body — still an Edge Function failure.
+    throw new ScoreJobFitEdgeError('score-job-fit returned an empty response', {
+      code: 'empty_response',
+      provider: route.modelProvider,
+    })
   }
 
   const match = edgeScoreToMatchResult(data.score, input.heuristicMatch)
@@ -304,7 +365,7 @@ export async function scoreJobFitWithLlm(
   if (persisted.status === 'queued') {
     // A race where the cap was crossed between routeAiTask reads — persist the
     // heuristic fallback so the queued contract is honored consistently.
-    return persistHeuristicFallback(input, 'cost_cap')
+    return persistScoreFallback(input, 'cost_cap')
   }
   return { status: 'saved', decision: persisted.decision, source: 'llm', overallScore: match.overall }
 }

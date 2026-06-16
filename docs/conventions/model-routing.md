@@ -23,18 +23,23 @@ last_synced_at: 2026-06-05
 
 Use these pinned model names exactly through src/lib/ai-router.ts.
 
+> **Standardization (2026-06-16, ADR-010):** all Anthropic/Claude tasks are pinned to **Claude
+> Sonnet 4.6**. This fixed the `format-jd` 502 (its old `Claude 3.5 Haiku` route was retired) and
+> retired the Opus 4.6 routes for scoring/cover-letter/interview-prep (consistency + cost; Opus
+> remains a user-selectable chat model). Non-Anthropic routes (OpenAI/Gemini) are unchanged.
+
 | Task Type | Model | Provider | Priority | Notes |
 | --- | --- | --- | --- | --- |
-| cover_letter_generation | Claude Opus 4.6 | anthropic | Primary | High-quality narrative writing |
-| interview_prep | Claude Opus 4.6 | anthropic | Primary | Complex reasoning and coaching |
-| match_scoring | Claude Opus 4.6 | anthropic | Primary | RAG + structured analysis |
+| cover_letter_generation | Claude Sonnet 4.6 | anthropic | Primary | Narrative writing (was Opus 4.6; standardized per ADR-010) |
+| interview_prep | Claude Sonnet 4.6 | anthropic | Primary | Reasoning and coaching (was Opus 4.6; standardized per ADR-010) |
+| match_scoring | Claude Sonnet 4.6 | anthropic | Primary | RAG + structured analysis (was Opus 4.6; standardized per ADR-010) |
 | resume_rewriting | GPT-5 | openai | Primary | ATS keyword optimization |
 | browser_form_automation | GPT-5 | openai | Post-MVP | Deferred in MVP (SIGN-OFF-004) |
 | company_market_research | Gemini 2.5 Pro | google | Primary | Retrieval and synthesis |
 | email_classification | Gemini 2.5 Flash | google | Primary | High-volume, low-latency |
 | intent_routing | Gemini 2.5 Flash | google | Primary | Chat intent detection |
 | general_qa | Claude Sonnet 4.6 | anthropic | Primary | Cost-efficient general chat |
-| jd_formatting | Claude 3.5 Haiku | anthropic | Primary | Low-latency JD normalization for the Prospector sidebar |
+| jd_formatting | Claude Sonnet 4.6 | anthropic | Primary | JD normalization; was Claude 3.5 Haiku (retired → format-jd 502), ADR-010 |
 
 ---
 

@@ -11,6 +11,9 @@
     "typecheck": "tsc -b",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
+    "test:uat": "playwright test --config=playwright.uat.config.ts --grep-invert @explorer",
+    "test:uat:smoke": "playwright test --config=playwright.uat.config.ts e2e/ai-uat/smoke.spec.ts",
+    "test:uat:full": "playwright test --config=playwright.uat.config.ts",
     "validate": "pnpm typecheck && pnpm lint && pnpm test",
     "db:gen-types": "pnpm exec supabase gen types typescript --linked > src/types/db.types.ts"
   },
@@ -34,6 +37,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@browserbasehq/stagehand": "^2.0.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.60.0",
     "@tailwindcss/vite": "^4.3.0",
@@ -52,6 +56,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "zod": "^3.24.0"
   }
 }

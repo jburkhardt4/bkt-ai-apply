@@ -36,6 +36,7 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CORS_HEADERS, json } from '../_shared/http.ts'
+import { cronSecretConfigured, hasValidCronSecret } from '../_shared/cron-auth.ts'
 import { resolveChannel } from '../_shared/submission/resolveChannel.ts'
 import { atsAdapters, buildAtsRequest } from '../_shared/submission/atsAdapters.ts'
 import { browserAdapter } from '../_shared/submission/browserAdapter.ts'
@@ -76,25 +77,6 @@ function batchSize(): number {
 }
 
 /**
- * Constant-time string equality. Both inputs are SHA-256 digested to fixed
- * 32-byte buffers first, then compared with a branchless XOR fold, so neither
- * the comparison time nor the loop length reveals anything about the secret
- * (including its length). crypto.subtle is available in the Deno edge runtime.
- */
-async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  const enc = new TextEncoder()
-  const [ah, bh] = await Promise.all([
-    crypto.subtle.digest('SHA-256', enc.encode(a)),
-    crypto.subtle.digest('SHA-256', enc.encode(b)),
-  ])
-  const av = new Uint8Array(ah)
-  const bv = new Uint8Array(bh)
-  let diff = 0
-  for (let i = 0; i < av.length; i++) diff |= av[i] ^ bv[i]
-  return diff === 0
-}
-
-/**
  * Shared-secret gate for the scheduler. The worker is deployed --no-verify-jwt
  * so pg_cron can invoke it without a user JWT. CRON_SECRET gates access:
  *   - If SET, the request MUST carry it ('x-cron-secret' header or
@@ -105,15 +87,9 @@ async function timingSafeEqual(a: string, b: string): Promise<boolean> {
  * Returns true when the request is authorized to proceed.
  */
 async function isCronAuthorized(req: Request): Promise<boolean> {
-  const secret = Deno.env.get('CRON_SECRET')
-  if (!secret) return !isLive() // unset → open in dry-run/shadow only; fail closed in live mode
-
-  const headerSecret = req.headers.get('x-cron-secret')
-  if (headerSecret && (await timingSafeEqual(headerSecret, secret))) return true
-
-  const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization')
-  if (authHeader && (await timingSafeEqual(authHeader, `Bearer ${secret}`))) return true
-
+  if (await hasValidCronSecret(req)) return true
+  // CRON_SECRET unset → open in dry-run/shadow only; fail closed in live mode.
+  if (!cronSecretConfigured()) return !isLive()
   return false
 }
 

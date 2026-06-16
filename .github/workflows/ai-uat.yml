@@ -1,0 +1,88 @@
+name: AI UAT
+
+# Runs an AI-driven browser agent against a live environment.
+# Requires RUN_AI_UAT=true (repo Actions variable) to run — same opt-in
+# pattern as the existing `e2e` job in ci.yml (RUN_E2E=true).
+#
+# Manual trigger: Actions → AI UAT → Run workflow
+# Automatic trigger: can be wired to a Vercel deploy-success webhook by
+# adding a `repository_dispatch` event (see docs/deploy/ for webhook setup).
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target environment'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - dev
+      scenario:
+        description: 'Scenario filter (e.g. smoke, auth, pipeline, explorer, or leave blank for all)'
+        required: false
+        default: ''
+        type: string
+      base_url:
+        description: 'Base URL override for dev target (e.g. https://my-codespace-5173.app.github.dev)'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: ai-uat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-uat:
+    name: AI UAT (${{ inputs.target || 'prod' }})
+    runs-on: ubuntu-latest
+    # Guard: opt-in via repo Actions variable (Settings → Variables → RUN_AI_UAT=true)
+    if: ${{ vars.RUN_AI_UAT == 'true' }}
+
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_KEY }}
+      BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+      BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      AI_UAT_BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || (inputs.target == 'prod' && 'https://bkt-ai-apply.vercel.app' || '') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run AI UAT
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+        run: |
+          if [ -n "$SCENARIO" ]; then
+            pnpm playwright test --config=playwright.uat.config.ts --grep "@$SCENARIO"
+          else
+            pnpm test:uat
+          fi
+
+      - name: Upload AI UAT report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-uat-report-${{ github.run_id }}
+          path: playwright-report/ai-uat/
+          retention-days: 14

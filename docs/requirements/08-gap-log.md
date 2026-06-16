@@ -13,7 +13,7 @@
 | GAP-001 | LinkedIn Jobs API access tier and rate limits not confirmed | May limit job ingestion volume from LinkedIn | JB | Confirm API tier before INT-003 implementation | OPEN |
 | GAP-002 | Workday integration method not fully specified (OAuth vs. partner program) | Blocks INT-007 implementation | JB + Engineering | Review Workday developer docs; confirm eligibility | OPEN |
 | GAP-003 | Indeed partner feed eligibility criteria not confirmed | May block INT-006 | JB | Apply for Indeed Publisher program if not already enrolled | OPEN |
-| GAP-004 | `pnpm db:gen-types` target (local Supabase vs. hosted project) not specified | Blocks type generation workflow | Engineering | Confirm Supabase project URL and service role key availability in Codespaces | OPEN |
+| GAP-004 | `pnpm db:gen-types` target (local Supabase vs. hosted project) not specified | Blocks type generation workflow | Engineering | Confirm Supabase project URL and service role key availability in Codespaces | RESOLVED — Supabase project is configured; `pnpm db:gen-types` runs against `--linked` project |
 | GAP-005 | RAG vector store implementation (F-POST-005) not designed | Post-MVP but no design exists to reference | Engineering | Defer to Post-MVP ADR | DEFERRED |
 | GAP-006 | Stagehand integration design not documented | Post-MVP; no design exists | Engineering | Defer to Post-MVP ADR; no action in MVP | DEFERRED |
 | GAP-007 | AI cost estimation accuracy for match scoring at 800 jobs/month | If estimates are off, cap may be hit early | Engineering | Instrument first 100 calls and recalibrate estimates in `05-ai-routing.md` | OPEN |
@@ -41,4 +41,4 @@
 | --- | --- | --- |
 | SC-001 | PRD Section 17 lists ZipRecruiter as integration; SIGN-OFF-002 removes it from MVP | SIGN-OFF-002 supersedes PRD Section 17 for MVP scope |
 | SC-002 | PRD Section 6.3 references auto-apply workflow; SIGN-OFF-004 defers full automation | SIGN-OFF-004 supersedes for MVP; UITL gate is the approved MVP path |
-| SC-003 | PRD Section 2.1 states >=60% threshold for submission; SIGN-OFF-005 creates two-tier threshold | SIGN-OFF-005 replaces single-threshold language; PRD to be updated post-lock |
+| SC-003 | PRD Section 2.1 states >=60% threshold for submission; SIGN-OFF-005 creates two-tier threshold | SIGN-OFF-005 replaces single-threshold language; PRD §22 updated to reflect both tiers (>=60 Consideration, >=80 Auto-Submit prep) — resolved 2026-06-15 |

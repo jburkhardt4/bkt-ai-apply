@@ -1,0 +1,50 @@
+graph TD
+  subgraph Frontend["Frontend — React 19 + Vite + TS (SPA, anon key + RLS)"]
+    SHELL["App Shell & Auth"]
+    PIPE["Applications Pipeline & Events"]
+    PROS["Job Discovery & Prospector"]
+    AUTO["Auto-Apply Workspace & Settings"]
+    DOCS["Documents (Resume / Cover Letter)"]
+    CHAT["Conversational AI Assistant"]
+    SETT["Settings & Provider Status"]
+  end
+  subgraph EdgeFns["Backend — Supabase Edge Functions (Deno, service-role)"]
+    AIRT["AI Routing & Scoring"]
+    SUB["Auto-Submission Engine"]
+    GMAIL["Gmail Integration"]
+  end
+  subgraph Data["Data — PostgreSQL + RLS + Realtime + Storage"]
+    DB["Data Schema & RLS Migrations"]
+  end
+
+  PIPE --> SHELL
+  PROS --> SHELL
+  PROS --> AIRT
+  PROS --> SUB
+  AUTO --> SHELL
+  AUTO --> PIPE
+  AUTO --> GMAIL
+  DOCS --> SHELL
+  DOCS --> AIRT
+  CHAT --> SHELL
+  CHAT --> AIRT
+  SETT --> SHELL
+  SETT --> AIRT
+  AIRT --> SHELL
+  SUB --> SHELL
+  SUB --> PIPE
+  SUB --> DOCS
+  GMAIL --> SHELL
+  GMAIL --> PIPE
+  GMAIL --> AIRT
+
+  SHELL --> DB
+  PIPE --> DB
+  PROS --> DB
+  AUTO --> DB
+  DOCS --> DB
+  CHAT --> DB
+  AIRT --> DB
+  SUB --> DB
+  GMAIL --> DB
+  SETT --> DB

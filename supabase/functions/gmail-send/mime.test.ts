@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertHeaderSafe,
   buildMimeMessage,
   buildRawMessage,
   encodeBase64Url,
@@ -72,5 +73,63 @@ describe('subject helpers', () => {
     expect(forwardSubject('Offer letter')).toBe('Fwd: Offer letter')
     expect(forwardSubject('Fwd: Offer letter')).toBe('Fwd: Offer letter')
     expect(forwardSubject('Fw: Offer letter')).toBe('Fw: Offer letter')
+  })
+})
+
+describe('header injection guard', () => {
+  it('rejects CRLF in the To header (Bcc smuggling)', () => {
+    expect(() =>
+      buildMimeMessage({
+        from: 'john@bktadvisory.com',
+        to: 'victim@x.com\r\nBcc: attacker@evil.com',
+        subject: 'Hi',
+        body: 'x',
+      }),
+    ).toThrow(/CR\/LF/)
+  })
+
+  it('rejects CRLF in the Subject header', () => {
+    expect(() =>
+      buildMimeMessage({
+        from: 'a@b.c',
+        to: 'd@e.f',
+        subject: 'Hi\r\nBcc: attacker@evil.com',
+        body: 'x',
+      }),
+    ).toThrow(/CR\/LF/)
+  })
+
+  it('rejects a bare-newline injection in the Subject header', () => {
+    expect(() =>
+      buildMimeMessage({ from: 'a@b.c', to: 'd@e.f', subject: 'Hi\nX-Evil: 1', body: 'x' }),
+    ).toThrow(/CR\/LF/)
+  })
+
+  it('rejects CRLF smuggled via In-Reply-To', () => {
+    expect(() =>
+      buildMimeMessage({
+        from: 'a@b.c',
+        to: 'd@e.f',
+        subject: 'Re: Hi',
+        body: 'x',
+        inReplyTo: '<id@m>\r\nBcc: evil@x.com',
+      }),
+    ).toThrow(/CR\/LF/)
+  })
+
+  it('still allows a normal message (newlines in the body are fine)', () => {
+    expect(() =>
+      buildMimeMessage({
+        from: 'a@b.c',
+        to: 'd@e.f',
+        subject: 'Normal subject',
+        body: 'Body line one\nBody line two',
+      }),
+    ).not.toThrow()
+  })
+
+  it('assertHeaderSafe throws with the field name', () => {
+    expect(() => assertHeaderSafe('ok value', 'To')).not.toThrow()
+    expect(() => assertHeaderSafe('bad\r\nvalue', 'To')).toThrow(/"To"/)
   })
 })

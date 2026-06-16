@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClientSafe } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import type { Tables } from '@/types/db.types'
 
@@ -49,7 +49,15 @@ export function useProspectingRuns(): UseProspectingRunsResult {
     if (!user) return
 
     let cancelled = false
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClientSafe()
+
+    // When Supabase is not configured, gracefully degrade — no run history.
+    if (!supabase) {
+      Promise.resolve().then(() => {
+        if (!cancelled) setLoading(false)
+      })
+      return () => { cancelled = true }
+    }
 
     Promise.resolve(
       supabase

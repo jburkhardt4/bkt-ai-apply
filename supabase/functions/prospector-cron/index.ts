@@ -23,12 +23,8 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getApiKeyForProvider } from '../_shared/llm/factory.ts'
 import { formatJdMarkdown } from '../_shared/jd-format.ts'
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders } from '../_shared/http.ts'
+import { cronSecretConfigured, hasValidCronSecret } from '../_shared/cron-auth.ts'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -974,12 +970,22 @@ async function runForProfile(
 Deno.serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight — required for supabase.functions.invoke() from the browser
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS })
+    return new Response('ok', { headers: corsHeaders(req) })
   }
 
-  const jsonHeaders = { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+  const jsonHeaders = { ...corsHeaders(req), 'Content-Type': 'application/json' }
 
   console.log('prospector-cron: invoked')
+
+  // Caller authentication: pg_cron presents CRON_SECRET (x-cron-secret header or
+  // Authorization: Bearer). Deployed --no-verify-jwt, so reject anonymous callers
+  // once a secret is configured; warn (back-compat) until then. Not client-invoked.
+  if (!(await hasValidCronSecret(req))) {
+    if (cronSecretConfigured()) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
+    }
+    console.error('prospector-cron: SECURITY — unauthenticated invocation allowed; set CRON_SECRET to require auth')
+  }
 
   // @ts-expect-error — Deno global provided by Edge Function runtime
   const serpApiKey = Deno.env.get('SERPAPI_KEY')

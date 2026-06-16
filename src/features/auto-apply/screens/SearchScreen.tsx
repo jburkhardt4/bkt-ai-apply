@@ -415,10 +415,10 @@ function SearchJobCard({
             variant="ghost"
             size="md"
             iconRight={<Icon name="external-link" size={14} />}
-            disabled={!job.source_url}
+            disabled={!job.sourceUrl}
             onClick={() => {
-              if (job.source_url && /^https?:\/\//i.test(job.source_url)) {
-                window.open(job.source_url, '_blank', 'noopener,noreferrer')
+              if (job.sourceUrl && /^https?:\/\//i.test(job.sourceUrl)) {
+                window.open(job.sourceUrl, '_blank', 'noopener,noreferrer')
               }
             }}
           >

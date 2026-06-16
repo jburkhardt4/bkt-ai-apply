@@ -284,9 +284,9 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
             size="md"
             style={{ borderRadius: 'var(--radius-pill)' }}
             iconRight={<Icon name="external-link" size={15} />}
-            disabled={!job.source_url}
+            disabled={!job.sourceUrl}
             onClick={() => {
-              if (job.source_url && /^https?:\/\//i.test(job.source_url)) window.open(job.source_url, '_blank', 'noopener,noreferrer')
+              if (job.sourceUrl && /^https?:\/\//i.test(job.sourceUrl)) window.open(job.sourceUrl, '_blank', 'noopener,noreferrer')
             }}
           >
             View Job

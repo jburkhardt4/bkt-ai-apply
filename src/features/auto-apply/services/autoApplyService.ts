@@ -110,7 +110,7 @@ function mapApplication(row: LiveApplicationRow): JobMatch {
     keyMatches: score?.strengths ?? undefined,
     keyGaps: score?.gaps ?? undefined,
     about,
-    source_url: job?.source_url ?? undefined,
+    sourceUrl: job?.source_url ?? undefined,
   }
 }
 
@@ -320,7 +320,7 @@ function mapJob(row: LiveSearchJobRow): SearchJob {
     keyMatches: score?.strengths ?? undefined,
     keyGaps: score?.gaps ?? undefined,
     about,
-    source_url: row.source_url ?? undefined,
+    sourceUrl: row.source_url ?? undefined,
   }
 }
 

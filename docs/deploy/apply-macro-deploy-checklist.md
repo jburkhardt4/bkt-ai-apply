@@ -11,6 +11,7 @@
 ---
 
 ## A. Pre-merge gate (this branch)
+
 - [ ] `pnpm validate` green (`typecheck && lint && test`) — currently passing (262 tests).
 - [ ] `pnpm test:e2e` (`ai-uat`) run in a credentialed env (needs `TEST_USER_EMAIL`,
       `TEST_USER_PASSWORD`, `ANTHROPIC_KEY`, Browserbase) — these `test.skip` without
@@ -26,6 +27,7 @@
       `src/types/db.types.ts`.
 
 ## B. SPA → Vercel (Phase 1 + 2a)
+
 - [ ] `vercel.json` unchanged (`framework: vite`, SPA rewrite already configured).
 - [ ] Vercel **Environment Variables** (Production + Preview) — client-side, public:
       - [ ] `VITE_SUPABASE_URL`
@@ -37,6 +39,7 @@
       `/prospector`; open a JD sidebar → Fit panel renders; Apply opens source link.
 
 ## C. Supabase Edge Functions / secrets (scoring backend the Fit panel + extension use)
+
 - [ ] Edge secrets set on the hosted project (read only in `_shared/llm/factory.ts`):
       - [ ] `ANTHROPIC_KEY` (fallback `ANTHROPIC_API_KEY`)
       - [ ] `OPENAI_KEY` (fallback `OPENAI_API_KEY`)
@@ -53,6 +56,7 @@
       degrades to the heuristic/"estimated" state, never an error.
 
 ## D. Extension → Chrome Web Store (Phase 2b — when built)
+
 - [ ] MV3 `manifest.json`: `host_permissions` limited to the **defined board hosts**
       (spec §7); minimal `permissions` (`storage`, `scripting`/`activeTab`).
 - [ ] Bundle audit: **zero** LLM keys, zero service-role key. Only the public Supabase
@@ -67,6 +71,7 @@
       auto-update enabled.
 
 ## E. Rollback
+
 - SPA: redeploy the previous Vercel build; Phase 1/2a are additive and isolated (no
   schema change), so revert is low-risk.
 - Edge: re-deploy the prior `score-job-fit` version via MCP.

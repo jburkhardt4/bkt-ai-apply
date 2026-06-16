@@ -37,6 +37,7 @@ We split the SOW into three tracks and frame the extension as **human-in-the-loo
 assistive autofill**, not autonomous submission:
 
 ### Phase 1 — Job Source-Link handoff (BUILT, Accepted)
+
 When `user_settings.review_mode` is `review` or `assist` (Hybrid), the Dashboard green
 "Apply" button and the dashboard JD-sidebar "Apply" button **open the original Job
 Source Link (`jobs.source_url`) in a new tab** and move the application into a
@@ -57,6 +58,7 @@ keeps its existing auto-apply behavior.
   were previously local-state-only; "Hybrid" maps to `assist`).
 
 ### Phase 2a — AI Match Score + Fit Summary in the JD sidebar (BUILT, Accepted)
+
 The JD sidebars surface the existing `ai_scores` data **before** the user clicks Apply:
 a 0–100 Match Score, a fit label, matched skills (`strengths[]`) and missing keywords
 (`gaps[]`), plus a "queued / estimated" state when scoring was cost-capped to the
@@ -67,6 +69,7 @@ exists) over the hardcoded keyword profile, falling back gracefully. No schema c
 cost-cap path (BR-052/104) untouched.
 
 ### Phase 2b — Apply-Macro Chrome Extension (PROPOSED — this ADR gates it)
+
 A Manifest V3 Chrome extension that, on a supported ATS page, reads the DOM, references
 per-ATS JSON field-mapping configs, and **autofills** the application form with the
 user's stored profile/resume data — with the human present to review, resolve
@@ -75,6 +78,7 @@ inline on the ATS page before apply. See the full design spec:
 `docs/features/simplifyai-apply-macro-extension.md`.
 
 **This is compatible with ADR-006's deferral, not a reversal of it**, because:
+
 - The **human performs the submission**; the extension only assists data entry. There
   is no autonomous, unattended submit.
 - It runs **client-side in the user's own authenticated browser session** — it does not

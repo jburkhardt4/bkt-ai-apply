@@ -32,7 +32,7 @@ and returns to "Mark as applied."
 
 ## 2. Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  BKT SPA (bkt-ai-apply.vercel.app)                                    │
 │   • Phase 1 Apply button → opens jobs.source_url (Manual/In-progress) │
@@ -63,6 +63,7 @@ and returns to "Mark as applied."
 ```
 
 **Reuse, don't rebuild:**
+
 - AI scoring → existing `score-job-fit` Edge Function (ADR-007). Keys stay server-side
   (BR-122); the extension only sends `{ provider, model, job, profile }` over a
   JWT-gated call, exactly like the SPA.
@@ -76,6 +77,7 @@ and returns to "Mark as applied."
 ## 3. PLAN
 
 ### 3.1 AI matching engine
+
 - **Engine:** reuse `score-job-fit` end-to-end. The content script extracts the JD; the
   background worker fetches the user's profile (and resume text when available) and
   POSTs `{ provider, model, job:{title, description}, profile }` to the Edge Function;
@@ -99,6 +101,7 @@ and returns to "Mark as applied."
     on block, show the heuristic/estimated state in the panel (no hard failure).
 
 ### 3.2 JSON field-mapping config schema
+
 Per-ATS, versioned, remotely updatable (cached in the background worker; fetched from a
 Supabase table or storage JSON so mappings can be fixed without a Web Store release):
 
@@ -130,6 +133,7 @@ Supabase table or storage JSON so mappings can be fixed without a Web Store rele
   left blank and flagged for the user.
 
 ### 3.3 Data flow
+
 `ATS page load → detect vendor → load config → extract JD → [background] fetch profile +
 score-job-fit → render Fit panel → user clicks "Autofill" → macro fills fields →
 user reviews, answers screeners, submits → user returns to SPA → "Mark as applied"
@@ -140,6 +144,7 @@ user reviews, answers screeners, submits → user returns to SPA → "Mark as ap
 ## 4. BUILD (illustrative)
 
 ### 4.1 Extract the JD from the DOM (content script)
+
 ```ts
 function extractJd(cfg: AtsConfig): { title: string; description: string } {
   const root = document.querySelector(cfg.jd.container) ?? document.body
@@ -151,6 +156,7 @@ function extractJd(cfg: AtsConfig): { title: string; description: string } {
 ```
 
 ### 4.2 Score + render the Fit panel
+
 ```ts
 // background service worker — keys NEVER touch the content script
 async function scoreJob(job: { title: string; description: string }) {
@@ -162,11 +168,13 @@ async function scoreJob(job: { title: string; description: string }) {
   return data.score                                          // { overall_score, strengths[], gaps[], recommendation }
 }
 ```
+
 The content script receives `score` via `chrome.runtime.sendMessage` and renders the
 **same** Match Score + Fit Summary UI as Phase 2a's `JobFitPanel` inside a shadow root
 (so host-page CSS can't break it), **before** the user applies.
 
 ### 4.3 Autofill macro (config-driven)
+
 ```ts
 async function runMacro(cfg: AtsConfig, profile: Profile) {
   for (const f of cfg.fields) {
@@ -185,6 +193,7 @@ async function runMacro(cfg: AtsConfig, profile: Profile) {
 ## 5. DEFINE UAT & TEST
 
 ### 5.1 UAT acceptance criteria
+
 | # | Criterion |
 | - | --------- |
 | UAT-1 | On a supported ATS posting, the Fit panel renders a 0–100 Match Score + matched/missing keywords **before** any apply action. |
@@ -198,6 +207,7 @@ async function runMacro(cfg: AtsConfig, profile: Profile) {
 | UAT-9 | Cross-user isolation: the extension only ever reads the signed-in user's own profile/resume/scores (RLS). |
 
 ### 5.2 Edge-case scenarios (grounding / anti-hallucination)
+
 - **Highly formatted / multi-column PDF resume:** extraction may scramble order →
   require the pre-extracted `.txt`/`master_resume_text` path; if only a messy PDF, fall
   back to the keyword profile and label the score "estimated" rather than scoring on
@@ -218,6 +228,7 @@ async function runMacro(cfg: AtsConfig, profile: Profile) {
   is advisory; assert no threshold drift.
 
 ### 5.3 Automated test surface
+
 - Unit: config loader, `detectAtsVendor`, JD extractor, field-fill strategies (jsdom).
 - Fixtures: saved ATS HTML snapshots per board → assert selectors resolve + macro fills.
 - Reuse the repo's Stagehand/Playwright `e2e/ai-uat` harness for an extension-loaded
@@ -231,6 +242,7 @@ async function runMacro(cfg: AtsConfig, profile: Profile) {
 See the full operational checklist: [`docs/deploy/apply-macro-deploy-checklist.md`](../deploy/apply-macro-deploy-checklist.md).
 
 Summary:
+
 - **SPA (Phase 1 + 2a) → Vercel:** standard `vite` build (`vercel.json` already set);
   client env `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` only — never any LLM key.
 - **Supabase Edge secrets:** `ANTHROPIC_KEY` / `OPENAI_KEY` / `GEMINI_KEY` set via
@@ -250,6 +262,7 @@ waves. Two classes: **ATS** (direct application forms — full autofill) and
 else hand off to the underlying ATS).
 
 ### Tier 1 — ATS form autofill (priority; API-first ATS already partially supported server-side)
+
 | Board / ATS | Detect host(s) | Notes |
 | ----------- | -------------- | ----- |
 | **Greenhouse** | `boards.greenhouse.io`, `job-boards.greenhouse.io` | Server-side send already live (ADR-006). First macro target (matches the Jam recording). |
@@ -266,6 +279,7 @@ else hand off to the underlying ATS).
 | **Teamtailor / Recruitee / Breezy / JazzHR / Rippling / Dover** | respective hosts | Long-tail SMB ATS — config-driven, added as demand appears. |
 
 ### Tier 2 — Aggregators & job boards
+
 | Board | Detect host(s) | Notes |
 | ----- | -------------- | ----- |
 | **LinkedIn (Easy Apply)** | `linkedin.com/jobs` | Easy Apply modal autofill; external applies hand off to the ATS. |
@@ -277,6 +291,7 @@ else hand off to the underlying ATS).
 | **Monster / SimplyHired / Handshake / Google Jobs** | respective hosts | Lower priority; mostly redirect to an ATS where the macro then runs. |
 
 ### Rollout waves
+
 1. **Wave 1 (pilot):** Greenhouse → Ashby → Lever (align with the locked Phase 4
    API-first decision; Greenhouse mirrors the Jam recording).
 2. **Wave 2:** Workday, iCIMS, SmartRecruiters, Workable.
@@ -289,6 +304,7 @@ in the UI.
 ---
 
 ## 8. Open questions / follow-ups
+
 - Pre-extracted `master_resume_text` (real PDF→text) so scoring + autofill are universal,
   not gated on a `.txt` resume existing.
 - Where field-mapping configs live (Supabase table vs storage JSON) + an authoring/QA

@@ -8,7 +8,7 @@
  */
 import { test, expect } from '@playwright/test'
 import { z } from 'zod'
-import { makeStagehand, loginWithTestUser, hasTestCredentials, UAT_BASE_URL } from './_helpers/setup'
+import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers/setup'
 
 test.describe('Auth: AI-driven login + session @auth', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')

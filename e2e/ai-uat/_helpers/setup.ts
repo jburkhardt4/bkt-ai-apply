@@ -1,6 +1,10 @@
 import { Stagehand } from '@browserbasehq/stagehand'
 import type { Page } from '@playwright/test'
 
+declare const process: {
+  env: Record<string, string | undefined>
+}
+
 /**
  * Resolve the AI UAT base URL from env vars:
  *  1. AI_UAT_BASE_URL (explicit override — dev Codespace or Vercel prod)

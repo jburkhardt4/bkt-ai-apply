@@ -11,7 +11,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
-    "test:uat": "playwright test --config=playwright.uat.config.ts",
+    "test:uat": "playwright test --config=playwright.uat.config.ts --grep-invert @explorer",
     "test:uat:smoke": "playwright test --config=playwright.uat.config.ts e2e/ai-uat/smoke.spec.ts",
     "test:uat:full": "playwright test --config=playwright.uat.config.ts",
     "validate": "pnpm typecheck && pnpm lint && pnpm test",

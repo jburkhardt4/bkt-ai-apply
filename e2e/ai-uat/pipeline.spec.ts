@@ -26,7 +26,7 @@ const KNOWN_STAGES = [
 test.describe('Pipeline: AI exploration @pipeline', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('AI agent reports pipeline page state', async (_fixtures, testInfo) => {
+  test('AI agent reports pipeline page state', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -39,7 +39,7 @@ test.describe('Pipeline: AI exploration @pipeline', () => {
 
       const pipelineState = await stagehand.page.extract({
         instruction:
-          'Describe the pipeline page in detail: what stage columns or sections are visible, how many application cards exist, are there any loading spinners, empty-state messages, or error messag[...]',
+          'Describe the pipeline page in detail: what stage columns or sections are visible, how many application cards exist, are there any loading spinners, empty-state messages, or error messages?',
         schema: z.object({
           stagesVisible: z.array(z.string()),
           applicationCount: z.number(),
@@ -75,7 +75,7 @@ test.describe('Pipeline: AI exploration @pipeline', () => {
     }
   })
 
-  test('AI agent checks for unexpected stage labels', async (_fixtures, testInfo) => {
+  test('AI agent checks for unexpected stage labels', async ({}, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

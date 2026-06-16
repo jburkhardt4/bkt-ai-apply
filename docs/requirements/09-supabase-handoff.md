@@ -2,12 +2,31 @@
 
 **task_id:** BKT-AIAPPLY-PHASE1-REQS-LOCK-002
 **target_agent:** Supabase-Security
-**status:** READY FOR SQL MIGRATION DRAFTING
+**status:** COMPLETED — all migrations applied
 **issued_date:** 2026-06-03
+**completed_date:** 2026-06-14
 
 ---
 
-## Handoff Payload
+## Completion Summary
+
+All 14 core entity migrations have been applied, plus additional feature migrations.
+
+| Migration File | Entities |
+| --- | --- |
+| `20260603000001` – `20260603000014` | All 14 core entities (users, roles, companies, jobs, recruiters, documents, ai_scores, applications, application_materials, application_events, emails, interviews, notifications, ai_model_usage) |
+| `20260603000015` | Realtime publications + Storage bucket |
+| `20260605000001` | `transition_stage` RPC (atomic stage transitions — LSN-004) |
+| `20260605000002` | application_materials RLS patch |
+| `20260607000001`–`20260607000003` | Prospecting tables + search index + jobs.job_type |
+| `20260608000001` | Chat tables (chat_conversations, chat_messages, chat_memory) |
+| `20260612000001`–`20260612000004` | user_settings, saved_jobs, gmail_sync_state, application_queue |
+| `20260613000001`–`20260613000004` | gmail_label_map, notifications.email_sent, consolidation, submission_worker RPCs |
+| `20260614000001`–`20260614000003` | candidate_profiles, notifications.auto_submitted, jobs.description_formatted |
+
+---
+
+## Original Handoff Payload (archived for reference)
 
 ### schema_or_auth_change_summary
 

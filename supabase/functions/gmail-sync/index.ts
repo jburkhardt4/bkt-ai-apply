@@ -22,9 +22,11 @@
  * (docs/deploy/gmail-sync-setup.md).
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { CORS_HEADERS, json } from '../_shared/http.ts'
+import { json, preflight } from '../_shared/http.ts'
 import { getApiKeyForProvider, getProvider } from '../_shared/llm/factory.ts'
 import { readGmailCredentials, refreshAccessToken } from '../_shared/gmail-auth.ts'
+import { getAuthenticatedUserId } from '../_shared/auth.ts'
+import { cronSecretConfigured, hasValidCronSecret } from '../_shared/cron-auth.ts'
 import {
   fetchMessageMeta,
   listLabelNames,
@@ -329,9 +331,22 @@ async function writeSyncState(
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
+  if (req.method === 'OPTIONS') return preflight(req)
 
   console.log('gmail-sync: invoked')
+
+  // Caller authentication: pg_cron presents CRON_SECRET; the client Refresh
+  // button presents a Supabase JWT. The function is deployed --no-verify-jwt,
+  // so reject anonymous callers once a secret is configured (BR-005). The 60s
+  // re-invocation guard below is a throttle, not an authorization control.
+  const viaCron = await hasValidCronSecret(req)
+  const viaUser = viaCron || (await getAuthenticatedUserId(req)) !== null
+  if (!viaCron && !viaUser) {
+    if (cronSecretConfigured()) return json({ error: 'Unauthorized' }, 401, req)
+    console.error(
+      'gmail-sync: SECURITY — unauthenticated invocation allowed; set CRON_SECRET to require auth',
+    )
+  }
 
   const credentials = readGmailCredentials()
   if (!credentials) {
@@ -343,6 +358,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           'GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET / GMAIL_REFRESH_TOKEN not set — see docs/deploy/gmail-sync-setup.md',
       },
       200,
+      req,
     )
   }
 
@@ -357,7 +373,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`gmail-sync: ${msg}`)
-    return json({ error: msg }, 500)
+    return json({ error: msg }, 500, req)
   }
 
   const summary: RunSummary = {
@@ -382,7 +398,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (state?.last_synced_at) {
       const ageMs = Date.now() - new Date(state.last_synced_at).getTime()
       if (ageMs >= 0 && ageMs < MIN_SECONDS_BETWEEN_RUNS * 1000) {
-        return json({ status: 'noop', reason: `last run ${Math.round(ageMs / 1000)}s ago` }, 200)
+        return json({ status: 'noop', reason: `last run ${Math.round(ageMs / 1000)}s ago` }, 200, req)
       }
     }
 
@@ -460,13 +476,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
         `stored=${summary.stored} labeled=${summary.labeled} skipped=${summary.skipped_irrelevant} ` +
         `transitioned=${summary.auto_transitioned}`,
     )
-    return json(summary, 200)
+    return json(summary, 200, req)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`gmail-sync: run failed: ${msg}`)
     summary.status = 'error'
     summary.errors.push(msg)
     await writeSyncState(supabase, userId, { status: 'error', error: msg })
-    return json(summary, 500)
+    return json(summary, 500, req)
   }
 })

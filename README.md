@@ -1,73 +1,99 @@
-# React + TypeScript + Vite
+# BKT AI-Apply
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-orchestrated job application automation and pipeline management platform.
 
-Currently, two official plugins are available:
+Tracks the full lifecycle from job discovery through hire. Gmail and Google Calendar
+intelligence drives autonomous stage transitions. Multi-model AI routing assigns the
+best model per task type.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + Vite + TypeScript (strict) |
+| Styling | Tailwind CSS v4 |
+| Backend | Supabase (PostgreSQL + Auth + Realtime + Storage + Edge Functions) |
+| Dev env | GitHub Codespaces (primary) · Local VS Code (secondary) |
+| Automation | Gmail API + Google Calendar API → Edge Function webhooks |
+| AI | Multi-model routing — Anthropic, OpenAI, Google |
 
-## Expanding the ESLint configuration
+## Pipeline
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+Discovery → Applied → Screening → Interview Scheduled → Interview Complete → Offer → Hired
+                                                                                   ↘ Rejected
+                                                                                   ↘ Ghosted
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Local setup
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# 1. Copy env template and fill in values
+cp .env.example .env
+
+# 2. Install dependencies (pnpm required)
+pnpm install
+
+# 3. Start dev server
+pnpm dev
 ```
+
+`.env` requires at minimum:
+
+```
+VITE_SUPABASE_URL=https://<your-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+```
+
+Without Supabase configured, every screen falls back to seeded demo data.
+
+---
+
+## Validation
+
+```bash
+pnpm typecheck    # zero type errors
+pnpm lint         # zero warnings
+pnpm test         # all unit tests green
+pnpm test:e2e     # Playwright e2e (run when UI changes)
+pnpm validate     # all of the above in sequence
+```
+
+`pnpm validate` must pass clean before any task is considered done (BR-080).
+
+---
+
+## Key docs
+
+| Topic | Path |
+|---|---|
+| Agent entry point (read first) | `CLAUDE.md` |
+| Architecture + data flow | `docs/architecture.md` |
+| Database schema | `docs/requirements/03-data-entities.md` |
+| Business rules | `docs/domain/business-rules.md` |
+| AI model routing | `docs/conventions/model-routing.md` |
+| Auth + RLS | `docs/domain/auth.md` |
+| ADRs | `docs/adr/` |
+| Lessons register | `docs/retro/lessons.md` |
+
+---
+
+## Supabase Edge Function secrets
+
+Set via `supabase secrets set NAME=value` (never in `.env` for Edge Functions):
+
+| Secret | Purpose |
+|---|---|
+| `ANTHROPIC_KEY` | Claude models |
+| `OPENAI_KEY` | GPT models |
+| `GEMINI_KEY` | Gemini models |
+| `SERPAPI_KEY` | Job discovery (prospector-cron) |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Gmail + Calendar OAuth |
+| `GMAIL_REFRESH_TOKEN` | Gmail ingestion |
+| `CRON_SECRET` | Locks the submission-worker endpoint |
+
+See `.env.example` for the full list and descriptions.

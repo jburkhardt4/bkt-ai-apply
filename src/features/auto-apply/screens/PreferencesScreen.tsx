@@ -444,9 +444,9 @@ interface LocationPref {
   hybrid: boolean
 }
 
-function ModeCards({ appMode, setAppMode }: { appMode: string; setAppMode: (m: string) => void }) {
+function ModeCards({ appMode, setAppMode, stack = false }: { appMode: string; setAppMode: (m: string) => void; stack?: boolean }) {
   return (
-    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: stack ? 'column' : 'row', gap: 16, flexWrap: 'wrap' }}>
       <PrefModeCard
         icon="user-round"
         title="Hybrid mode"
@@ -704,7 +704,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
       <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 28px 60px' }}>
         {tab === 'Quick Settings' && (
           <div key="quick" className="bkt-blur-in">
-            <PrefSection title="Application behaviour" idx={0}>
+            <PrefSection title="Application Behaviour" idx={0}>
               <p style={{ margin: 0, font: '400 var(--text-sm)/1.6 var(--font-body)', color: 'var(--text-muted)', maxWidth: 620 }}>
                 How should we apply to jobs for you? Pick the mode that best fits your style.
               </p>
@@ -721,7 +721,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               you to relevant roles and to auto-fill application forms.
             </p>
 
-            <PrefSection title="Role & experience" idx={0}>
+            <PrefSection title="Role & Experience" idx={0}>
               <div>
                 <PrefLabel>Describe your current employment status</PrefLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -754,7 +754,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               </div>
             </PrefSection>
 
-            <PrefSection title="Location & schedule" idx={1}>
+            <PrefSection title="Location & Schedule" idx={1}>
               {locations.map((loc, i) => (
                 <div
                   key={i}
@@ -828,17 +828,21 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             </PrefSection>
 
             <PrefSection title="Compensation" idx={2}>
-              {hourlyFirst ? (
-                <>
-                  {hourlyRow}
-                  {salaryRow}
-                </>
-              ) : (
-                <>
-                  {salaryRow}
-                  {hourlyRow}
-                </>
-              )}
+              {/* Standard-width inputs in the left half of the section —
+                  not stretched flush to the full section width. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
+                {hourlyFirst ? (
+                  <>
+                    {hourlyRow}
+                    {salaryRow}
+                  </>
+                ) : (
+                  <>
+                    {salaryRow}
+                    {hourlyRow}
+                  </>
+                )}
+              </div>
             </PrefSection>
 
             <PrefSection title="Filtering" idx={3}>
@@ -884,7 +888,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               </div>
             </PrefSection>
 
-            <PrefSection title="Personal information" idx={5}>
+            <PrefSection title="Personal Information" idx={5}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <PrefLabel>Full name</PrefLabel>
@@ -982,9 +986,13 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               </div>
             </PrefSection>
 
-            <PrefSection title="Application behaviour" idx={6}>
-              <ModeCards appMode={appMode} setAppMode={setAppMode} />
-              <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
+            <PrefSection title="Application Behaviour" idx={6}>
+              {/* Mirror the compensation treatment — half-width block with the
+                  mode cards stacked rather than stretched across the section. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
+                <ModeCards appMode={appMode} setAppMode={setAppMode} stack />
+                <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
+              </div>
             </PrefSection>
 
             <div style={{ paddingTop: 28, paddingBottom: 8 }}>

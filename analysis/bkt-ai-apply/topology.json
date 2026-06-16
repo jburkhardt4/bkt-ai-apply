@@ -1,0 +1,4914 @@
+{
+  "system": "BKT AI-Apply",
+  "root": {
+    "id": "sys",
+    "name": "BKT AI-Apply",
+    "kind": "system",
+    "children": [
+      {
+        "id": "dom:app-shell-auth",
+        "name": "App Shell & Auth",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/components/bkt/BktCard.tsx",
+            "name": "BktCard.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 187,
+            "file": "src/components/bkt/BktCard.tsx"
+          },
+          {
+            "id": "src/pages/LoginPage.tsx",
+            "name": "LoginPage.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 167,
+            "file": "src/pages/LoginPage.tsx"
+          },
+          {
+            "id": "src/components/ui/select.tsx",
+            "name": "select.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 158,
+            "file": "src/components/ui/select.tsx"
+          },
+          {
+            "id": "src/components/bkt/JobRow.tsx",
+            "name": "JobRow.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 145,
+            "file": "src/components/bkt/JobRow.tsx"
+          },
+          {
+            "id": "src/components/ui/sheet.tsx",
+            "name": "sheet.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 140,
+            "file": "src/components/ui/sheet.tsx"
+          },
+          {
+            "id": "src/components/AppShell.tsx",
+            "name": "AppShell.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 137,
+            "file": "src/components/AppShell.tsx"
+          },
+          {
+            "id": "src/components/bkt/BktButton.tsx",
+            "name": "BktButton.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 124,
+            "file": "src/components/bkt/BktButton.tsx"
+          },
+          {
+            "id": "src/components/ui/dialog.tsx",
+            "name": "dialog.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 122,
+            "file": "src/components/ui/dialog.tsx"
+          },
+          {
+            "id": "src/components/bkt/BktCheckbox.tsx",
+            "name": "BktCheckbox.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 119,
+            "file": "src/components/bkt/BktCheckbox.tsx"
+          },
+          {
+            "id": "src/components/bkt/MatchScore.tsx",
+            "name": "MatchScore.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 103,
+            "file": "src/components/bkt/MatchScore.tsx"
+          },
+          {
+            "id": "src/App.tsx",
+            "name": "App.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 100,
+            "file": "src/App.tsx"
+          },
+          {
+            "id": "src/contexts/AuthContext.tsx",
+            "name": "AuthContext.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 96,
+            "file": "src/contexts/AuthContext.tsx"
+          },
+          {
+            "id": "src/components/bkt/bits.tsx",
+            "name": "bits.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 92,
+            "file": "src/components/bkt/bits.tsx"
+          },
+          {
+            "id": "src/components/bkt/BktBadge.tsx",
+            "name": "BktBadge.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 88,
+            "file": "src/components/bkt/BktBadge.tsx"
+          },
+          {
+            "id": "src/components/bkt/BktInput.tsx",
+            "name": "BktInput.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 86,
+            "file": "src/components/bkt/BktInput.tsx"
+          },
+          {
+            "id": "src/components/bkt/BktAvatar.tsx",
+            "name": "BktAvatar.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 84,
+            "file": "src/components/bkt/BktAvatar.tsx"
+          },
+          {
+            "id": "src/components/ui/card.tsx",
+            "name": "card.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 79,
+            "file": "src/components/ui/card.tsx"
+          },
+          {
+            "id": "src/components/ui/alert.tsx",
+            "name": "alert.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 59,
+            "file": "src/components/ui/alert.tsx"
+          },
+          {
+            "id": "src/lib/supabase.ts",
+            "name": "supabase.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 58,
+            "file": "src/lib/supabase.ts"
+          },
+          {
+            "id": "src/components/ui/button.tsx",
+            "name": "button.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 57,
+            "file": "src/components/ui/button.tsx"
+          },
+          {
+            "id": "src/components/bkt/toast.tsx",
+            "name": "toast.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 53,
+            "file": "src/components/bkt/toast.tsx"
+          },
+          {
+            "id": "src/components/ui/tabs.tsx",
+            "name": "tabs.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 53,
+            "file": "src/components/ui/tabs.tsx"
+          },
+          {
+            "id": "src/components/bkt/Icon.tsx",
+            "name": "Icon.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 50,
+            "file": "src/components/bkt/Icon.tsx"
+          },
+          {
+            "id": "src/components/ui/badge.tsx",
+            "name": "badge.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 37,
+            "file": "src/components/ui/badge.tsx"
+          },
+          {
+            "id": "src/components/ui/separator.tsx",
+            "name": "separator.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 29,
+            "file": "src/components/ui/separator.tsx"
+          },
+          {
+            "id": "src/components/ui/checkbox.tsx",
+            "name": "checkbox.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 28,
+            "file": "src/components/ui/checkbox.tsx"
+          },
+          {
+            "id": "src/components/ui/progress.tsx",
+            "name": "progress.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 28,
+            "file": "src/components/ui/progress.tsx"
+          },
+          {
+            "id": "src/components/bkt/format.ts",
+            "name": "format.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 25,
+            "file": "src/components/bkt/format.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/auth.ts",
+            "name": "auth.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 23,
+            "file": "supabase/functions/_shared/auth.ts"
+          },
+          {
+            "id": "src/components/ui/input.tsx",
+            "name": "input.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 22,
+            "file": "src/components/ui/input.tsx"
+          },
+          {
+            "id": "src/components/ui/textarea.tsx",
+            "name": "textarea.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 22,
+            "file": "src/components/ui/textarea.tsx"
+          },
+          {
+            "id": "src/contexts/auth-context.ts",
+            "name": "auth-context.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 21,
+            "file": "src/contexts/auth-context.ts"
+          },
+          {
+            "id": "src/components/ui/skeleton.tsx",
+            "name": "skeleton.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 15,
+            "file": "src/components/ui/skeleton.tsx"
+          },
+          {
+            "id": "src/contexts/selected-application-context.tsx",
+            "name": "selected-application-context.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 14,
+            "file": "src/contexts/selected-application-context.tsx"
+          },
+          {
+            "id": "src/main.tsx",
+            "name": "main.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 13,
+            "file": "src/main.tsx"
+          },
+          {
+            "id": "supabase/functions/_shared/http.ts",
+            "name": "http.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 13,
+            "file": "supabase/functions/_shared/http.ts"
+          },
+          {
+            "id": "src/components/bkt/toast-context.ts",
+            "name": "toast-context.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 12,
+            "file": "src/components/bkt/toast-context.ts"
+          },
+          {
+            "id": "src/components/ui/collapsible.tsx",
+            "name": "collapsible.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 11,
+            "file": "src/components/ui/collapsible.tsx"
+          },
+          {
+            "id": "src/lib/utils.ts",
+            "name": "utils.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 6,
+            "file": "src/lib/utils.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:job-discovery-prospector",
+        "name": "Job Discovery & Prospector",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/jobs/components/ProspectorSearchResults.tsx",
+            "name": "ProspectorSearchResults.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 1523,
+            "file": "src/features/jobs/components/ProspectorSearchResults.tsx"
+          },
+          {
+            "id": "supabase/functions/prospector-cron/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 1112,
+            "file": "supabase/functions/prospector-cron/index.ts"
+          },
+          {
+            "id": "src/features/jobs/ProspectorDashboard.tsx",
+            "name": "ProspectorDashboard.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 425,
+            "file": "src/features/jobs/ProspectorDashboard.tsx"
+          },
+          {
+            "id": "src/features/jobs/hooks/useProspectorTableControls.ts",
+            "name": "useProspectorTableControls.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 376,
+            "file": "src/features/jobs/hooks/useProspectorTableControls.ts"
+          },
+          {
+            "id": "src/pages/IngestionPage.tsx",
+            "name": "IngestionPage.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 373,
+            "file": "src/pages/IngestionPage.tsx"
+          },
+          {
+            "id": "src/features/jobs/components/ProspectorProfileForm.tsx",
+            "name": "ProspectorProfileForm.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 328,
+            "file": "src/features/jobs/components/ProspectorProfileForm.tsx"
+          },
+          {
+            "id": "src/features/applications/services/ingestionService.ts",
+            "name": "ingestionService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 327,
+            "file": "src/features/applications/services/ingestionService.ts"
+          },
+          {
+            "id": "src/features/jobs/hooks/useProspectorColumnOrder.ts",
+            "name": "useProspectorColumnOrder.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 287,
+            "file": "src/features/jobs/hooks/useProspectorColumnOrder.ts"
+          },
+          {
+            "id": "src/features/jobs/components/ProspectorJobSheet.tsx",
+            "name": "ProspectorJobSheet.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 280,
+            "file": "src/features/jobs/components/ProspectorJobSheet.tsx"
+          },
+          {
+            "id": "src/features/jobs/data/prospectorSeedData.ts",
+            "name": "prospectorSeedData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 190,
+            "file": "src/features/jobs/data/prospectorSeedData.ts"
+          },
+          {
+            "id": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+            "name": "useProspectorSearchResults.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 190,
+            "file": "src/features/jobs/hooks/useProspectorSearchResults.ts"
+          },
+          {
+            "id": "src/features/jobs/hooks/useProspectorProfile.ts",
+            "name": "useProspectorProfile.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 178,
+            "file": "src/features/jobs/hooks/useProspectorProfile.ts"
+          },
+          {
+            "id": "src/features/jobs/services/prospectorGraduationService.ts",
+            "name": "prospectorGraduationService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 176,
+            "file": "src/features/jobs/services/prospectorGraduationService.ts"
+          },
+          {
+            "id": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+            "name": "useProspectorReadyQueue.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 165,
+            "file": "src/features/jobs/hooks/useProspectorReadyQueue.ts"
+          },
+          {
+            "id": "src/features/jobs/components/ProspectorReadyQueue.tsx",
+            "name": "ProspectorReadyQueue.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 133,
+            "file": "src/features/jobs/components/ProspectorReadyQueue.tsx"
+          },
+          {
+            "id": "src/features/jobs/services/jdFormattingService.ts",
+            "name": "jdFormattingService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 126,
+            "file": "src/features/jobs/services/jdFormattingService.ts"
+          },
+          {
+            "id": "src/features/jobs/hooks/useProspectingRuns.ts",
+            "name": "useProspectingRuns.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 114,
+            "file": "src/features/jobs/hooks/useProspectingRuns.ts"
+          },
+          {
+            "id": "src/features/jobs/components/JobDescriptionMarkdown.tsx",
+            "name": "JobDescriptionMarkdown.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 112,
+            "file": "src/features/jobs/components/JobDescriptionMarkdown.tsx"
+          },
+          {
+            "id": "src/features/jobs/components/CompanyLogo.tsx",
+            "name": "CompanyLogo.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 101,
+            "file": "src/features/jobs/components/CompanyLogo.tsx"
+          },
+          {
+            "id": "supabase/functions/format-jd/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 100,
+            "file": "supabase/functions/format-jd/index.ts"
+          },
+          {
+            "id": "src/features/jobs/components/parseJdMarkdown.ts",
+            "name": "parseJdMarkdown.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 99,
+            "file": "src/features/jobs/components/parseJdMarkdown.ts"
+          },
+          {
+            "id": "src/features/jobs/components/prospectorJobFields.ts",
+            "name": "prospectorJobFields.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 89,
+            "file": "src/features/jobs/components/prospectorJobFields.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/jd-format.ts",
+            "name": "jd-format.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 85,
+            "file": "supabase/functions/_shared/jd-format.ts"
+          },
+          {
+            "id": "src/features/jobs/summarizeRunResults.ts",
+            "name": "summarizeRunResults.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 66,
+            "file": "src/features/jobs/summarizeRunResults.ts"
+          },
+          {
+            "id": "src/features/jobs/components/ProspectorRunStatus.tsx",
+            "name": "ProspectorRunStatus.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 58,
+            "file": "src/features/jobs/components/ProspectorRunStatus.tsx"
+          },
+          {
+            "id": "src/features/jobs/components/ProspectorToggle.tsx",
+            "name": "ProspectorToggle.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 55,
+            "file": "src/features/jobs/components/ProspectorToggle.tsx"
+          },
+          {
+            "id": "src/pages/ProspectorPage.tsx",
+            "name": "ProspectorPage.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 10,
+            "file": "src/pages/ProspectorPage.tsx"
+          }
+        ]
+      },
+      {
+        "id": "dom:applications-pipeline-events",
+        "name": "Applications Pipeline & Events",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/applications/services/chatAssistantService.ts",
+            "name": "chatAssistantService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 437,
+            "file": "src/features/applications/services/chatAssistantService.ts"
+          },
+          {
+            "id": "src/features/applications/services/calendarIntelligenceService.ts",
+            "name": "calendarIntelligenceService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 308,
+            "file": "src/features/applications/services/calendarIntelligenceService.ts"
+          },
+          {
+            "id": "src/features/applications/services/analyticsReportService.ts",
+            "name": "analyticsReportService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 279,
+            "file": "src/features/applications/services/analyticsReportService.ts"
+          },
+          {
+            "id": "src/features/applications/components/PipelineBoard.tsx",
+            "name": "PipelineBoard.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 265,
+            "file": "src/features/applications/components/PipelineBoard.tsx"
+          },
+          {
+            "id": "src/features/applications/services/gmailIntelligenceService.ts",
+            "name": "gmailIntelligenceService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 264,
+            "file": "src/features/applications/services/gmailIntelligenceService.ts"
+          },
+          {
+            "id": "src/features/applications/services/pipelineService.ts",
+            "name": "pipelineService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 194,
+            "file": "src/features/applications/services/pipelineService.ts"
+          },
+          {
+            "id": "src/features/applications/services/ingestionCsv.ts",
+            "name": "ingestionCsv.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 186,
+            "file": "src/features/applications/services/ingestionCsv.ts"
+          },
+          {
+            "id": "src/features/applications/components/AnalyticsReportsSection.tsx",
+            "name": "AnalyticsReportsSection.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 159,
+            "file": "src/features/applications/components/AnalyticsReportsSection.tsx"
+          },
+          {
+            "id": "src/features/applications/components/AiCostMonitorCard.tsx",
+            "name": "AiCostMonitorCard.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 142,
+            "file": "src/features/applications/components/AiCostMonitorCard.tsx"
+          },
+          {
+            "id": "src/features/applications/components/ChatAssistantPanel.tsx",
+            "name": "ChatAssistantPanel.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 134,
+            "file": "src/features/applications/components/ChatAssistantPanel.tsx"
+          },
+          {
+            "id": "src/features/applications/components/NotificationFeedSection.tsx",
+            "name": "NotificationFeedSection.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 129,
+            "file": "src/features/applications/components/NotificationFeedSection.tsx"
+          },
+          {
+            "id": "src/features/applications/services/applicationService.ts",
+            "name": "applicationService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 123,
+            "file": "src/features/applications/services/applicationService.ts"
+          },
+          {
+            "id": "src/features/applications/components/DashboardSummarySection.tsx",
+            "name": "DashboardSummarySection.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 119,
+            "file": "src/features/applications/components/DashboardSummarySection.tsx"
+          },
+          {
+            "id": "src/features/applications/services/notificationFeedService.ts",
+            "name": "notificationFeedService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 98,
+            "file": "src/features/applications/services/notificationFeedService.ts"
+          },
+          {
+            "id": "src/types/pipeline.ts",
+            "name": "pipeline.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 95,
+            "file": "src/types/pipeline.ts"
+          },
+          {
+            "id": "src/features/applications/services/dashboardAnalyticsService.ts",
+            "name": "dashboardAnalyticsService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 94,
+            "file": "src/features/applications/services/dashboardAnalyticsService.ts"
+          },
+          {
+            "id": "src/features/applications/components/AuditLogViewer.tsx",
+            "name": "AuditLogViewer.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 81,
+            "file": "src/features/applications/components/AuditLogViewer.tsx"
+          },
+          {
+            "id": "src/features/applications/services/submittedCount.ts",
+            "name": "submittedCount.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 81,
+            "file": "src/features/applications/services/submittedCount.ts"
+          },
+          {
+            "id": "src/pages/PipelinePage.tsx",
+            "name": "PipelinePage.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 78,
+            "file": "src/pages/PipelinePage.tsx"
+          },
+          {
+            "id": "src/features/applications/components/chatAssistantPanelView.ts",
+            "name": "chatAssistantPanelView.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 62,
+            "file": "src/features/applications/components/chatAssistantPanelView.ts"
+          },
+          {
+            "id": "src/features/applications/components/notificationFeedView.ts",
+            "name": "notificationFeedView.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 61,
+            "file": "src/features/applications/components/notificationFeedView.ts"
+          },
+          {
+            "id": "src/features/applications/domain/stageRules.ts",
+            "name": "stageRules.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 17,
+            "file": "src/features/applications/domain/stageRules.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:ai-routing-scoring",
+        "name": "AI Routing & Scoring",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/applications/services/aiScoringService.ts",
+            "name": "aiScoringService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 310,
+            "file": "src/features/applications/services/aiScoringService.ts"
+          },
+          {
+            "id": "src/lib/ai-router.ts",
+            "name": "ai-router.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 283,
+            "file": "src/lib/ai-router.ts"
+          },
+          {
+            "id": "supabase/functions/score-job-fit/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 262,
+            "file": "supabase/functions/score-job-fit/index.ts"
+          },
+          {
+            "id": "supabase/functions/generate-document/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 181,
+            "file": "supabase/functions/generate-document/index.ts"
+          },
+          {
+            "id": "src/features/applications/services/aiCostMonitorService.ts",
+            "name": "aiCostMonitorService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 168,
+            "file": "src/features/applications/services/aiCostMonitorService.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/llm/errors.ts",
+            "name": "errors.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 105,
+            "file": "supabase/functions/_shared/llm/errors.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/llm/google.ts",
+            "name": "google.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 80,
+            "file": "supabase/functions/_shared/llm/google.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/llm/anthropic.ts",
+            "name": "anthropic.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 71,
+            "file": "supabase/functions/_shared/llm/anthropic.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/llm/openai.ts",
+            "name": "openai.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 71,
+            "file": "supabase/functions/_shared/llm/openai.ts"
+          },
+          {
+            "id": "src/lib/edgeFunctionError.ts",
+            "name": "edgeFunctionError.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 54,
+            "file": "src/lib/edgeFunctionError.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/llm/factory.ts",
+            "name": "factory.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 47,
+            "file": "supabase/functions/_shared/llm/factory.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/llm/types.ts",
+            "name": "types.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 45,
+            "file": "supabase/functions/_shared/llm/types.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:conversational-ai-assistant",
+        "name": "Conversational AI Assistant",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/ai-agent/services/chatCompletionService.ts",
+            "name": "chatCompletionService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 231,
+            "file": "src/features/ai-agent/services/chatCompletionService.ts"
+          },
+          {
+            "id": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+            "name": "AiAssistantPanel.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 213,
+            "file": "src/features/ai-agent/components/AiAssistantPanel.tsx"
+          },
+          {
+            "id": "src/features/ai-agent/hooks/useChatConversations.ts",
+            "name": "useChatConversations.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 172,
+            "file": "src/features/ai-agent/hooks/useChatConversations.ts"
+          },
+          {
+            "id": "src/features/ai-agent/services/chatConversationsService.ts",
+            "name": "chatConversationsService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 105,
+            "file": "src/features/ai-agent/services/chatConversationsService.ts"
+          },
+          {
+            "id": "src/features/ai-agent/components/ModelSelector.tsx",
+            "name": "ModelSelector.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 93,
+            "file": "src/features/ai-agent/components/ModelSelector.tsx"
+          },
+          {
+            "id": "supabase/functions/ai-chat/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 89,
+            "file": "supabase/functions/ai-chat/index.ts"
+          },
+          {
+            "id": "src/features/ai-agent/services/chatMemoryService.ts",
+            "name": "chatMemoryService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 77,
+            "file": "src/features/ai-agent/services/chatMemoryService.ts"
+          },
+          {
+            "id": "src/features/ai-agent/hooks/useSelectedModel.ts",
+            "name": "useSelectedModel.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 50,
+            "file": "src/features/ai-agent/hooks/useSelectedModel.ts"
+          },
+          {
+            "id": "src/features/ai-agent/types.ts",
+            "name": "types.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 41,
+            "file": "src/features/ai-agent/types.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:documents-resume-cover-letter",
+        "name": "Documents (Resume/Cover Letter)",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/auto-apply/screens/DocBuilder.tsx",
+            "name": "DocBuilder.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 519,
+            "file": "src/features/auto-apply/screens/DocBuilder.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/DocsScreen.tsx",
+            "name": "DocsScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 416,
+            "file": "src/features/auto-apply/screens/DocsScreen.tsx"
+          },
+          {
+            "id": "src/features/applications/services/documentGenerationService.ts",
+            "name": "documentGenerationService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 341,
+            "file": "src/features/applications/services/documentGenerationService.ts"
+          },
+          {
+            "id": "src/features/auto-apply/services/docContentParser.ts",
+            "name": "docContentParser.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 187,
+            "file": "src/features/auto-apply/services/docContentParser.ts"
+          },
+          {
+            "id": "src/features/applications/services/documentStorageService.ts",
+            "name": "documentStorageService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 182,
+            "file": "src/features/applications/services/documentStorageService.ts"
+          },
+          {
+            "id": "src/features/auto-apply/services/docWriterService.ts",
+            "name": "docWriterService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 138,
+            "file": "src/features/auto-apply/services/docWriterService.ts"
+          },
+          {
+            "id": "src/features/applications/data/masterProfile.ts",
+            "name": "masterProfile.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 82,
+            "file": "src/features/applications/data/masterProfile.ts"
+          },
+          {
+            "id": "src/features/auto-apply/services/textSanitizer.ts",
+            "name": "textSanitizer.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 34,
+            "file": "src/features/auto-apply/services/textSanitizer.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:auto-apply-workspace-settings",
+        "name": "Auto-Apply Workspace & Settings",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/auto-apply/screens/PreferencesScreen.tsx",
+            "name": "PreferencesScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 1037,
+            "file": "src/features/auto-apply/screens/PreferencesScreen.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/SearchScreen.tsx",
+            "name": "SearchScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 742,
+            "file": "src/features/auto-apply/screens/SearchScreen.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/services/autoApplyService.ts",
+            "name": "autoApplyService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 510,
+            "file": "src/features/auto-apply/services/autoApplyService.ts"
+          },
+          {
+            "id": "src/features/auto-apply/screens/DocAssistant.tsx",
+            "name": "DocAssistant.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 382,
+            "file": "src/features/auto-apply/screens/DocAssistant.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/QuickReview.tsx",
+            "name": "QuickReview.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 366,
+            "file": "src/features/auto-apply/screens/QuickReview.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/components/chrome.tsx",
+            "name": "chrome.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 356,
+            "file": "src/features/auto-apply/components/chrome.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/JDSidebar.tsx",
+            "name": "JDSidebar.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 312,
+            "file": "src/features/auto-apply/screens/JDSidebar.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/SavedScreen.tsx",
+            "name": "SavedScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 305,
+            "file": "src/features/auto-apply/screens/SavedScreen.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/routes.tsx",
+            "name": "routes.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 257,
+            "file": "src/features/auto-apply/routes.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/DocPaper.tsx",
+            "name": "DocPaper.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 244,
+            "file": "src/features/auto-apply/screens/DocPaper.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/types.ts",
+            "name": "types.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 227,
+            "file": "src/features/auto-apply/types.ts"
+          },
+          {
+            "id": "src/features/auto-apply/components/AutoApplySidebar.tsx",
+            "name": "AutoApplySidebar.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 198,
+            "file": "src/features/auto-apply/components/AutoApplySidebar.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/screens/JobsScreen.tsx",
+            "name": "JobsScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 182,
+            "file": "src/features/auto-apply/screens/JobsScreen.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/components/ComposeModal.tsx",
+            "name": "ComposeModal.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 178,
+            "file": "src/features/auto-apply/components/ComposeModal.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/AutoApplyDashboard.tsx",
+            "name": "AutoApplyDashboard.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 154,
+            "file": "src/features/auto-apply/AutoApplyDashboard.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/data/docsData.ts",
+            "name": "docsData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 138,
+            "file": "src/features/auto-apply/data/docsData.ts"
+          },
+          {
+            "id": "src/features/auto-apply/data/searchData.ts",
+            "name": "searchData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 114,
+            "file": "src/features/auto-apply/data/searchData.ts"
+          },
+          {
+            "id": "src/features/auto-apply/data/jobsData.ts",
+            "name": "jobsData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 99,
+            "file": "src/features/auto-apply/data/jobsData.ts"
+          },
+          {
+            "id": "src/features/auto-apply/data/inboxData.ts",
+            "name": "inboxData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 83,
+            "file": "src/features/auto-apply/data/inboxData.ts"
+          },
+          {
+            "id": "src/features/auto-apply/services/settingsService.ts",
+            "name": "settingsService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 80,
+            "file": "src/features/auto-apply/services/settingsService.ts"
+          },
+          {
+            "id": "src/features/auto-apply/router.ts",
+            "name": "router.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 66,
+            "file": "src/features/auto-apply/router.ts"
+          },
+          {
+            "id": "src/features/auto-apply/state.ts",
+            "name": "state.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 66,
+            "file": "src/features/auto-apply/state.ts"
+          },
+          {
+            "id": "src/features/auto-apply/components/AutoApplySettingsProvider.tsx",
+            "name": "AutoApplySettingsProvider.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 62,
+            "file": "src/features/auto-apply/components/AutoApplySettingsProvider.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/hooks/useAutoApplyData.ts",
+            "name": "useAutoApplyData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 61,
+            "file": "src/features/auto-apply/hooks/useAutoApplyData.ts"
+          },
+          {
+            "id": "src/features/auto-apply/screens/InterviewPrepScreen.tsx",
+            "name": "InterviewPrepScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 36,
+            "file": "src/features/auto-apply/screens/InterviewPrepScreen.tsx"
+          },
+          {
+            "id": "src/features/auto-apply/data/savedData.ts",
+            "name": "savedData.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 30,
+            "file": "src/features/auto-apply/data/savedData.ts"
+          },
+          {
+            "id": "src/features/auto-apply/settings-context.ts",
+            "name": "settings-context.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 28,
+            "file": "src/features/auto-apply/settings-context.ts"
+          },
+          {
+            "id": "src/features/auto-apply/assets.ts",
+            "name": "assets.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 14,
+            "file": "src/features/auto-apply/assets.ts"
+          },
+          {
+            "id": "src/features/auto-apply/reviewModes.ts",
+            "name": "reviewModes.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 9,
+            "file": "src/features/auto-apply/reviewModes.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:auto-submission-engine",
+        "name": "Auto-Submission Engine",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "supabase/functions/submission-worker/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 574,
+            "file": "supabase/functions/submission-worker/index.ts"
+          },
+          {
+            "id": "src/features/applications/components/SubmissionGatePanel.tsx",
+            "name": "SubmissionGatePanel.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 343,
+            "file": "src/features/applications/components/SubmissionGatePanel.tsx"
+          },
+          {
+            "id": "supabase/functions/_shared/submission/atsAdapters.ts",
+            "name": "atsAdapters.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 311,
+            "file": "supabase/functions/_shared/submission/atsAdapters.ts"
+          },
+          {
+            "id": "src/features/applications/services/submissionApprovalService.ts",
+            "name": "submissionApprovalService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 235,
+            "file": "src/features/applications/services/submissionApprovalService.ts"
+          },
+          {
+            "id": "src/features/applications/services/submissionQueueService.ts",
+            "name": "submissionQueueService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 224,
+            "file": "src/features/applications/services/submissionQueueService.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/submission/browserAdapter.ts",
+            "name": "browserAdapter.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 129,
+            "file": "supabase/functions/_shared/submission/browserAdapter.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/submission/types.ts",
+            "name": "types.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 100,
+            "file": "supabase/functions/_shared/submission/types.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/notify.ts",
+            "name": "notify.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 92,
+            "file": "supabase/functions/_shared/notify.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/submission/resolveChannel.ts",
+            "name": "resolveChannel.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 91,
+            "file": "supabase/functions/_shared/submission/resolveChannel.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/submission/candidate.ts",
+            "name": "candidate.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 88,
+            "file": "supabase/functions/_shared/submission/candidate.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:gmail-integration",
+        "name": "Gmail Integration",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/auto-apply/screens/InboxScreen.tsx",
+            "name": "InboxScreen.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 558,
+            "file": "src/features/auto-apply/screens/InboxScreen.tsx"
+          },
+          {
+            "id": "supabase/functions/gmail-sync/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 472,
+            "file": "supabase/functions/gmail-sync/index.ts"
+          },
+          {
+            "id": "supabase/functions/gmail-sync/logic.ts",
+            "name": "logic.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 466,
+            "file": "supabase/functions/gmail-sync/logic.ts"
+          },
+          {
+            "id": "supabase/functions/gmail-send/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 332,
+            "file": "supabase/functions/gmail-send/index.ts"
+          },
+          {
+            "id": "supabase/functions/gmail-sync/gmail.ts",
+            "name": "gmail.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 173,
+            "file": "supabase/functions/gmail-sync/gmail.ts"
+          },
+          {
+            "id": "supabase/functions/gmail-send/mime.ts",
+            "name": "mime.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 70,
+            "file": "supabase/functions/gmail-send/mime.ts"
+          },
+          {
+            "id": "supabase/functions/_shared/gmail-auth.ts",
+            "name": "gmail-auth.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 54,
+            "file": "supabase/functions/_shared/gmail-auth.ts"
+          },
+          {
+            "id": "src/features/auto-apply/services/emailSendService.ts",
+            "name": "emailSendService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 45,
+            "file": "src/features/auto-apply/services/emailSendService.ts"
+          }
+        ]
+      },
+      {
+        "id": "dom:settings-provider-status",
+        "name": "Settings & Provider Status",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/features/settings/components/IntegrationsPanel.tsx",
+            "name": "IntegrationsPanel.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 110,
+            "file": "src/features/settings/components/IntegrationsPanel.tsx"
+          },
+          {
+            "id": "src/features/settings/hooks/useProviderStatus.ts",
+            "name": "useProviderStatus.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 64,
+            "file": "src/features/settings/hooks/useProviderStatus.ts"
+          },
+          {
+            "id": "src/features/settings/components/ProviderStatusCard.tsx",
+            "name": "ProviderStatusCard.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 53,
+            "file": "src/features/settings/components/ProviderStatusCard.tsx"
+          },
+          {
+            "id": "supabase/functions/provider-status/index.ts",
+            "name": "index.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 31,
+            "file": "supabase/functions/provider-status/index.ts"
+          },
+          {
+            "id": "src/features/settings/services/providerStatusService.ts",
+            "name": "providerStatusService.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 29,
+            "file": "src/features/settings/services/providerStatusService.ts"
+          },
+          {
+            "id": "src/features/settings/types.ts",
+            "name": "types.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 14,
+            "file": "src/features/settings/types.ts"
+          },
+          {
+            "id": "src/pages/SettingsPage.tsx",
+            "name": "SettingsPage.tsx",
+            "kind": "module",
+            "language": "tsx",
+            "loc": 10,
+            "file": "src/pages/SettingsPage.tsx"
+          }
+        ]
+      },
+      {
+        "id": "dom:data-schema-rls-migrations",
+        "name": "Data Schema & RLS Migrations",
+        "kind": "domain",
+        "children": [
+          {
+            "id": "src/types/db.types.ts",
+            "name": "db.types.ts",
+            "kind": "module",
+            "language": "ts",
+            "loc": 1424,
+            "file": "src/types/db.types.ts"
+          },
+          {
+            "id": "ds:ai_model_usage",
+            "name": "ai_model_usage",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:ai_scores",
+            "name": "ai_scores",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:application_events",
+            "name": "application_events",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:application_materials",
+            "name": "application_materials",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:application_queue",
+            "name": "application_queue",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:applications",
+            "name": "applications",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:candidate_profiles",
+            "name": "candidate_profiles",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:chat_conversations",
+            "name": "chat_conversations",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:chat_memory",
+            "name": "chat_memory",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:chat_messages",
+            "name": "chat_messages",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:companies",
+            "name": "companies",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:documents",
+            "name": "documents",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:emails",
+            "name": "emails",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:gmail_label_map",
+            "name": "gmail_label_map",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:gmail_sync_state",
+            "name": "gmail_sync_state",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:interviews",
+            "name": "interviews",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:jobs",
+            "name": "jobs",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:notifications",
+            "name": "notifications",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:prospecting_profiles",
+            "name": "prospecting_profiles",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:prospecting_runs",
+            "name": "prospecting_runs",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:recruiters",
+            "name": "recruiters",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:roles",
+            "name": "roles",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:saved_jobs",
+            "name": "saved_jobs",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:submission_previews",
+            "name": "submission_previews",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:user_settings",
+            "name": "user_settings",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:users",
+            "name": "users",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:rpc:claim_submission",
+            "name": "claim_submission()",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:rpc:expire_stuck_submitting",
+            "name": "expire_stuck_submitting()",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:rpc:finalize_submission",
+            "name": "finalize_submission()",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:rpc:transition_stage",
+            "name": "transition_stage()",
+            "kind": "datastore"
+          },
+          {
+            "id": "ds:rpc:write_approval_event",
+            "name": "write_approval_event()",
+            "kind": "datastore"
+          }
+        ]
+      }
+    ]
+  },
+  "edges": [
+    {
+      "source": "src/App.tsx",
+      "target": "src/components/AppShell.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/components/bkt/toast-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/components/chrome.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/routes.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/screens/InterviewPrepScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/screens/PreferencesScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/pages/IngestionPage.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/pages/LoginPage.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/pages/PipelinePage.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/pages/ProspectorPage.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/App.tsx",
+      "target": "src/pages/SettingsPage.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/contexts/selected-application-context.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/features/auto-apply/components/AutoApplySettingsProvider.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/features/auto-apply/components/AutoApplySidebar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/features/auto-apply/router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/features/auto-apply/services/autoApplyService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/AppShell.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/JobRow.tsx",
+      "target": "src/components/bkt/BktAvatar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/JobRow.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/JobRow.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/JobRow.tsx",
+      "target": "src/components/bkt/MatchScore.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/JobRow.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/bits.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/toast.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/toast.tsx",
+      "target": "src/components/bkt/toast-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/bkt/toast.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/alert.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/badge.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/button.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/card.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/checkbox.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/dialog.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/input.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/progress.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/select.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/separator.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/sheet.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/skeleton.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/tabs.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/components/ui/textarea.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/contexts/AuthContext.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/contexts/AuthContext.tsx",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/components/ui/textarea.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/features/ai-agent/components/ModelSelector.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/features/ai-agent/hooks/useChatConversations.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/features/ai-agent/hooks/useSelectedModel.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/features/ai-agent/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/features/settings/hooks/useProviderStatus.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/AiAssistantPanel.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/ModelSelector.tsx",
+      "target": "src/components/ui/select.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/ModelSelector.tsx",
+      "target": "src/features/settings/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/ModelSelector.tsx",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/components/ModelSelector.tsx",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/hooks/useChatConversations.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/hooks/useChatConversations.ts",
+      "target": "src/features/ai-agent/services/chatCompletionService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/hooks/useChatConversations.ts",
+      "target": "src/features/ai-agent/services/chatConversationsService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/hooks/useChatConversations.ts",
+      "target": "src/features/ai-agent/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/hooks/useSelectedModel.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/hooks/useSelectedModel.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/features/ai-agent/services/chatConversationsService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/features/ai-agent/services/chatMemoryService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/features/ai-agent/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/features/applications/services/chatAssistantService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/lib/edgeFunctionError.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatCompletionService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatConversationsService.ts",
+      "target": "ds:chat_conversations",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatConversationsService.ts",
+      "target": "ds:chat_conversations",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatConversationsService.ts",
+      "target": "ds:chat_messages",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatConversationsService.ts",
+      "target": "ds:chat_messages",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatConversationsService.ts",
+      "target": "src/features/ai-agent/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatConversationsService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatMemoryService.ts",
+      "target": "ds:chat_memory",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatMemoryService.ts",
+      "target": "ds:chat_memory",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatMemoryService.ts",
+      "target": "src/features/ai-agent/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/ai-agent/services/chatMemoryService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/components/ui/progress.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "target": "src/features/applications/services/aiCostMonitorService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AnalyticsReportsSection.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AnalyticsReportsSection.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AnalyticsReportsSection.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AnalyticsReportsSection.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AnalyticsReportsSection.tsx",
+      "target": "src/features/applications/services/analyticsReportService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AuditLogViewer.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AuditLogViewer.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AuditLogViewer.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/AuditLogViewer.tsx",
+      "target": "src/features/applications/services/applicationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/components/ui/textarea.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/features/applications/components/chatAssistantPanelView.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/ChatAssistantPanel.tsx",
+      "target": "src/features/applications/services/chatAssistantService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/DashboardSummarySection.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/DashboardSummarySection.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/DashboardSummarySection.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/DashboardSummarySection.tsx",
+      "target": "src/features/applications/services/dashboardAnalyticsService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/features/applications/components/notificationFeedView.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/NotificationFeedSection.tsx",
+      "target": "src/features/applications/services/notificationFeedService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/dialog.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/input.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/components/ui/select.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/features/applications/domain/stageRules.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/features/applications/services/applicationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/PipelineBoard.tsx",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/components/ui/checkbox.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/features/applications/data/masterProfile.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/features/applications/services/submissionApprovalService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/features/applications/services/submissionQueueService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "target": "src/features/auto-apply/state.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/chatAssistantPanelView.ts",
+      "target": "src/features/applications/services/chatAssistantService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/components/notificationFeedView.ts",
+      "target": "src/features/applications/services/notificationFeedService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/data/masterProfile.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/domain/stageRules.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiCostMonitorService.ts",
+      "target": "ds:ai_model_usage",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/aiCostMonitorService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiCostMonitorService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiCostMonitorService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiScoringService.ts",
+      "target": "ds:ai_scores",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/aiScoringService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiScoringService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiScoringService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/aiScoringService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/analyticsReportService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/analyticsReportService.ts",
+      "target": "ds:companies",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/analyticsReportService.ts",
+      "target": "ds:jobs",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/analyticsReportService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/analyticsReportService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "ds:application_events",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "ds:rpc:transition_stage",
+      "kind": "dispatch"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "src/features/applications/domain/stageRules.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "src/features/applications/services/submittedCount.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/applicationService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "ds:interviews",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "ds:notifications",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "ds:recruiters",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "src/features/applications/domain/stageRules.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "src/features/applications/services/applicationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/calendarIntelligenceService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/chatAssistantService.ts",
+      "target": "ds:ai_scores",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/chatAssistantService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/chatAssistantService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/chatAssistantService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/chatAssistantService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/chatAssistantService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/dashboardAnalyticsService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/dashboardAnalyticsService.ts",
+      "target": "ds:interviews",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/dashboardAnalyticsService.ts",
+      "target": "ds:notifications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/dashboardAnalyticsService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/dashboardAnalyticsService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentGenerationService.ts",
+      "target": "src/features/applications/services/documentStorageService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentGenerationService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentGenerationService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentGenerationService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentGenerationService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentStorageService.ts",
+      "target": "ds:application_materials",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/documentStorageService.ts",
+      "target": "ds:documents",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/documentStorageService.ts",
+      "target": "ds:documents",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/documentStorageService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/documentStorageService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "ds:emails",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "ds:notifications",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "src/features/applications/domain/stageRules.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "src/features/applications/services/applicationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/gmailIntelligenceService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "ds:applications",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "ds:jobs",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "ds:jobs",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "src/features/applications/data/masterProfile.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "src/features/applications/services/aiScoringService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "src/features/applications/services/ingestionCsv.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "src/features/applications/services/pipelineService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/ingestionService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/notificationFeedService.ts",
+      "target": "ds:notifications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/notificationFeedService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/notificationFeedService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/pipelineService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "ds:rpc:write_approval_event",
+      "kind": "dispatch"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "src/features/applications/data/masterProfile.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "src/features/applications/services/documentGenerationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "src/features/applications/services/documentStorageService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionApprovalService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionQueueService.ts",
+      "target": "ds:application_queue",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/submissionQueueService.ts",
+      "target": "ds:application_queue",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/applications/services/submissionQueueService.ts",
+      "target": "ds:user_settings",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/applications/services/submissionQueueService.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionQueueService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submissionQueueService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/applications/services/submittedCount.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/components/bkt/toast-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/applications/services/applicationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/components/chrome.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/data/jobsData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/hooks/useAutoApplyData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/reviewModes.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/screens/QuickReview.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/services/autoApplyService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/state.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/AutoApplyDashboard.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySettingsProvider.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySettingsProvider.tsx",
+      "target": "src/features/auto-apply/services/settingsService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySettingsProvider.tsx",
+      "target": "src/features/auto-apply/settings-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySidebar.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySidebar.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySidebar.tsx",
+      "target": "src/features/auto-apply/assets.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/AutoApplySidebar.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/ComposeModal.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/ComposeModal.tsx",
+      "target": "src/components/bkt/BktInput.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/ComposeModal.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/ComposeModal.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/ComposeModal.tsx",
+      "target": "src/features/auto-apply/services/emailSendService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/ComposeModal.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/components/bkt/BktInput.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/features/auto-apply/assets.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/features/auto-apply/reviewModes.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/components/chrome.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/data/docsData.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/data/inboxData.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/data/jobsData.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/data/savedData.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/data/searchData.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/reviewModes.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/router.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/components/bkt/toast-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/data/docsData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/data/inboxData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/data/savedData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/data/searchData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/hooks/useAutoApplyData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/screens/DocPaper.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/services/autoApplyService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/state.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/routes.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "target": "src/features/auto-apply/screens/DocPaper.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "target": "src/features/auto-apply/services/docWriterService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/components/bkt/BktInput.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/features/auto-apply/screens/DocPaper.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/features/auto-apply/services/docContentParser.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/features/auto-apply/services/docWriterService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocPaper.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocPaper.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocPaper.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocPaper.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocPaper.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/features/auto-apply/screens/DocBuilder.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/features/auto-apply/screens/DocPaper.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/DocsScreen.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/components/bkt/BktAvatar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/features/auto-apply/components/ComposeModal.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InboxScreen.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/InterviewPrepScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/components/bkt/BktAvatar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/components/bkt/bits.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/features/auto-apply/services/autoApplyService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JDSidebar.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/components/bkt/BktCard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/components/bkt/BktInput.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/components/bkt/JobRow.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/JobsScreen.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/PreferencesScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/PreferencesScreen.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/PreferencesScreen.tsx",
+      "target": "src/features/auto-apply/assets.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/components/bkt/BktAvatar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/components/bkt/BktCard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/components/bkt/bits.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/QuickReview.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/components/bkt/BktAvatar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SavedScreen.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/BktAvatar.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/BktBadge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/BktButton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/BktCheckbox.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/BktInput.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/Icon.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/components/bkt/toast.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/screens/SearchScreen.tsx",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:application_events",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:applications",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:emails",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:gmail_label_map",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:jobs",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:saved_jobs",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "ds:saved_jobs",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/features/applications/services/applicationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/features/auto-apply/data/inboxData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/features/auto-apply/data/jobsData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/features/auto-apply/data/savedData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/features/auto-apply/data/searchData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/autoApplyService.ts",
+      "target": "supabase/functions/gmail-sync/index.ts",
+      "kind": "dispatch"
+    },
+    {
+      "source": "src/features/auto-apply/services/docContentParser.ts",
+      "target": "src/features/auto-apply/services/textSanitizer.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docContentParser.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docWriterService.ts",
+      "target": "src/features/ai-agent/services/chatCompletionService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docWriterService.ts",
+      "target": "src/features/applications/services/documentGenerationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docWriterService.ts",
+      "target": "src/features/auto-apply/screens/DocAssistant.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docWriterService.ts",
+      "target": "src/features/auto-apply/screens/DocPaper.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docWriterService.ts",
+      "target": "src/features/auto-apply/services/textSanitizer.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/docWriterService.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/emailSendService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "ds:user_settings",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "ds:user_settings",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "src/features/auto-apply/data/jobsData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "src/features/auto-apply/data/searchData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/services/settingsService.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/settings-context.ts",
+      "target": "src/features/auto-apply/services/settingsService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/state.ts",
+      "target": "src/features/auto-apply/hooks/useAutoApplyData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/state.ts",
+      "target": "src/features/auto-apply/services/settingsService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/auto-apply/state.ts",
+      "target": "src/features/auto-apply/settings-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/applications/services/ingestionService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/auto-apply/settings-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/components/ProspectorReadyQueue.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/components/ProspectorRunStatus.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/components/ProspectorToggle.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/hooks/useProspectingRuns.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/services/prospectorGraduationService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/features/jobs/summarizeRunResults.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/ProspectorDashboard.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/CompanyLogo.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/JobDescriptionMarkdown.tsx",
+      "target": "src/features/jobs/components/parseJdMarkdown.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/JobDescriptionMarkdown.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/components/ui/sheet.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/features/jobs/components/CompanyLogo.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/features/jobs/components/JobDescriptionMarkdown.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/features/jobs/components/prospectorJobFields.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/features/jobs/services/jdFormattingService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "target": "src/components/ui/checkbox.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "target": "src/components/ui/input.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "target": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorProfileForm.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorReadyQueue.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorReadyQueue.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorRunStatus.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/components/ui/skeleton.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/features/jobs/components/ProspectorJobSheet.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/features/jobs/components/prospectorJobFields.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/features/jobs/hooks/useProspectorColumnOrder.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/features/jobs/hooks/useProspectorTableControls.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorSearchResults.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/components/ProspectorToggle.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/data/prospectorSeedData.ts",
+      "target": "src/features/jobs/components/ProspectorReadyQueue.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/data/prospectorSeedData.ts",
+      "target": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectingRuns.ts",
+      "target": "ds:prospecting_runs",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectingRuns.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectingRuns.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectingRuns.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorColumnOrder.ts",
+      "target": "src/features/jobs/hooks/useProspectorTableControls.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "target": "ds:prospecting_profiles",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "target": "ds:prospecting_profiles",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorProfile.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+      "target": "src/features/jobs/components/ProspectorReadyQueue.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+      "target": "src/features/jobs/data/prospectorSeedData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorReadyQueue.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "target": "ds:jobs",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "target": "src/features/jobs/data/prospectorSeedData.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorTableControls.ts",
+      "target": "src/features/jobs/components/prospectorJobFields.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/hooks/useProspectorTableControls.ts",
+      "target": "src/features/jobs/hooks/useProspectorSearchResults.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/services/jdFormattingService.ts",
+      "target": "ds:jobs",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/jobs/services/jdFormattingService.ts",
+      "target": "src/lib/ai-router.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/services/jdFormattingService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/services/prospectorGraduationService.ts",
+      "target": "ds:ai_scores",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/jobs/services/prospectorGraduationService.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "src/features/jobs/services/prospectorGraduationService.ts",
+      "target": "ds:applications",
+      "kind": "write"
+    },
+    {
+      "source": "src/features/jobs/services/prospectorGraduationService.ts",
+      "target": "src/features/applications/services/submissionQueueService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/services/prospectorGraduationService.ts",
+      "target": "src/features/auto-apply/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/jobs/services/prospectorGraduationService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/IntegrationsPanel.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/IntegrationsPanel.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/IntegrationsPanel.tsx",
+      "target": "src/features/settings/components/ProviderStatusCard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/IntegrationsPanel.tsx",
+      "target": "src/features/settings/hooks/useProviderStatus.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/IntegrationsPanel.tsx",
+      "target": "src/features/settings/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/IntegrationsPanel.tsx",
+      "target": "src/lib/utils.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/ProviderStatusCard.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/ProviderStatusCard.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/components/ProviderStatusCard.tsx",
+      "target": "src/features/settings/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/hooks/useProviderStatus.ts",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/hooks/useProviderStatus.ts",
+      "target": "src/features/settings/services/providerStatusService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/hooks/useProviderStatus.ts",
+      "target": "src/features/settings/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/services/providerStatusService.ts",
+      "target": "src/features/settings/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/services/providerStatusService.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/features/settings/types.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/lib/ai-router.ts",
+      "target": "ds:ai_model_usage",
+      "kind": "read"
+    },
+    {
+      "source": "src/lib/ai-router.ts",
+      "target": "ds:ai_model_usage",
+      "kind": "write"
+    },
+    {
+      "source": "src/lib/ai-router.ts",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/lib/ai-router.ts",
+      "target": "src/types/db.types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/lib/ai-router.ts",
+      "target": "src/types/pipeline.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/main.tsx",
+      "target": "src/App.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/main.tsx",
+      "target": "src/contexts/AuthContext.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/badge.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/input.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/separator.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/components/ui/textarea.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/features/applications/services/ingestionCsv.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/IngestionPage.tsx",
+      "target": "src/features/applications/services/ingestionService.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/LoginPage.tsx",
+      "target": "src/components/ui/alert.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/LoginPage.tsx",
+      "target": "src/components/ui/button.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/LoginPage.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/LoginPage.tsx",
+      "target": "src/components/ui/input.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/LoginPage.tsx",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/components/ui/card.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/contexts/auth-context.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/contexts/selected-application-context.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/AiCostMonitorCard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/AnalyticsReportsSection.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/AuditLogViewer.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/DashboardSummarySection.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/NotificationFeedSection.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/PipelineBoard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/features/applications/components/SubmissionGatePanel.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/PipelinePage.tsx",
+      "target": "src/lib/supabase.ts",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/ProspectorPage.tsx",
+      "target": "src/features/jobs/ProspectorDashboard.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "src/pages/SettingsPage.tsx",
+      "target": "src/features/settings/components/IntegrationsPanel.tsx",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/jd-format.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/jd-format.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/anthropic.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/anthropic.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/errors.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/factory.ts",
+      "target": "supabase/functions/_shared/llm/anthropic.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/factory.ts",
+      "target": "supabase/functions/_shared/llm/google.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/factory.ts",
+      "target": "supabase/functions/_shared/llm/openai.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/factory.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/google.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/google.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/openai.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/llm/openai.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/notify.ts",
+      "target": "ds:jobs",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/_shared/notify.ts",
+      "target": "ds:notifications",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/_shared/submission/atsAdapters.ts",
+      "target": "supabase/functions/_shared/submission/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/submission/browserAdapter.ts",
+      "target": "supabase/functions/_shared/submission/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/submission/candidate.ts",
+      "target": "ds:candidate_profiles",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/_shared/submission/candidate.ts",
+      "target": "supabase/functions/_shared/submission/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/_shared/submission/resolveChannel.ts",
+      "target": "supabase/functions/_shared/submission/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/ai-chat/index.ts",
+      "target": "supabase/functions/_shared/auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/ai-chat/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/ai-chat/index.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/ai-chat/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/ai-chat/index.ts",
+      "target": "supabase/functions/_shared/llm/types.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/format-jd/index.ts",
+      "target": "supabase/functions/_shared/auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/format-jd/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/format-jd/index.ts",
+      "target": "supabase/functions/_shared/jd-format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/format-jd/index.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/format-jd/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/generate-document/index.ts",
+      "target": "supabase/functions/_shared/auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/generate-document/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/generate-document/index.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/generate-document/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "ds:ai_model_usage",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "ds:emails",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "ds:notifications",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "ds:notifications",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "supabase/functions/_shared/auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "supabase/functions/_shared/gmail-auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-send/index.ts",
+      "target": "supabase/functions/gmail-send/mime.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/gmail.ts",
+      "target": "supabase/functions/_shared/gmail-auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:ai_model_usage",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:applications",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:emails",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:emails",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:gmail_label_map",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:gmail_sync_state",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:gmail_sync_state",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:notifications",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:rpc:transition_stage",
+      "kind": "dispatch"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "ds:users",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "supabase/functions/_shared/gmail-auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "supabase/functions/gmail-sync/gmail.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/gmail-sync/index.ts",
+      "target": "supabase/functions/gmail-sync/logic.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:ai_model_usage",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:companies",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:companies",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:jobs",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:prospecting_profiles",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:prospecting_profiles",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "ds:prospecting_runs",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "supabase/functions/_shared/jd-format.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/prospector-cron/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/provider-status/index.ts",
+      "target": "supabase/functions/_shared/auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/provider-status/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/provider-status/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/score-job-fit/index.ts",
+      "target": "supabase/functions/_shared/auth.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/score-job-fit/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/score-job-fit/index.ts",
+      "target": "supabase/functions/_shared/llm/errors.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/score-job-fit/index.ts",
+      "target": "supabase/functions/_shared/llm/factory.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "ds:application_queue",
+      "kind": "read"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "ds:rpc:claim_submission",
+      "kind": "dispatch"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "ds:rpc:expire_stuck_submitting",
+      "kind": "dispatch"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "ds:rpc:finalize_submission",
+      "kind": "dispatch"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "ds:submission_previews",
+      "kind": "write"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/http.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/notify.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/submission/atsAdapters.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/submission/browserAdapter.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/submission/candidate.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/submission/resolveChannel.ts",
+      "kind": "call"
+    },
+    {
+      "source": "supabase/functions/submission-worker/index.ts",
+      "target": "supabase/functions/_shared/submission/types.ts",
+      "kind": "call"
+    }
+  ],
+  "entryPoints": [
+    "src/main.tsx",
+    "src/pages/IngestionPage.tsx",
+    "src/pages/LoginPage.tsx",
+    "src/pages/PipelinePage.tsx",
+    "src/pages/ProspectorPage.tsx",
+    "src/pages/SettingsPage.tsx",
+    "supabase/functions/ai-chat/index.ts",
+    "supabase/functions/format-jd/index.ts",
+    "supabase/functions/generate-document/index.ts",
+    "supabase/functions/gmail-send/index.ts",
+    "supabase/functions/gmail-sync/index.ts",
+    "supabase/functions/prospector-cron/index.ts",
+    "supabase/functions/provider-status/index.ts",
+    "supabase/functions/score-job-fit/index.ts",
+    "supabase/functions/submission-worker/index.ts"
+  ],
+  "deadEnds": [
+    "src/components/ui/collapsible.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/features/applications/components/ChatAssistantPanel.tsx",
+    "src/features/applications/services/calendarIntelligenceService.ts",
+    "src/features/applications/services/gmailIntelligenceService.ts"
+  ],
+  "observations": [
+    "Entry points are deployment-defined, not in source: the SPA bootstrap (src/main.tsx) plus each Edge Function's Deno.serve handler. prospector-cron and gmail-sync are additionally invoked by pg_cron / Supabase schedules \u2014 an edge the static parser cannot see, so they are NOT marked dead.",
+    "Highest call-graph fan-in (shared single points of failure): supabase.ts (32 importers), types.ts (32 importers), utils.ts (25 importers). src/lib/supabase.ts is the mandated single DB client (BR-004), so a change there touches the whole frontend.",
+    "Most-written data stores (many-writer hotspots): notifications (5 writer modules), ai_model_usage (4 writer modules), applications (3 writer modules).",
+    "application_events is append-only by design (event sourcing, BR-002/BR-003); writes funnel through the transition_stage RPC rather than direct table writes, which is why it shows as a dispatch target, not a multi-writer table.",
+    "Confirmed dead code (no runtime inbound edge; imported only by their own tests): calendarIntelligenceService.ts and gmailIntelligenceService.ts (client-side intelligence superseded by server-side gmail-sync) and a second, unwired chat stack (ChatAssistantPanel.tsx + chatAssistantService.ts). Safe-delete candidates.",
+    "The Auto-Submission Engine and Gmail Integration are the only domains with real-world side effects (sending applications / sending mail); both depend on Applications Pipeline & Events and are the right blast-radius boundary for the security-hardening phase.",
+    "createServiceClient() is copy-pasted across 4 Edge Functions and _shared/http.ts CORS is duplicated in prospector-cron \u2014 extraction candidates that would also remove drift risk."
+  ],
+  "flows": [
+    {
+      "name": "A job seeker's roles are discovered automatically",
+      "persona": "Job seeker (operator)",
+      "description": "Twice a day the system searches for new jobs matching the seeker's profile and files them for review.",
+      "steps": [
+        {
+          "label": "Scheduler wakes the prospector (pg_cron, twice daily)",
+          "nodes": [
+            "supabase/functions/prospector-cron/index.ts"
+          ]
+        },
+        {
+          "label": "Read active search profiles, query SerpAPI, de-duplicate and store new postings",
+          "nodes": [
+            "supabase/functions/prospector-cron/index.ts",
+            "ds:prospecting_profiles",
+            "ds:jobs",
+            "ds:prospecting_runs"
+          ]
+        },
+        {
+          "label": "Format each job description for readability",
+          "nodes": [
+            "supabase/functions/format-jd/index.ts",
+            "ds:jobs"
+          ]
+        },
+        {
+          "label": "Score job fit and graduate strong matches into the pipeline",
+          "nodes": [
+            "src/features/jobs/services/prospectorGraduationService.ts",
+            "ds:ai_scores",
+            "ds:applications"
+          ]
+        },
+        {
+          "label": "Seeker sees new matches on the Prospector dashboard",
+          "nodes": [
+            "src/features/jobs/ProspectorDashboard.tsx",
+            "src/features/jobs/components/ProspectorSearchResults.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "A job seeker approves an application and it is auto-submitted",
+      "persona": "Job seeker (operator)",
+      "description": "The seeker approves a prepared application; a guarded worker submits it to the employer's ATS.",
+      "steps": [
+        {
+          "label": "Seeker reviews the prepared packet at the submission gate",
+          "nodes": [
+            "src/features/applications/components/SubmissionGatePanel.tsx"
+          ]
+        },
+        {
+          "label": "Approval is recorded as an immutable event and queued",
+          "nodes": [
+            "src/features/applications/services/submissionApprovalService.ts",
+            "ds:rpc:transition_stage",
+            "ds:application_events",
+            "ds:application_queue"
+          ]
+        },
+        {
+          "label": "The kill-default worker drains approved rows (dry-run unless SUBMISSION_LIVE)",
+          "nodes": [
+            "supabase/functions/submission-worker/index.ts",
+            "ds:application_queue"
+          ]
+        },
+        {
+          "label": "Resolve channel and submit via ATS API (or browser fallback)",
+          "nodes": [
+            "supabase/functions/_shared/submission/resolveChannel.ts",
+            "supabase/functions/_shared/submission/atsAdapters.ts"
+          ]
+        },
+        {
+          "label": "Notify the seeker of the outcome",
+          "nodes": [
+            "supabase/functions/_shared/notify.ts",
+            "ds:notifications"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "An incoming email moves an application forward on its own",
+      "persona": "Job seeker (passive) / System",
+      "description": "A recruiter email is ingested, classified, and (if confident) advances the application's stage automatically.",
+      "steps": [
+        {
+          "label": "Scheduled sync pulls new Gmail messages",
+          "nodes": [
+            "supabase/functions/gmail-sync/index.ts",
+            "ds:gmail_sync_state",
+            "ds:emails"
+          ]
+        },
+        {
+          "label": "Classify the email with Gemini (keyword fallback)",
+          "nodes": [
+            "supabase/functions/gmail-sync/logic.ts"
+          ]
+        },
+        {
+          "label": "If confidence >= 0.70 and the transition is legal, advance the stage",
+          "nodes": [
+            "supabase/functions/gmail-sync/logic.ts",
+            "ds:rpc:transition_stage",
+            "ds:applications",
+            "ds:application_events"
+          ]
+        },
+        {
+          "label": "Seeker sees the updated pipeline (Realtime)",
+          "nodes": [
+            "src/features/applications/components/PipelineBoard.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "A job seeker generates a tailored resume and cover letter",
+      "persona": "Job seeker (operator)",
+      "description": "From a target job, the seeker generates application documents drafted by the routed LLM.",
+      "steps": [
+        {
+          "label": "Seeker opens the document builder for a job",
+          "nodes": [
+            "src/features/auto-apply/screens/DocBuilder.tsx"
+          ]
+        },
+        {
+          "label": "Build the request from the master profile + job",
+          "nodes": [
+            "src/features/applications/services/documentGenerationService.ts",
+            "src/features/applications/data/masterProfile.ts"
+          ]
+        },
+        {
+          "label": "Route to the chosen model and draft the document",
+          "nodes": [
+            "supabase/functions/generate-document/index.ts",
+            "supabase/functions/_shared/llm/factory.ts"
+          ]
+        },
+        {
+          "label": "Sanitize and store the generated document",
+          "nodes": [
+            "src/features/auto-apply/services/textSanitizer.ts",
+            "src/features/applications/services/documentStorageService.ts",
+            "ds:documents",
+            "ds:application_materials"
+          ]
+        }
+      ]
+    }
+  ]
+}

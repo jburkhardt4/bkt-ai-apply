@@ -1,10 +1,12 @@
 # Prospector Schema Proposal
 
 **feature:** F-017 — Automated Job Prospector
-**status:** PROPOSAL — not applied; no migration has been run
+**status:** IMPLEMENTED — migration applied 2026-06-07
 **proposal_date:** 2026-06-07
+**implemented_date:** 2026-06-07
+**migration_file:** `supabase/migrations/20260607000001_add_prospecting_tables.sql`
 **authored_by:** Supabase-Security Agent (dispatched by Orchestrator WO-20260607-automated-job-prospector)
-**depends_on:** docs/prd.md §23b, docs/domain/business-rules.md BR-100 through BR-107, docs/domain/auth.md, docs/requirements/06-security-compliance.md
+**depends_on:** docs/prd.md §27, docs/domain/business-rules.md BR-100 through BR-107, docs/domain/auth.md, docs/requirements/06-security-compliance.md
 
 ---
 

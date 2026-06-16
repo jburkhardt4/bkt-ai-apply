@@ -8,6 +8,28 @@ import { Icon } from '@/components/bkt/Icon'
 import type { ToastFn } from '@/components/bkt/toast'
 import { brandAsset } from '../assets'
 
+/* ─────────────── COMPENSATION CONVERSION HELPERS ─────────────── */
+// Standard US work year used for hourly⇄salary conversion.
+const HOURS_PER_YEAR = 2080
+
+/** Strips `$`, commas, and stray characters; returns a finite number or null. */
+function parseCurrency(value: string): number | null {
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  if (cleaned === '' || cleaned === '.') return null
+  const n = Number.parseFloat(cleaned)
+  return Number.isFinite(n) ? n : null
+}
+
+/** Formats a whole-dollar salary with thousands separators: 150000 → "150,000". */
+function formatSalary(n: number): string {
+  return Math.round(n).toLocaleString('en-US')
+}
+
+/** Formats an hourly rate with thousands separators and 2 decimals: 72.115 → "72.12". */
+function formatHourly(n: number): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 /* ─────────────────────── FORM PRIMITIVES ─────────────────────── */
 
 function PrefLabel({ children, note }: { children: ReactNode; note?: ReactNode }) {
@@ -22,16 +44,20 @@ function PrefLabel({ children, note }: { children: ReactNode; note?: ReactNode }
 function PrefInput({
   value,
   onChange,
+  onBlur,
   placeholder,
   prefix,
   type = 'text',
+  inputMode,
   style: s = {},
 }: {
   value: string
   onChange: (v: string) => void
+  onBlur?: () => void
   placeholder?: string
   prefix?: ReactNode
   type?: string
+  inputMode?: 'text' | 'decimal' | 'numeric'
   style?: CSSProperties
 }) {
   const [focus, setFocus] = useState(false)
@@ -54,12 +80,45 @@ function PrefInput({
       {prefix && <span style={{ font: '500 var(--text-sm)/1 var(--font-body)', color: 'var(--text-muted)', flexShrink: 0 }}>{prefix}</span>}
       <input
         type={type}
+        inputMode={inputMode}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         onFocus={() => setFocus(true)}
-        onBlur={() => setFocus(false)}
+        onBlur={() => {
+          setFocus(false)
+          onBlur?.()
+        }}
         style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', font: '400 var(--text-sm)/1 var(--font-body)', color: 'var(--text-strong)' }}
+      />
+    </div>
+  )
+}
+
+/** Compensation currency field — `$`-prefixed, parent formats on blur. */
+function CompField({
+  label,
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  onBlur: () => void
+  placeholder: string
+}) {
+  return (
+    <div>
+      <PrefLabel>{label}</PrefLabel>
+      <PrefInput
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        prefix="$"
+        placeholder={placeholder}
+        inputMode="decimal"
       />
     </div>
   )
@@ -385,9 +444,9 @@ interface LocationPref {
   hybrid: boolean
 }
 
-function ModeCards({ appMode, setAppMode }: { appMode: string; setAppMode: (m: string) => void }) {
+function ModeCards({ appMode, setAppMode, stack = false }: { appMode: string; setAppMode: (m: string) => void; stack?: boolean }) {
   return (
-    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: stack ? 'column' : 'row', gap: 16, flexWrap: 'wrap' }}>
       <PrefModeCard
         icon="user-round"
         title="Hybrid mode"
@@ -456,7 +515,11 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
       hybrid: true,
     },
   ])
-  const [salary, setSalary] = useState('150000')
+  // Compensation — four editable currency fields kept in sync via a 2080h year.
+  const [minSalary, setMinSalary] = useState('150,000')
+  const [maxSalary, setMaxSalary] = useState('')
+  const [minHourly, setMinHourly] = useState(() => formatHourly(150000 / HOURS_PER_YEAR))
+  const [maxHourly, setMaxHourly] = useState('')
   const [excluded, setExcluded] = useState(['Evertas', 'SkyView Advisors', 'PricewaterhouseCoopers'])
   const [workAuth, setWorkAuth] = useState('US Citizen')
   const [clearance, setClearance] = useState('No')
@@ -491,6 +554,82 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   ]
   const WORK_OPTS = ['Full-time', 'Part-time', 'Contract/Freelance', 'Internship']
   const AUTH_OPTS = ['US Citizen', 'Permanent Resident (Green Card)', 'H-1B', 'H-4 EAD', 'OPT', 'TN (USMCA)', 'Not yet authorized']
+
+  // ── Compensation: 2080-hour work-year conversion ──────────────
+  // Hourly row sits above salary only when Contract is the active direction
+  // (Contract selected, Full-time not). Both/neither → salary first (default).
+  const hourlyFirst =
+    workTypes.includes('Contract/Freelance') && !workTypes.includes('Full-time')
+
+  const editSalary = (
+    raw: string,
+    setSalaryField: (v: string) => void,
+    setHourlyField: (v: string) => void,
+  ) => {
+    setSalaryField(raw)
+    const n = parseCurrency(raw)
+    setHourlyField(n === null ? '' : formatHourly(n / HOURS_PER_YEAR))
+  }
+
+  const editHourly = (
+    raw: string,
+    setHourlyField: (v: string) => void,
+    setSalaryField: (v: string) => void,
+  ) => {
+    setHourlyField(raw)
+    const n = parseCurrency(raw)
+    setSalaryField(n === null ? '' : formatSalary(n * HOURS_PER_YEAR))
+  }
+
+  const reformatSalary = (set: (updater: (prev: string) => string) => void) =>
+    set((v) => {
+      const n = parseCurrency(v)
+      return n === null ? '' : formatSalary(n)
+    })
+
+  const reformatHourly = (set: (updater: (prev: string) => string) => void) =>
+    set((v) => {
+      const n = parseCurrency(v)
+      return n === null ? '' : formatHourly(n)
+    })
+
+  const salaryRow = (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <CompField
+        label="Min Salary:"
+        value={minSalary}
+        placeholder="#,##0"
+        onChange={(v) => editSalary(v, setMinSalary, setMinHourly)}
+        onBlur={() => reformatSalary(setMinSalary)}
+      />
+      <CompField
+        label="Max Salary:"
+        value={maxSalary}
+        placeholder="#,##0"
+        onChange={(v) => editSalary(v, setMaxSalary, setMaxHourly)}
+        onBlur={() => reformatSalary(setMaxSalary)}
+      />
+    </div>
+  )
+
+  const hourlyRow = (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <CompField
+        label="Min Hourly Rate:"
+        value={minHourly}
+        placeholder="#,##0.00"
+        onChange={(v) => editHourly(v, setMinHourly, setMinSalary)}
+        onBlur={() => reformatHourly(setMinHourly)}
+      />
+      <CompField
+        label="Max Hourly Rate:"
+        value={maxHourly}
+        placeholder="#,##0.00"
+        onChange={(v) => editHourly(v, setMaxHourly, setMaxSalary)}
+        onBlur={() => reformatHourly(setMaxHourly)}
+      />
+    </div>
+  )
 
   const save = () => onToast('Preferences saved', 'circle-check', 'var(--bkt-success)')
 
@@ -565,7 +704,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
       <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 28px 60px' }}>
         {tab === 'Quick Settings' && (
           <div key="quick" className="bkt-blur-in">
-            <PrefSection title="Application behaviour" idx={0}>
+            <PrefSection title="Application Behaviour" idx={0}>
               <p style={{ margin: 0, font: '400 var(--text-sm)/1.6 var(--font-body)', color: 'var(--text-muted)', maxWidth: 620 }}>
                 How should we apply to jobs for you? Pick the mode that best fits your style.
               </p>
@@ -582,7 +721,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               you to relevant roles and to auto-fill application forms.
             </p>
 
-            <PrefSection title="Role & experience" idx={0}>
+            <PrefSection title="Role & Experience" idx={0}>
               <div>
                 <PrefLabel>Describe your current employment status</PrefLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -615,7 +754,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               </div>
             </PrefSection>
 
-            <PrefSection title="Location & schedule" idx={1}>
+            <PrefSection title="Location & Schedule" idx={1}>
               {locations.map((loc, i) => (
                 <div
                   key={i}
@@ -689,9 +828,20 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             </PrefSection>
 
             <PrefSection title="Compensation" idx={2}>
-              <div style={{ maxWidth: 320 }}>
-                <PrefLabel note="Annual, before taxes">What's your minimum preferred salary?</PrefLabel>
-                <PrefInput value={salary} onChange={setSalary} prefix="$" placeholder="100000" type="text" />
+              {/* Standard-width inputs in the left half of the section —
+                  not stretched flush to the full section width. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
+                {hourlyFirst ? (
+                  <>
+                    {hourlyRow}
+                    {salaryRow}
+                  </>
+                ) : (
+                  <>
+                    {salaryRow}
+                    {hourlyRow}
+                  </>
+                )}
               </div>
             </PrefSection>
 
@@ -738,7 +888,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               </div>
             </PrefSection>
 
-            <PrefSection title="Personal information" idx={5}>
+            <PrefSection title="Personal Information" idx={5}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <PrefLabel>Full name</PrefLabel>
@@ -836,9 +986,13 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               </div>
             </PrefSection>
 
-            <PrefSection title="Application behaviour" idx={6}>
-              <ModeCards appMode={appMode} setAppMode={setAppMode} />
-              <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
+            <PrefSection title="Application Behaviour" idx={6}>
+              {/* Mirror the compensation treatment — half-width block with the
+                  mode cards stacked rather than stretched across the section. */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
+                <ModeCards appMode={appMode} setAppMode={setAppMode} stack />
+                <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
+              </div>
             </PrefSection>
 
             <div style={{ paddingTop: 28, paddingBottom: 8 }}>

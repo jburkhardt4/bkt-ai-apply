@@ -1,0 +1,51 @@
+%% Data lineage: domains -> Postgres stores. Solid =write, dashed =read.
+%% transition_stage() RPC is the only writer of application_events (event sourcing).
+graph LR
+  classDef store fill:#2d2d2d,stroke:#cc785c,color:#d4d4d4;
+
+  PROS["Job Discovery & Prospector"]
+  PIPE["Applications Pipeline & Events"]
+  SUB["Auto-Submission Engine"]
+  GMAIL["Gmail Integration"]
+  AIRT["AI Routing & Scoring"]
+  DOCS["Documents"]
+  CHAT["Conversational AI Assistant"]
+
+  jobs[("jobs")]:::store
+  pruns[("prospecting_runs")]:::store
+  pprof[("prospecting_profiles")]:::store
+  apps[("applications")]:::store
+  events[("application_events")]:::store
+  queue[("application_queue")]:::store
+  emails[("emails")]:::store
+  gss[("gmail_sync_state")]:::store
+  notif[("notifications")]:::store
+  scores[("ai_scores")]:::store
+  usage[("ai_model_usage")]:::store
+  docs[("documents")]:::store
+  mats[("application_materials")]:::store
+  chat[("chat_*")]:::store
+  rpc{{"transition_stage()"}}
+
+  PROS --> jobs
+  PROS --> pruns
+  PROS -.-> pprof
+  PROS --> scores
+  PIPE --> rpc
+  rpc --> apps
+  rpc --> events
+  PIPE -.-> apps
+  SUB --> queue
+  SUB --> notif
+  SUB -.-> queue
+  SUB --> rpc
+  GMAIL --> emails
+  GMAIL --> gss
+  GMAIL --> notif
+  GMAIL --> rpc
+  GMAIL -.-> emails
+  AIRT --> scores
+  AIRT --> usage
+  DOCS --> docs
+  DOCS --> mats
+  CHAT --> chat

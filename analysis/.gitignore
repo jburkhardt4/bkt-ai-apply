@@ -1,0 +1,3 @@
+# Modernization analysis — never commit discovered secrets or local patches.
+SECRETS.local.md
+*.local.patch

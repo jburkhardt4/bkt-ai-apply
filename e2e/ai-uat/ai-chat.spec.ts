@@ -34,14 +34,13 @@ test.describe('AI Chat: assistant interaction @ai-chat', () => {
         }),
       })
 
-      if (!panelState.chatVisible || !panelState.inputVisible) {
-        console.info('Chat panel not found or not visible — may require different navigation')
-        await testInfo.attach('chat-state', {
-          body: JSON.stringify(panelState, null, 2),
-          contentType: 'application/json',
-        })
-        return
-      }
+      await testInfo.attach('chat-state', {
+        body: JSON.stringify(panelState, null, 2),
+        contentType: 'application/json',
+      })
+
+      expect(panelState.chatVisible, 'Chat panel is not visible after navigation').toBe(true)
+      expect(panelState.inputVisible, 'Chat input is not visible after navigation').toBe(true)
 
       // Send a test message
       await stagehand.page.act({

@@ -183,5 +183,5 @@ Report:
 - **Attach screenshots**: The extension can take screenshots and annotate them.
   Ask: "screenshot this and circle the broken element."
 - **Compare dev vs prod**: Run the same prompt against both
-  `https://vigilant-space-adventure-pjp4vv9vvvrv264vp-5173.app.github.dev` (dev)
+  `https://[YOUR-CODESPACE-URL]-5173.app.github.dev` (dev)
   and `https://bkt-ai-apply.vercel.app` (prod) to catch deployment-only bugs.

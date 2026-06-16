@@ -39,7 +39,7 @@ test.describe('Pipeline: AI exploration @pipeline', () => {
 
       const pipelineState = await stagehand.page.extract({
         instruction:
-          'Describe the pipeline page in detail: what stage columns or sections are visible, how many application cards exist, are there any loading spinners, empty-state messages, or error messages?',
+          'Describe the pipeline page in detail: what stage columns or sections are visible, how many application cards exist, are there any loading spinners, empty-state messages, or error messag[...]',
         schema: z.object({
           stagesVisible: z.array(z.string()),
           applicationCount: z.number(),

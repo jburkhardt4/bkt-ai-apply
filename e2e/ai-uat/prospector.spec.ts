@@ -13,7 +13,7 @@ import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers
 test.describe('Prospector: AI exploration @prospector', () => {
   test.skip(!hasTestCredentials(), 'TEST_USER_EMAIL / TEST_USER_PASSWORD not set — skipping')
 
-  test('AI agent reports prospector page state', async ({}, testInfo) => {
+  test('AI agent reports prospector page state', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -54,7 +54,7 @@ test.describe('Prospector: AI exploration @prospector', () => {
     }
   })
 
-  test('AI agent interacts with a job card if visible', async ({}, testInfo) => {
+  test('AI agent interacts with a job card if visible', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 

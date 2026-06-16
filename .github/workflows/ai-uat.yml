@@ -24,6 +24,11 @@ on:
         required: false
         default: ''
         type: string
+      base_url:
+        description: 'Base URL override for dev target (e.g. https://my-codespace-5173.app.github.dev)'
+        required: false
+        default: ''
+        type: string
 
 concurrency:
   group: ai-uat-${{ github.ref }}
@@ -44,7 +49,7 @@ jobs:
       BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-      AI_UAT_BASE_URL: ${{ inputs.target == 'prod' && 'https://bkt-ai-apply.vercel.app' || '' }}
+      AI_UAT_BASE_URL: ${{ inputs.base_url != '' && inputs.base_url || (inputs.target == 'prod' && 'https://bkt-ai-apply.vercel.app' || '') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -65,9 +70,11 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run AI UAT
+        env:
+          SCENARIO: ${{ inputs.scenario }}
         run: |
-          if [ -n "${{ inputs.scenario }}" ]; then
-            pnpm playwright test --config=playwright.uat.config.ts --grep "@${{ inputs.scenario }}"
+          if [ -n "$SCENARIO" ]; then
+            pnpm playwright test --config=playwright.uat.config.ts --grep "@$SCENARIO"
           else
             pnpm test:uat
           fi

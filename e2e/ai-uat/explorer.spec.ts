@@ -10,7 +10,7 @@
  * Max 25 steps. 5-minute timeout (set in playwright.uat.config.ts per-test override).
  * Requires: TEST_USER_EMAIL, TEST_USER_PASSWORD, ANTHROPIC_KEY
  */
-import { test } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { z } from 'zod'
 import { makeStagehand, loginWithTestUser, hasTestCredentials } from './_helpers/setup'
 
@@ -33,7 +33,7 @@ test.describe('Explorer: autonomous agent @explorer', () => {
   // Override to 5 minutes for this agent-loop test
   test.setTimeout(300_000)
 
-  test('autonomous agent explores the authenticated app and reports findings', async ({}, testInfo) => {
+  test('autonomous agent explores the authenticated app and reports findings', async (_fixtures, testInfo) => {
     const stagehand = makeStagehand()
     await stagehand.init()
 
@@ -45,6 +45,19 @@ test.describe('Explorer: autonomous agent @explorer', () => {
 
       for (let step = 0; step < MAX_STEPS; step++) {
         const currentUrl = stagehand.page.url()
+
+        // Skip pages already explored to avoid cycling between the same URLs
+        if (visited.has(currentUrl)) {
+          findings.push({
+            step,
+            action: 'navigate',
+            finding: `Already visited ${currentUrl} — stopping to avoid redundant exploration`,
+            url: currentUrl,
+            severity: 'info',
+          })
+          break
+        }
+        visited.add(currentUrl)
 
         // Discover all interactive elements on this page that look interesting
         const observations = await stagehand.page.observe({
@@ -133,9 +146,6 @@ test.describe('Explorer: autonomous agent @explorer', () => {
           url: postPage.newUrl ?? stagehand.page.url(),
           severity,
         })
-
-        // Track visited pages to avoid infinite loops
-        visited.add(stagehand.page.url())
       }
     } finally {
       // Build a human-readable report and attach it to the Playwright test report
@@ -171,6 +181,12 @@ test.describe('Explorer: autonomous agent @explorer', () => {
       })
 
       await stagehand.close()
+
+      // Fail the test if the explorer encountered any errors during exploration
+      expect(
+        errors,
+        `Explorer found ${errors.length} error(s):\n${errors.map((e) => `  - ${e.finding} (${e.url})`).join('\n')}`,
+      ).toHaveLength(0)
     }
   })
 })

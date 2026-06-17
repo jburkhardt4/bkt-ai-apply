@@ -8,6 +8,12 @@
  *
  * Returns a shaped list of ProspectorJobMatch objects for the ReadyQueue UI.
  *
+ * Paginated server-side (Phase A): fetches one page of PAGE_SIZE rows via
+ * `.range()` plus an exact total count, so the "Ready to Apply" queue can
+ * toggle multiple pages (Phase B page controls consume `page` / `pageCount` /
+ * `goToPage`). Page 0 preserves the prior 50-row behavior until the UI wires
+ * navigation.
+ *
  * Rules enforced:
  *   BR-004 — all DB access via getSupabaseClient() from src/lib/supabase.ts
  *   BR-005 — every query filters by user_id
@@ -20,6 +26,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getSupabaseClientSafe } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { PAGE_SIZE, getPageCount, pageRange } from '@/lib/pagination'
 import type { ProspectorJobMatch } from '../components/ProspectorReadyQueue'
 import { PROSPECTOR_READY_QUEUE_SEED } from '../data/prospectorSeedData'
 
@@ -31,6 +38,10 @@ export interface UseProspectorReadyQueueResult {
   loading: boolean
   error: string | null
   refetch: () => void
+  page: number
+  pageCount: number
+  totalCount: number
+  goToPage: (page: number) => void
 }
 
 export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
@@ -39,6 +50,8 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
   const [loading, setLoading] = useState(user != null)
   const [error, setError] = useState<string | null>(null)
   const [refetchTrigger, setRefetchTrigger] = useState(0)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     // No user — nothing to fetch; state already initialized to empty/false.
@@ -53,11 +66,14 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
       Promise.resolve().then(() => {
         if (!cancelled) {
           setJobs(PROSPECTOR_READY_QUEUE_SEED)
+          setTotalCount(PROSPECTOR_READY_QUEUE_SEED.length)
           setLoading(false)
         }
       })
       return () => { cancelled = true }
     }
+
+    const { from, to } = pageRange(page)
 
     // Join applications -> jobs to filter by both match_score and jobs.source.
     // The select uses a nested join: jobs!inner ensures only rows with a matching
@@ -79,14 +95,15 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
             )
           )
           `,
+          { count: 'exact' },
         )
         .eq('user_id', user.id)
         .gte('match_score', READY_QUEUE_MIN_SCORE)
         .eq('jobs.source', 'prospector')
         .order('match_score', { ascending: false })
-        .limit(50),
+        .range(from, to),
     )
-      .then(({ data, error: fetchError }) => {
+      .then(({ data, error: fetchError, count }) => {
         if (cancelled) return
 
         if (fetchError) {
@@ -94,11 +111,14 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
           // clear error so consumers don't see conflicting state.
           setError(null)
           setJobs(PROSPECTOR_READY_QUEUE_SEED)
+          setTotalCount(PROSPECTOR_READY_QUEUE_SEED.length)
         } else {
           const rows = data ?? []
-          if (rows.length === 0) {
-            // No rows yet — show seed data so the UI is reviewable.
+          // Seed only stands in for "no real data at all" — i.e. an empty
+          // first page. A legitimately empty later page renders empty.
+          if (rows.length === 0 && page === 0) {
             setJobs(PROSPECTOR_READY_QUEUE_SEED)
+            setTotalCount(PROSPECTOR_READY_QUEUE_SEED.length)
             setLoading(false)
             return
           }
@@ -134,6 +154,7 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
           })
 
           setJobs(shaped)
+          setTotalCount(count ?? shaped.length)
         }
 
         setLoading(false)
@@ -144,16 +165,24 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
         void err
         setError(null)
         setJobs(PROSPECTOR_READY_QUEUE_SEED)
+        setTotalCount(PROSPECTOR_READY_QUEUE_SEED.length)
         setLoading(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [user, refetchTrigger])
+  }, [user, refetchTrigger, page])
 
   const refetch = useCallback(() => {
     setRefetchTrigger((n) => n + 1)
+  }, [])
+
+  const goToPage = useCallback((next: number) => {
+    // Show the skeleton while the next page loads. setLoading in the action
+    // callback (not the effect body) keeps react-hooks/set-state-in-effect happy.
+    setLoading(true)
+    setPage(Math.max(0, next))
   }, [])
 
   return {
@@ -161,5 +190,9 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
     loading,
     error,
     refetch,
+    page,
+    pageCount: getPageCount(totalCount, PAGE_SIZE),
+    totalCount,
+    goToPage,
   }
 }

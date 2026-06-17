@@ -22,14 +22,18 @@ function splitName(full: string): { first: string; last: string } {
 }
 
 /**
- * Builds the flat autofill payload from the user's contact profile. Only
- * non-empty values are included, so the macro never overwrites a field with a
- * blank — it reports `no_value` instead (spec §4.3).
+ * Builds the flat autofill payload from the user's contact profile. Provides
+ * both split (first/last — Greenhouse) and combined (full_name — Lever/Ashby)
+ * name keys so each board's config picks the shape it needs. Only non-empty
+ * values are included, so the macro never overwrites a field with a blank — it
+ * reports `no_value` instead (spec §4.3).
  */
 export function buildPayload(profile: ContactProfile): AutofillPayload {
   const payload: AutofillPayload = {}
   const first = profile.firstName ?? (profile.fullName ? splitName(profile.fullName).first : '')
   const last = profile.lastName ?? (profile.fullName ? splitName(profile.fullName).last : '')
+  const full = profile.fullName?.trim() ?? [first, last].filter(Boolean).join(' ')
+  if (full) payload['full_name'] = full
   if (first) payload['first_name'] = first
   if (last) payload['last_name'] = last
   if (profile.email) payload['email'] = profile.email

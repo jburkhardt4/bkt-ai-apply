@@ -1,8 +1,8 @@
 /**
  * Static fixture mimicking a Greenhouse application form. Selectors match
- * extension/src/configs/greenhouse.ts so the autofill macro can be tested
- * deterministically with no network, auth, or CORS (spec §5.3). Exported as a
- * string and loaded via Playwright `page.setContent`.
+ * extension/src/configs/greenhouse.ts. The work-authorization field is a
+ * react-select-style widget (`.rs-control` + `.rs-menu`) wired by
+ * installReactSelectMock in the spec. No network, auth, or CORS (spec §5.3).
  */
 export const greenhouseFixtureHtml = `<!doctype html>
 <html lang="en">
@@ -24,13 +24,12 @@ export const greenhouseFixtureHtml = `<!doctype html>
       <label>Resume
         <input id="resume" name="job_application[resume]" type="file" />
       </label>
-      <label>Work authorization
-        <select id="work_authorization">
-          <option value="">Select…</option>
-          <option value="yes">Authorized to work in the US</option>
-          <option value="no">Not authorized</option>
-        </select>
-      </label>
+      <div class="rs" data-field="work_auth">
+        <span>Work authorization</span>
+        <div id="work_auth_control" class="rs-control" tabindex="0"
+             data-options="Authorized to work in the US|Not authorized">Select…</div>
+        <div class="rs-menu" hidden></div>
+      </div>
       <button type="submit" id="submit_app">Submit Application</button>
     </form>
   </body>

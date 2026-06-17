@@ -77,6 +77,94 @@ export async function fetchSubmittedCount(userId: string): Promise<number> {
   return deriveSubmittedCount(apps, everSubmittedIds)
 }
 
+/** Per-tab exact counts for the Dashboard sections (All / Review / In progress /
+ *  Applied / Declined), computed server-side so the badges show "True Numbers"
+ *  independent of how many rows a paged/limited list fetch has loaded (Phase A
+ *  groundwork; Phase D refines the exact Action-Required semantics).
+ *
+ *  Mirrors the dashboard's existing status derivation (autoApplyService):
+ *    - review     = stage 'discovery' WITHOUT a manual-apply marker
+ *    - inProgress = stage 'discovery' WITH a manual-apply marker (view overlay)
+ *    - applied    = DB-truth submitted count (reuses fetchSubmittedCount, BR-133)
+ *    - declined   = stage in ('rejected', 'ghosted')
+ *    - all        = total applications for the user
+ *  Returns zeros on any error so the badges degrade gracefully. */
+export interface ApplicationStageCounts {
+  all: number
+  review: number
+  inProgress: number
+  applied: number
+  declined: number
+}
+
+export async function fetchApplicationStageCounts(
+  userId: string,
+): Promise<ApplicationStageCounts> {
+  const empty: ApplicationStageCounts = { all: 0, review: 0, inProgress: 0, applied: 0, declined: 0 }
+  const supabase = getSupabaseClient()
+
+  try {
+    // Head-only counts (no rows transferred) + the DB-truth submitted count + the
+    // bounded set of manual-apply markers (only manually-opened rows carry one).
+    const [allRes, discoveryRes, declinedRes, applied, markersRes] = await Promise.all([
+      supabase.from('applications').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      supabase
+        .from('applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('stage', 'discovery'),
+      supabase
+        .from('applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('stage', ['rejected', 'ghosted']),
+      fetchSubmittedCount(userId),
+      supabase
+        .from('application_events')
+        .select('application_id')
+        .eq('user_id', userId)
+        .eq('event_type', 'submission_attempt')
+        .eq('metadata->>outcome', 'in_progress')
+        .eq('metadata->>source', 'manual-apply'),
+    ])
+
+    const all = allRes.count ?? 0
+    const discovery = discoveryRes.count ?? 0
+    const declined = declinedRes.count ?? 0
+
+    // Of the manually-opened applications, count those still at 'discovery' — these
+    // are the 'In progress' overlay rows (matches fetchJobMatches exactly).
+    const markerIds = Array.from(
+      new Set(
+        ((markersRes.data ?? []) as { application_id: string | null }[])
+          .map((m) => m.application_id)
+          .filter((id): id is string => id != null),
+      ),
+    )
+
+    let inProgress = 0
+    if (markerIds.length > 0) {
+      const { count } = await supabase
+        .from('applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('stage', 'discovery')
+        .in('id', markerIds)
+      inProgress = count ?? 0
+    }
+
+    return {
+      all,
+      review: Math.max(0, discovery - inProgress),
+      inProgress,
+      applied,
+      declined,
+    }
+  } catch {
+    return empty
+  }
+}
+
 export async function transitionStage(params: {
   applicationId: string
   userId: string

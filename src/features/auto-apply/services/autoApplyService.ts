@@ -98,6 +98,7 @@ interface LiveApplicationRow {
   stage: string
   match_score: number | null
   updated_at: string
+  application_url: string | null
   jobs: LiveJobJoin | null
 }
 
@@ -132,6 +133,7 @@ function mapApplication(row: LiveApplicationRow, manualInProgressIds?: Set<strin
     scoreSource: deriveScoreSource(score),
     about,
     sourceUrl: job?.source_url ?? undefined,
+    applicationUrl: row.application_url ?? job?.source_url ?? undefined,
   }
 }
 
@@ -142,7 +144,7 @@ export async function fetchJobMatches(userId: string | null): Promise<{ source: 
     const { data, error } = await supabase
       .from('applications')
       .select(
-        'id, stage, match_score, updated_at, jobs(id, title, location, description, skills, compensation_min, compensation_max, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace))',
+        'id, stage, match_score, updated_at, application_url, jobs(id, title, location, description, skills, compensation_min, compensation_max, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace))',
       )
       .eq('user_id', userId)
       // Embedded ai_scores are versioned per job; order desc by scored_at and

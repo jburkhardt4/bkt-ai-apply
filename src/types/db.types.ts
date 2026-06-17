@@ -295,6 +295,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          application_url: string | null
           created_at: string
           id: string
           job_id: string
@@ -306,6 +307,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          application_url?: string | null
           created_at?: string
           id?: string
           job_id: string
@@ -317,6 +319,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          application_url?: string | null
           created_at?: string
           id?: string
           job_id?: string

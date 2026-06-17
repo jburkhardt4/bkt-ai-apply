@@ -39,6 +39,10 @@ export interface JobMatch {
   about?: string
   /** Direct URL to the original job posting. */
   sourceUrl?: string
+  /** Board URL where the application was submitted (applications.application_url,
+   *  falls back to the posting's source_url). Drives the Applied-tab
+   *  "View Application" button (Phase B). */
+  applicationUrl?: string
   /** Live rows carry the pipeline ids needed for stage transitions. */
   applicationId?: string
   stage?: string

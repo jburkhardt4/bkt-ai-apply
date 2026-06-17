@@ -6,6 +6,12 @@
  * Prospector dashboard — separate from the "Ready to Apply" queue which
  * requires match scoring.
  *
+ * Paginated server-side (Phase A): fetches one page of PAGE_SIZE rows via
+ * `.range()` plus an exact total count, so the Prospector list can toggle
+ * multiple pages (Phase B page controls consume `page` / `pageCount` /
+ * `goToPage`). Page 0 preserves the prior 50-row behavior until the UI wires
+ * navigation.
+ *
  * Rules enforced:
  *   BR-004 — all DB access via getSupabaseClient()
  *   BR-005 — every query filters by user_id
@@ -16,6 +22,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getSupabaseClientSafe } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
+import { PAGE_SIZE, getPageCount, pageRange } from '@/lib/pagination'
 import { PROSPECTOR_SEARCH_SEED } from '../data/prospectorSeedData'
 
 export interface ProspectorSearchResult {
@@ -41,6 +48,10 @@ export interface UseProspectorSearchResultsResult {
   loading: boolean
   error: string | null
   refetch: () => void
+  page: number
+  pageCount: number
+  totalCount: number
+  goToPage: (page: number) => void
 }
 
 export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
@@ -49,6 +60,8 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
   const [loading, setLoading] = useState(user != null)
   const [error, setError] = useState<string | null>(null)
   const [refetchTrigger, setRefetchTrigger] = useState(0)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -62,11 +75,14 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
       Promise.resolve().then(() => {
         if (!cancelled) {
           setJobs(PROSPECTOR_SEARCH_SEED)
+          setTotalCount(PROSPECTOR_SEARCH_SEED.length)
           setLoading(false)
         }
       })
       return () => { cancelled = true }
     }
+
+    const { from, to } = pageRange(page)
 
     Promise.resolve(
       supabase
@@ -94,13 +110,14 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
             scored_at
           )
           `,
+          { count: 'exact' },
         )
         .eq('user_id', user.id)
         .eq('source', 'prospector')
         .order('created_at', { ascending: false })
-        .limit(50),
+        .range(from, to),
     )
-      .then(({ data, error: fetchError }) => {
+      .then(({ data, error: fetchError, count }) => {
         if (cancelled) return
 
         if (fetchError) {
@@ -108,11 +125,14 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           // clear error so consumers don't see conflicting state.
           setError(null)
           setJobs(PROSPECTOR_SEARCH_SEED)
+          setTotalCount(PROSPECTOR_SEARCH_SEED.length)
         } else {
           const rows = data ?? []
-          if (rows.length === 0) {
-            // No rows yet — show seed data so the UI is reviewable.
+          // Seed only stands in for "no real data at all" — i.e. an empty
+          // first page. A legitimately empty later page renders empty.
+          if (rows.length === 0 && page === 0) {
             setJobs(PROSPECTOR_SEARCH_SEED)
+            setTotalCount(PROSPECTOR_SEARCH_SEED.length)
             setError(null)
             setLoading(false)
             return
@@ -158,6 +178,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           })
 
           setJobs(shaped)
+          setTotalCount(count ?? shaped.length)
           setError(null)
         }
 
@@ -169,13 +190,14 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
         void err
         setError(null)
         setJobs(PROSPECTOR_SEARCH_SEED)
+        setTotalCount(PROSPECTOR_SEARCH_SEED.length)
         setLoading(false)
       })
 
     return () => {
       cancelled = true
     }
-  }, [user, refetchTrigger])
+  }, [user, refetchTrigger, page])
 
   const refetch = useCallback(() => {
     // Surface the loading state on manual refetch so the list shows its
@@ -186,5 +208,21 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
     setRefetchTrigger((n) => n + 1)
   }, [])
 
-  return { jobs, loading, error, refetch }
+  const goToPage = useCallback((next: number) => {
+    // Show the skeleton while the next page loads. setLoading in the action
+    // callback (not the effect body) keeps react-hooks/set-state-in-effect happy.
+    setLoading(true)
+    setPage(Math.max(0, next))
+  }, [])
+
+  return {
+    jobs,
+    loading,
+    error,
+    refetch,
+    page,
+    pageCount: getPageCount(totalCount, PAGE_SIZE),
+    totalCount,
+    goToPage,
+  }
 }

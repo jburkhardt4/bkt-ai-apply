@@ -43,4 +43,13 @@ export default defineConfig([
       'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }],
     },
   },
+  {
+    // The MV3 extension runs in browser + web-extension (chrome.*) + service-worker
+    // contexts. tsc -b does not cover extension/ (it is bundled separately via
+    // scripts/build-extension.mjs), so eslint is the type-adjacent gate here.
+    files: ['extension/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.webextensions, ...globals.serviceworker },
+    },
+  },
 ])

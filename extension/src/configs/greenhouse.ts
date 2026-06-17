@@ -3,8 +3,7 @@ import type { BoardConfig } from '../types'
 /**
  * Greenhouse field-mapping config — Wave 1 (the board in the Jam recording).
  * Selectors follow Greenhouse's standard application form. `work_auth` is a
- * react-select widget, so it carries the explicit strategy and is left for the
- * human until that strategy ships (spec §3.2/§7).
+ * react-select widget driven by the macro's react-select strategy (spec §3.2/§7).
  */
 export const greenhouseConfig: BoardConfig = {
   ats: 'greenhouse',
@@ -22,7 +21,7 @@ export const greenhouseConfig: BoardConfig = {
       type: 'url',
     },
     { key: 'resume', selector: 'input[type="file"][name*="resume"]', type: 'file' },
-    { key: 'work_auth', selector: '#work_authorization', type: 'react-select', strategy: 'react-select' },
+    { key: 'work_auth', selector: '#work_auth_control', type: 'react-select', strategy: 'react-select' },
   ],
   submit: { selector: 'button[type="submit"], #submit_app', autoClick: false },
 }

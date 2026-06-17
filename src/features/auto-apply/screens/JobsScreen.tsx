@@ -7,7 +7,9 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { BktCard, BktStatCard } from '@/components/bkt/BktCard'
 import { BktInput } from '@/components/bkt/BktInput'
 import { JobRow } from '@/components/bkt/JobRow'
+import { BktPagination } from '@/components/bkt/BktPagination'
 import { companyLogo } from '@/components/bkt/format'
+import { PAGE_SIZE, getPageCount } from '@/lib/pagination'
 import type { JobMatch } from '../types'
 
 function FilterTab({ label, count, active, onClick }: { label: string; count?: number; active: boolean; onClick: () => void }) {
@@ -64,6 +66,14 @@ export function JobsScreen({
 }: JobsScreenProps) {
   const [filter, setFilter] = useState('Review Matches')
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(0)
+
+  // Reset to the first page whenever the active tab changes so navigation never
+  // lands on an out-of-range page.
+  const selectFilter = (next: string) => {
+    setFilter(next)
+    setPage(0)
+  }
 
   const reviewCount = jobs.filter((j) => j.status === 'Review').length
   const inProgressCount = jobs.filter((j) => j.status === 'In progress').length
@@ -83,6 +93,12 @@ export function JobsScreen({
     const q = query.trim().toLowerCase()
     return f && (!q || j.company.toLowerCase().includes(q) || j.title.toLowerCase().includes(q))
   })
+
+  // Client-side pagination of the tab-filtered rows (data is already in memory;
+  // safePage clamps if `visible` shrinks under optimistic apply/decline).
+  const pageCount = getPageCount(visible.length)
+  const safePage = Math.min(page, pageCount - 1)
+  const paged = visible.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '0 28px 28px' }}>
@@ -108,18 +124,21 @@ export function JobsScreen({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 22, borderBottom: '1px solid var(--border)' }}>
-        <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => setFilter('All')} />
-        <FilterTab label="Review Matches" count={reviewCount} active={filter === 'Review Matches'} onClick={() => setFilter('Review Matches')} />
-        <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => setFilter('In progress')} />
-        <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => setFilter('Applied')} />
-        <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => setFilter('Declined')} />
+        <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => selectFilter('All')} />
+        <FilterTab label="Review Matches" count={reviewCount} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
+        <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => selectFilter('In progress')} />
+        <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
+        <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
         <div style={{ flex: 1 }}></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6 }}>
           <BktInput
             size="sm"
             placeholder="Search jobs or companies..."
             value={query}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setQuery(e.target.value)
+              setPage(0)
+            }}
             iconLeft={<Icon name="search" size={14} />}
             style={{ width: 230 }}
           />
@@ -153,7 +172,7 @@ export function JobsScreen({
           <span style={{ textAlign: 'right' }}>Action</span>
         </div>
         <div className="bkt-stagger-rows">
-          {visible.map((j, i) => (
+          {paged.map((j, i) => (
             <JobRow
               key={j.id}
               company={j.company}
@@ -169,7 +188,7 @@ export function JobsScreen({
               onApply={() => onApply(j.id)}
               onDecline={() => onDecline(j.id)}
               onViewApplication={() => onViewApplication(j.id)}
-              style={i === visible.length - 1 ? { borderBottom: 'none' } : undefined}
+              style={i === paged.length - 1 ? { borderBottom: 'none' } : undefined}
             />
           ))}
         </div>
@@ -180,11 +199,7 @@ export function JobsScreen({
         )}
       </BktCard>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, color: 'var(--text-muted)' }}>
-        <Icon name="arrow-left" size={16} />
-        <span style={{ font: '500 var(--text-sm)/1 var(--font-body)' }}>1 of 2</span>
-        <Icon name="arrow-right" size={16} color="var(--text-strong)" />
-      </div>
+      <BktPagination page={safePage} pageCount={pageCount} onPageChange={setPage} />
     </div>
   )
 }

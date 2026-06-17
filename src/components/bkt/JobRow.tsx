@@ -7,6 +7,7 @@ import { BktAvatar } from './BktAvatar'
 import { BktBadge } from './BktBadge'
 import type { BktBadgeTone } from './BktBadge'
 import { BktButton } from './BktButton'
+import { Icon } from './Icon'
 import { MatchScore } from './MatchScore'
 import type { JobStatus } from '@/features/auto-apply/types'
 
@@ -20,6 +21,9 @@ export interface JobRowProps {
   updatedAt?: string
   onApply?: () => void
   onDecline?: () => void
+  /** Applied rows show a "View Application" button (opens the board URL where the
+   *  application was submitted) in place of Decline/Apply. */
+  onViewApplication?: () => void
   onClick?: () => void
   selected?: boolean
   /** Success-button label. Becomes "Mark as applied" for in-progress manual rows. */
@@ -44,6 +48,7 @@ export function JobRow({
   updatedAt = '2 hours ago',
   onApply,
   onDecline,
+  onViewApplication,
   onClick,
   selected = false,
   applyLabel = 'Apply',
@@ -116,33 +121,51 @@ export function JobRow({
       <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>{updatedAt}</span>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <BktButton
-          variant="secondary"
-          size="sm"
-          style={{
-            color: 'var(--bkt-danger-ink)',
-            background: 'var(--bkt-danger-soft)',
-            borderColor: 'transparent',
-            borderRadius: 'var(--radius-pill)',
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onDecline?.()
-          }}
-        >
-          Decline
-        </BktButton>
-        <BktButton
-          variant="success"
-          size="sm"
-          style={{ borderRadius: 'var(--radius-pill)' }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onApply?.()
-          }}
-        >
-          {applyLabel}
-        </BktButton>
+        {status === 'Applied' ? (
+          <BktButton
+            variant="outline"
+            size="sm"
+            style={{ borderRadius: 'var(--radius-pill)' }}
+            iconLeft={<Icon name="external-link" size={14} />}
+            disabled={!onViewApplication}
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewApplication?.()
+            }}
+          >
+            View Application
+          </BktButton>
+        ) : (
+          <>
+            <BktButton
+              variant="secondary"
+              size="sm"
+              style={{
+                color: 'var(--bkt-danger-ink)',
+                background: 'var(--bkt-danger-soft)',
+                borderColor: 'transparent',
+                borderRadius: 'var(--radius-pill)',
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDecline?.()
+              }}
+            >
+              Decline
+            </BktButton>
+            <BktButton
+              variant="success"
+              size="sm"
+              style={{ borderRadius: 'var(--radius-pill)' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onApply?.()
+              }}
+            >
+              {applyLabel}
+            </BktButton>
+          </>
+        )}
       </div>
     </div>
   )

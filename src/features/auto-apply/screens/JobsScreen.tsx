@@ -41,6 +41,7 @@ export interface JobsScreenProps {
   onOpenJob: (id: JobMatch['id']) => void
   onApply: (id: JobMatch['id']) => void
   onDecline: (id: JobMatch['id']) => void
+  onViewApplication: (id: JobMatch['id']) => void
   selectedId: JobMatch['id'] | null
   paused: boolean
   onTogglePause: () => void
@@ -54,6 +55,7 @@ export function JobsScreen({
   onOpenJob,
   onApply,
   onDecline,
+  onViewApplication,
   selectedId,
   paused,
   onTogglePause,
@@ -166,6 +168,7 @@ export function JobsScreen({
               onClick={() => onOpenJob(j.id)}
               onApply={() => onApply(j.id)}
               onDecline={() => onDecline(j.id)}
+              onViewApplication={() => onViewApplication(j.id)}
               style={i === visible.length - 1 ? { borderBottom: 'none' } : undefined}
             />
           ))}

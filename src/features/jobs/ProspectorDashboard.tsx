@@ -8,6 +8,7 @@ import { ProspectorProfileForm, type ProspectorFormValues } from './components/P
 import { ProspectorRunStatus } from './components/ProspectorRunStatus'
 import { ProspectorSearchResults } from './components/ProspectorSearchResults'
 import { ProspectorReadyQueue } from './components/ProspectorReadyQueue'
+import { BktPagination } from '@/components/bkt/BktPagination'
 import { useProspectorProfile } from './hooks/useProspectorProfile'
 import { useProspectingRuns } from './hooks/useProspectingRuns'
 import { useProspectorSearchResults } from './hooks/useProspectorSearchResults'
@@ -53,12 +54,18 @@ export function ProspectorDashboard() {
     jobs: searchResults,
     loading: searchLoading,
     refetch: refetchSearchResults,
+    page: searchPage,
+    pageCount: searchPageCount,
+    goToPage: goToSearchPage,
   } = useProspectorSearchResults()
 
   const {
     jobs: queuedJobs,
     loading: queueLoading,
     refetch: refetchQueue,
+    page: queuePage,
+    pageCount: queuePageCount,
+    goToPage: goToQueuePage,
   } = useProspectorReadyQueue()
 
 
@@ -400,6 +407,12 @@ export function ProspectorDashboard() {
             jobs={searchResults}
             isLoading={searchLoading}
           />
+          <BktPagination
+            page={searchPage}
+            pageCount={searchPageCount}
+            onPageChange={goToSearchPage}
+            style={{ marginTop: 16 }}
+          />
         </CardContent>
       </Card>
 
@@ -417,6 +430,12 @@ export function ProspectorDashboard() {
           <ProspectorReadyQueue
             jobs={queuedJobs}
             isLoading={queueLoading}
+          />
+          <BktPagination
+            page={queuePage}
+            pageCount={queuePageCount}
+            onPageChange={goToQueuePage}
+            style={{ marginTop: 16 }}
           />
         </CardContent>
       </Card>

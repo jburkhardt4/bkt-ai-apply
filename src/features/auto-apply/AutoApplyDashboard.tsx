@@ -123,6 +123,15 @@ export function AutoApplyDashboard() {
     }
   }
 
+  // Applied rows: open the board where the application was submitted
+  // (application_url, falling back to the posting's source_url).
+  const viewApplication = (id: JobMatch['id']) => {
+    const j = jobs.find((x) => x.id === id)
+    if (!j) return
+    const opened = openSourceUrl(j.applicationUrl ?? j.sourceUrl)
+    if (!opened) toast('No application link available yet', 'circle-alert', 'var(--bkt-warning)')
+  }
+
   const reviewCount = jobs.filter((j) => j.status === 'Review').length
   const openJob = jobs.find((j) => j.id === openId) ?? null
   const openApplicationId = openJob?.applicationId ?? null
@@ -170,6 +179,7 @@ export function AutoApplyDashboard() {
             onOpenJob={setOpenId}
             onApply={apply}
             onDecline={decline}
+            onViewApplication={viewApplication}
             onRefresh={reload}
           />
         ) : (

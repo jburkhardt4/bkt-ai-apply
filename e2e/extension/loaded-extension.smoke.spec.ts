@@ -61,6 +61,13 @@ test.describe('MV3 extension — loaded-extension smoke @extension-runtime', () 
       })
       await expect(page.locator('#bkt-fit-panel')).toBeVisible()
       await expect(page.locator('#bkt-autofill-btn')).toBeVisible()
+      await expect(page.locator('#bkt-score-btn')).toBeVisible()
+      // With no SPA session present, the background reports signed-out — which
+      // proves the content ↔ background session-handoff round-trip is live (the
+      // SW loaded cleanly and answered the AUTH_STATUS message).
+      await expect(page.locator('html')).toHaveAttribute('data-bkt-auth', 'signed-out', {
+        timeout: 15_000,
+      })
     } finally {
       await context.close()
     }

@@ -9,7 +9,9 @@
     "https://job-boards.greenhouse.io/*",
     "https://jobs.lever.co/*",
     "https://jobs.ashbyhq.com/*",
-    "https://*.ashbyhq.com/*"
+    "https://*.ashbyhq.com/*",
+    "https://bkt-ai-apply.vercel.app/*",
+    "https://*.supabase.co/*"
   ],
   "background": { "service_worker": "background.js" },
   "content_scripts": [
@@ -22,6 +24,15 @@
         "https://*.ashbyhq.com/*"
       ],
       "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://bkt-ai-apply.vercel.app/*",
+        "http://localhost:5173/*",
+        "https://*.app.github.dev/*"
+      ],
+      "js": ["spa-session.js"],
       "run_at": "document_idle"
     }
   ]

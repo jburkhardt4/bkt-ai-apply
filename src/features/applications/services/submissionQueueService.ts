@@ -180,6 +180,15 @@ export async function fetchSubmitThreshold(userId: string): Promise<number> {
 /** ADR-006 default, aligning with BR-021's packet-prep threshold. */
 export const DEFAULT_SUBMIT_THRESHOLD = 80
 
+/**
+ * Auto-mode auto-submit floor — the pipeline-entry minimum (BR-020,
+ * READY_QUEUE_MIN_SCORE). In Auto mode the user has opted into submitting
+ * everything that graduated into the pipeline, so the floor is the graduation
+ * floor (60), NOT the high-fit Hybrid threshold. Mirrors the server's
+ * mode-specific floor in claim_submission (migration 20260618000001).
+ */
+export const AUTO_MODE_MIN_SCORE = 60
+
 /* ----------------------------- decision helper ---------------------------- */
 
 export type QueueDecision =
@@ -188,31 +197,38 @@ export type QueueDecision =
 
 /**
  * PURE decision helper for the NON-explicit (autonomous) enqueue path, encoding
- * ADR-006 review-mode autonomy semantics (BR-130). The explicit human-approval
- * path is handled directly by the gate UI and does NOT route through this.
+ * ADR-006 review-mode autonomy semantics with MODE-SPECIFIC floors (BR-130).
+ * The explicit human-approval path is handled directly by the gate UI and does
+ * NOT route through this.
  *
  *  - `review`: never auto-enqueue — every submission needs explicit approval.
- *  - `assist`: score ≥ threshold → auto-queue as `approved` (`assist_mode`);
- *              otherwise wait for explicit approval.
- *  - `auto`:   score ≥ threshold → auto-queue as `approved` (`auto_mode`);
- *              otherwise wait for explicit approval.
+ *  - `assist` (Hybrid): score ≥ `threshold` (80, high-fit roles) → auto-queue as
+ *              `approved` (`assist_mode`); otherwise wait for explicit approval.
+ *  - `auto`:   score ≥ `autoThreshold` (60, everything in the pipeline) →
+ *              auto-queue as `approved` (`auto_mode`).
  *
  * A null score never auto-enqueues. `threshold` is supplied by the caller from
- * `user_settings.auto_submit_score_threshold` (BR-131) — no literal lives here.
+ * `user_settings.auto_submit_score_threshold` (BR-131) — no literal lives here;
+ * `autoThreshold` defaults to the BR-020 pipeline floor. Both floors mirror the
+ * server-authoritative check in claim_submission (BR-131 re-validates anyway).
  */
 export function decideQueueAction(input: {
   reviewMode: ReviewModeId
   matchScore: number | null
   threshold: number
+  autoThreshold?: number
 }): QueueDecision {
-  const { reviewMode, matchScore, threshold } = input
+  const { reviewMode, matchScore, threshold, autoThreshold = AUTO_MODE_MIN_SCORE } = input
 
   if (reviewMode === 'review') {
     return { shouldEnqueue: false }
   }
 
-  const atOrAboveThreshold = matchScore !== null && matchScore >= threshold
-  if (!atOrAboveThreshold) {
+  // Mode-specific floor: Auto applies to everything in the pipeline (>= 60),
+  // Hybrid only to high-fit roles (>= the user's auto_submit_score_threshold).
+  const floor = reviewMode === 'auto' ? autoThreshold : threshold
+  const atOrAboveFloor = matchScore !== null && matchScore >= floor
+  if (!atOrAboveFloor) {
     return { shouldEnqueue: false }
   }
 

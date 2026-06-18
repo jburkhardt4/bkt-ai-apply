@@ -249,7 +249,7 @@ describe('graduateProspectorMatches', () => {
     const result = await graduateProspectorMatches({ userId: 'user-1', reviewMode: 'auto' })
 
     expect(result.enqueued).toBe(1)
-    expect(mockDecide).toHaveBeenCalledWith({ reviewMode: 'auto', matchScore: 92, threshold: 80 })
+    expect(mockDecide).toHaveBeenCalledWith({ reviewMode: 'auto', matchScore: 92, threshold: 80, autoThreshold: 60 })
     expect(mockEnqueue).toHaveBeenCalledWith({
       userId: 'user-1',
       applicationId: 'app-1',

@@ -45,10 +45,11 @@ interface ScoreRow {
  *    application yet gets a discovery-stage application carrying that score
  *    (so the Ready Queue surfaces it). The DB stage-transition trigger writes
  *    the application_events row — same path the ingestion flow relies on.
- * 2. In assist/auto mode, every prospector application at/above the user's
- *    auto_submit_score_threshold is enqueued ('approved'); review mode enqueues
- *    nothing (decideQueueAction). Enqueue is idempotent — application_queue
- *    .application_id is UNIQUE — so re-running is safe.
+ * 2. Mode-specific auto-enqueue (decideQueueAction, BR-130): auto mode enqueues
+ *    every prospector application at/above the pipeline floor (READY_QUEUE_MIN_SCORE);
+ *    assist (Hybrid) enqueues only those at/above the user's
+ *    auto_submit_score_threshold; review mode enqueues nothing. Enqueue is
+ *    idempotent — application_queue.application_id is UNIQUE — so re-running is safe.
  *
  * Idempotent end-to-end: only missing applications are created and duplicate
  * enqueues are absorbed. Safe to call on dashboard load and after scoring.
@@ -155,7 +156,10 @@ export async function graduateProspectorMatches(params: {
   let enqueued = 0
   const threshold = await fetchSubmitThreshold(userId)
   for (const [jobId, score] of bestByJob) {
-    const decision = decideQueueAction({ reviewMode, matchScore: score, threshold })
+    // Mode-specific floors (BR-130): Auto auto-submits everything that graduated
+    // into the pipeline (>= READY_QUEUE_MIN_SCORE); Hybrid only high-fit roles
+    // (>= the user's auto_submit_score_threshold). Mirrors claim_submission.
+    const decision = decideQueueAction({ reviewMode, matchScore: score, threshold, autoThreshold: READY_QUEUE_MIN_SCORE })
     if (!decision.shouldEnqueue) continue
     const applicationId = appIdByJob.get(jobId)
     if (!applicationId) continue

@@ -447,36 +447,31 @@ interface LocationPref {
   hybrid: boolean
 }
 
-// The three preference cards map onto the same review-mode setting as the
-// dashboard toggle (user_settings.review_mode). "Hybrid" is the human label for
-// the 'assist' mode; the human copy/badges are unchanged from the design kit.
+// The preference cards map onto the same review-mode setting as the dashboard
+// dropdown (user_settings.review_mode) and now share REVIEW_MODES as the single
+// source for order, labels, and copy — so the two surfaces stay in lockstep
+// (Auto → Hybrid → Review, AiApply-mirrored). The badge tags are Preferences-
+// only flair. "Hybrid" is the human label for the 'assist' mode.
+const MODE_BADGES: Record<ReviewModeId, string> = {
+  auto: 'Maximum speed',
+  assist: 'Best of both worlds',
+  review: 'Stay in control',
+}
+
 function ModeCards({ mode, onChange, stack = false }: { mode: ReviewModeId; onChange: (m: ReviewModeId) => void; stack?: boolean }) {
   return (
     <div style={{ display: 'flex', flexDirection: stack ? 'column' : 'row', gap: 16, flexWrap: 'wrap' }}>
-      <PrefModeCard
-        icon="user-round"
-        title="Hybrid mode"
-        badge="Best of both worlds"
-        active={mode === 'assist'}
-        onClick={() => onChange('assist')}
-        description="Best balance of speed and control. We auto-apply to high-fit jobs instantly, and queue lower-fit jobs for your review before sending."
-      />
-      <PrefModeCard
-        icon="zap"
-        title="Auto mode"
-        badge="Save time"
-        active={mode === 'auto'}
-        onClick={() => onChange('auto')}
-        description="Save time, no approval needed. We apply to all matching jobs automatically as they appear, so you never miss an opportunity."
-      />
-      <PrefModeCard
-        icon="eye"
-        title="Review mode"
-        badge="Stay in control"
-        active={mode === 'review'}
-        onClick={() => onChange('review')}
-        description="Review and approve each job before we apply. Perfect if you want full visibility on every application that goes out."
-      />
+      {REVIEW_MODES.map((m) => (
+        <PrefModeCard
+          key={m.id}
+          icon={m.icon}
+          title={m.label}
+          badge={MODE_BADGES[m.id]}
+          description={m.desc}
+          active={mode === m.id}
+          onClick={() => onChange(m.id)}
+        />
+      ))}
     </div>
   )
 }

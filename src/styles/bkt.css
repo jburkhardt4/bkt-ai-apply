@@ -515,6 +515,18 @@ code, kbd, pre, samp { font-family: var(--font-mono); }
   100% { background-position: 200% 0; }
 }
 
+/* Indeterminate progress sweep — the "searching for matches" loading bar. */
+@keyframes bkt-indeterminate {
+  0%   { margin-left: -30%; }
+  100% { margin-left: 100%; }
+}
+
+/* Staggered chevron pulse — the "matches awaiting review" notification badge. */
+@keyframes bkt-chevron-pulse {
+  0%, 100% { opacity: 0.4; transform: translateY(2px); }
+  50%      { opacity: 1;   transform: translateY(-1px); }
+}
+
 /* ---- Reduced motion: collapse to instant, keep end states ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

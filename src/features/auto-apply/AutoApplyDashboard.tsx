@@ -17,8 +17,10 @@ import {
 } from './services/autoApplyService'
 import { openSourceUrl } from './openSourceUrl'
 import { fetchSubmittedCount } from '@/features/applications/services/applicationService'
+import { useProspectorProfile } from '@/features/jobs/hooks/useProspectorProfile'
+import { triggerProspectorRun } from '@/features/jobs/services/prospectorRunService'
 import { useAsyncData } from './hooks/useAutoApplyData'
-import { useBudget, useCredits, usePaused, useReviewMode } from './state'
+import { useBudget, useCredits, useReviewMode } from './state'
 import { JOBS_SEED } from './data/jobsData'
 import { BudgetModal, ModeTabs, ReviewModeMenu, TopBar } from './components/chrome'
 import { REVIEW_MODES } from './reviewModes'
@@ -50,9 +52,17 @@ export function AutoApplyDashboard() {
   const [credits, setCredits] = useCredits()
   const [budget, setBudget] = useBudget()
   const [openId, setOpenId] = useState<JobMatch['id'] | null>(null)
-  const [paused, setPaused] = usePaused()
   const [reviewMode, setReviewMode] = useReviewMode()
   const [budgetOpen, setBudgetOpen] = useState(false)
+
+  // Phase C: the dashboard Play/Pause drives the prospector job SEARCH only.
+  // The auto-apply submission `paused` switch is a separate control driven by
+  // the Application-Behaviour mode (Review → paused), wired in useReviewMode.
+  // `searchActive` mirrors prospecting_profiles.is_active; Resume kicks an
+  // immediate run while the 12-hour pg_cron owns the recurring cadence.
+  const { profile: prospectorProfile, toggleActive } = useProspectorProfile()
+  const searchActive = prospectorProfile?.is_active ?? false
+  const [searching, setSearching] = useState(false)
 
   // Live: DB-derived submitted count (fall back to in-view Applied rows until
   // the count resolves). Demo/seed: the seeded stat stays stable.
@@ -132,6 +142,26 @@ export function AutoApplyDashboard() {
     if (!opened) toast('No application link available yet', 'circle-alert', 'var(--bkt-warning)')
   }
 
+  // Play/Pause → job search. Pause flips is_active off (the 8am/6pm pg_cron skips
+  // the profile); Resume flips it on and kicks an immediate run, surfacing the
+  // searching panel until results refetch.
+  const toggleSearch = () => {
+    if (searchActive) {
+      toggleActive(false)
+      toast('Job search paused', 'pause', 'var(--bkt-blue-300)')
+      return
+    }
+    toggleActive(true)
+    setSearching(true)
+    toast('Searching now — scanning sources…', 'play', 'var(--bkt-blue-300)')
+    triggerProspectorRun()
+      .then((res) => {
+        reload()
+        if (!res.ok) toast(res.message, 'circle-alert', 'var(--bkt-warning)')
+      })
+      .finally(() => setSearching(false))
+  }
+
   const reviewCount = jobs.filter((j) => j.status === 'Review').length
   const openJob = jobs.find((j) => j.id === openId) ?? null
   const openApplicationId = openJob?.applicationId ?? null
@@ -171,11 +201,9 @@ export function AutoApplyDashboard() {
             jobs={jobs}
             stats={{ submitted, matches }}
             selectedId={openId}
-            paused={paused}
-            onTogglePause={() => {
-              setPaused((p) => !p)
-              toast(paused ? 'Auto Apply resumed' : 'Auto Apply paused', paused ? 'play' : 'pause', 'var(--bkt-blue-300)')
-            }}
+            paused={!searchActive}
+            searching={searching}
+            onTogglePause={toggleSearch}
             onOpenJob={setOpenId}
             onApply={apply}
             onDecline={decline}

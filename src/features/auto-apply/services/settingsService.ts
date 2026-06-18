@@ -28,6 +28,10 @@ export const DEFAULT_SETTINGS: AutoApplySettings = {
   reviewMode: 'review',
   paused: false,
   lastTarget: DEFAULT_TARGET,
+  // Hybrid mode auto-applies to high-fit roles at/above this score (80%+).
+  // NOTE: the enforced auto-submit threshold also lives server-side
+  // (user_settings.auto_submit_score_threshold, Phase-4-locked at 80); this is
+  // the matching client view-model default.
   autoSubmitScoreThreshold: 80,
 }
 

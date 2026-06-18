@@ -1,18 +1,20 @@
 // BKT AI-Apply — "Your Jobs" screen: stat row, filter tabs, jobs table.
 // Ported 1:1 from the design-system UI kit (JobsScreen.jsx).
 import { useState } from 'react'
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import { BktCard, BktStatCard } from '@/components/bkt/BktCard'
 import { BktInput } from '@/components/bkt/BktInput'
 import { JobRow } from '@/components/bkt/JobRow'
 import { BktPagination } from '@/components/bkt/BktPagination'
+import { ChevronBadge } from '@/components/bkt/ChevronBadge'
+import { SearchingPanel } from './SearchingPanel'
 import { companyLogo } from '@/components/bkt/format'
 import { PAGE_SIZE, getPageCount } from '@/lib/pagination'
 import type { JobMatch } from '../types'
 
-function FilterTab({ label, count, active, onClick }: { label: string; count?: number; active: boolean; onClick: () => void }) {
+function FilterTab({ label, count, badge, active, onClick }: { label: string; count?: number; badge?: ReactNode; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -32,7 +34,9 @@ function FilterTab({ label, count, active, onClick }: { label: string; count?: n
       }}
     >
       {label}
-      {count != null && <span style={{ font: '500 var(--text-sm)/1 var(--font-body)', color: 'var(--text-subtle)' }}>{count}</span>}
+      {badge != null
+        ? badge
+        : count != null && <span style={{ font: '500 var(--text-sm)/1 var(--font-body)', color: 'var(--text-subtle)' }}>{count}</span>}
     </button>
   )
 }
@@ -46,6 +50,8 @@ export interface JobsScreenProps {
   onViewApplication: (id: JobMatch['id']) => void
   selectedId: JobMatch['id'] | null
   paused: boolean
+  /** A prospector run kicked off from Resume is in flight — show the searching panel. */
+  searching?: boolean
   onTogglePause: () => void
   onRefresh?: () => void
   showComp?: boolean
@@ -60,6 +66,7 @@ export function JobsScreen({
   onViewApplication,
   selectedId,
   paused,
+  searching = false,
   onTogglePause,
   onRefresh,
   showComp = true,
@@ -125,7 +132,7 @@ export function JobsScreen({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 22, borderBottom: '1px solid var(--border)' }}>
         <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => selectFilter('All')} />
-        <FilterTab label="Review Matches" count={reviewCount} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
+        <FilterTab label="Review Matches" count={reviewCount} badge={reviewCount > 0 ? <ChevronBadge count={reviewCount} /> : undefined} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
         <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => selectFilter('In progress')} />
         <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
@@ -150,6 +157,8 @@ export function JobsScreen({
           </BktButton>
         </div>
       </div>
+
+      {searching && <SearchingPanel />}
 
       <BktCard padding={0} radius="xl">
         <div

@@ -240,72 +240,95 @@ describe('submissionQueueService', () => {
   })
 })
 
-describe('decideQueueAction (ADR-006 / BR-130 autonomy semantics)', () => {
+describe('decideQueueAction (ADR-006 / BR-130 mode-specific autonomy floors)', () => {
+  // Hybrid (assist) floor; Auto floor defaults to AUTO_MODE_MIN_SCORE (60).
   const threshold = 80
+  const autoThreshold = 60
 
   it('review mode never auto-enqueues (explicit approval always required)', () => {
-    expect(decideQueueAction({ reviewMode: 'review', matchScore: 95, threshold })).toEqual({
+    expect(decideQueueAction({ reviewMode: 'review', matchScore: 95, threshold, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
-    expect(decideQueueAction({ reviewMode: 'review', matchScore: 50, threshold })).toEqual({
+    expect(decideQueueAction({ reviewMode: 'review', matchScore: 50, threshold, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
-    expect(decideQueueAction({ reviewMode: 'review', matchScore: null, threshold })).toEqual({
+    expect(decideQueueAction({ reviewMode: 'review', matchScore: null, threshold, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
   })
 
-  it('assist mode auto-queues approved at or above threshold via assist_mode', () => {
-    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 80, threshold })).toEqual({
+  it('assist (Hybrid) mode auto-queues approved at or above the 80 threshold via assist_mode', () => {
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 80, threshold, autoThreshold })).toEqual({
       shouldEnqueue: true,
       status: 'approved',
       queuedBy: 'assist_mode',
     })
-    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 92, threshold })).toEqual({
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 92, threshold, autoThreshold })).toEqual({
       shouldEnqueue: true,
       status: 'approved',
       queuedBy: 'assist_mode',
     })
   })
 
-  it('assist mode below threshold waits for explicit approval', () => {
-    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 79, threshold })).toEqual({
+  it('assist (Hybrid) mode below the 80 threshold waits for explicit approval (does NOT use the auto floor)', () => {
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 79, threshold, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
-    expect(decideQueueAction({ reviewMode: 'assist', matchScore: null, threshold })).toEqual({
+    // 65 clears the auto floor (60) but NOT the Hybrid threshold (80) — Hybrid queues it.
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 65, threshold, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
-  })
-
-  it('auto mode auto-queues approved at or above threshold via auto_mode', () => {
-    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 80, threshold })).toEqual({
-      shouldEnqueue: true,
-      status: 'approved',
-      queuedBy: 'auto_mode',
-    })
-    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 100, threshold })).toEqual({
-      shouldEnqueue: true,
-      status: 'approved',
-      queuedBy: 'auto_mode',
-    })
-  })
-
-  it('auto mode below threshold / null score waits for explicit approval', () => {
-    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 79, threshold })).toEqual({
-      shouldEnqueue: false,
-    })
-    expect(decideQueueAction({ reviewMode: 'auto', matchScore: null, threshold })).toEqual({
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: null, threshold, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
   })
 
-  it('honors a non-default threshold from user_settings (no literal coupling)', () => {
-    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 70, threshold: 65 })).toEqual({
+  it('auto mode auto-queues approved at or above the 60 floor (everything in the pipeline) via auto_mode', () => {
+    // 60 floor, NOT the 80 Hybrid threshold — this is the key behavioural delta.
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 60, threshold, autoThreshold })).toEqual({
       shouldEnqueue: true,
       status: 'approved',
       queuedBy: 'auto_mode',
     })
-    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 70, threshold: 90 })).toEqual({
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 79, threshold, autoThreshold })).toEqual({
+      shouldEnqueue: true,
+      status: 'approved',
+      queuedBy: 'auto_mode',
+    })
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 100, threshold, autoThreshold })).toEqual({
+      shouldEnqueue: true,
+      status: 'approved',
+      queuedBy: 'auto_mode',
+    })
+  })
+
+  it('auto mode below the 60 floor / null score waits for explicit approval', () => {
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 59, threshold, autoThreshold })).toEqual({
+      shouldEnqueue: false,
+    })
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: null, threshold, autoThreshold })).toEqual({
+      shouldEnqueue: false,
+    })
+  })
+
+  it('defaults the auto floor to AUTO_MODE_MIN_SCORE (60) when autoThreshold is omitted', () => {
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 60, threshold })).toEqual({
+      shouldEnqueue: true,
+      status: 'approved',
+      queuedBy: 'auto_mode',
+    })
+    expect(decideQueueAction({ reviewMode: 'auto', matchScore: 59, threshold })).toEqual({
+      shouldEnqueue: false,
+    })
+  })
+
+  it('honors a non-default Hybrid threshold from user_settings (no literal coupling)', () => {
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 70, threshold: 65, autoThreshold })).toEqual({
+      shouldEnqueue: true,
+      status: 'approved',
+      queuedBy: 'assist_mode',
+    })
+    expect(decideQueueAction({ reviewMode: 'assist', matchScore: 70, threshold: 90, autoThreshold })).toEqual({
       shouldEnqueue: false,
     })
   })

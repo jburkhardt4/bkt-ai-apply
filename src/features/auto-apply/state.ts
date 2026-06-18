@@ -11,7 +11,9 @@ import { useCallback } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { usePersistentState } from './hooks/useAutoApplyData'
 import { useAutoApplySettings } from './settings-context'
+import { pausedForMode } from './reviewModes'
 import type { AutoApplySettings } from './services/settingsService'
+import type { ReviewModeId } from './types'
 
 /* ---------------- user_settings-backed (server persisted) ---------------- */
 
@@ -31,8 +33,23 @@ export function useBudget() {
   return useSettingField('budget')
 }
 
-export function useReviewMode() {
-  return useSettingField('reviewMode')
+/**
+ * Review-mode selector. Setting the mode also syncs the auto-apply submission
+ * kill-switch (user_settings.paused) via pausedForMode — Review mode pauses all
+ * automatic outbound applications (manual-review safety switch); Auto and Hybrid
+ * leave them running. The dashboard Play/Pause is a SEPARATE control for the
+ * prospector search pipeline and never touches `paused`.
+ */
+export function useReviewMode(): [ReviewModeId, (mode: ReviewModeId) => void] {
+  const { settings, setField } = useAutoApplySettings()
+  const set = useCallback(
+    (mode: ReviewModeId) => {
+      setField('reviewMode', mode)
+      setField('paused', pausedForMode(mode))
+    },
+    [setField],
+  )
+  return [settings.reviewMode, set]
 }
 
 export function usePaused() {

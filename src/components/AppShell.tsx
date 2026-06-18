@@ -14,7 +14,7 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { AutoApplySidebar } from '@/features/auto-apply/components/AutoApplySidebar'
 import { AutoApplySettingsProvider } from '@/features/auto-apply/components/AutoApplySettingsProvider'
 import { navigate, useNavKey } from '@/features/auto-apply/router'
-import { fetchInbox, fetchJobMatches } from '@/features/auto-apply/services/autoApplyService'
+import { fetchActionRequiredCount } from '@/features/applications/services/actionRequiredService'
 import type { NavKey } from '@/features/auto-apply/types'
 
 interface AppShellProps {
@@ -28,17 +28,19 @@ export function AppShell({ children }: AppShellProps) {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
   const [badges, setBadges] = useState<Partial<Record<NavKey, number>>>({})
 
-  // Lightweight nav badges: review-queue size + unread inbox count.
+  // Unified "Action Required" nav badge — the centralized bottleneck count
+  // (unreviewed matches + interviews + offers + unread recruiter inbox). The
+  // Dashboard item shows the total; Inbox shows its needing-reply portion.
   useEffect(() => {
     let alive = true
     const userId = user?.id ?? null
-    Promise.all([fetchJobMatches(userId), fetchInbox(userId)]).then(([jm, ib]) => {
-      if (!alive) return
-      setBadges({
-        dashboard: jm.jobs.filter((j) => j.status === 'Review').length,
-        inbox: ib.inbox.emails.filter((e) => e.unread).length,
+    if (!userId) return
+    fetchActionRequiredCount(userId)
+      .then((ar) => {
+        if (!alive) return
+        setBadges({ dashboard: ar.total, inbox: ar.inbox })
       })
-    })
+      .catch(() => undefined)
     return () => {
       alive = false
     }

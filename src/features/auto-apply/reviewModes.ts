@@ -30,18 +30,10 @@ export const REVIEW_MODES: { id: ReviewModeId; label: string; desc: string; icon
   },
 ]
 
-/**
- * Auto-apply submission kill-switch derived from the selected mode, per the
- * Application-Behaviour contract:
- *   - Auto   → submissions running (paused: false) — auto-applies to all matches
- *   - Hybrid → submissions running (paused: false) — auto-applies to 80%+, queues the rest
- *   - Review → submissions PAUSED (paused: true)   — safety switch; everything queues for manual review
- *
- * `useReviewMode` writes this into user_settings.paused whenever the mode
- * changes so the kill-switch stays in lockstep with the mode. (The dashboard
- * Play/Pause is a SEPARATE control for the prospector search pipeline and never
- * touches `paused`.)
- */
-export function pausedForMode(mode: ReviewModeId): boolean {
-  return mode === 'review'
-}
+// NOTE: Review mode no longer toggles user_settings.paused. The server-
+// authoritative claim_submission floor (migration 20260618000001) already
+// enforces the Application-Behaviour contract per mode — review never submits
+// autonomously and requires an explicit `approval` event. Because the worker
+// checks `paused` BEFORE the approval path, pausing for Review mode also
+// blocked packets the user had explicitly approved. `paused` is therefore left
+// as an independent user kill-switch, decoupled from the selected mode.

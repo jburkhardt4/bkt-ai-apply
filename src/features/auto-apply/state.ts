@@ -11,7 +11,6 @@ import { useCallback } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { usePersistentState } from './hooks/useAutoApplyData'
 import { useAutoApplySettings } from './settings-context'
-import { pausedForMode } from './reviewModes'
 import type { AutoApplySettings } from './services/settingsService'
 import type { ReviewModeId } from './types'
 
@@ -34,18 +33,19 @@ export function useBudget() {
 }
 
 /**
- * Review-mode selector. Setting the mode also syncs the auto-apply submission
- * kill-switch (user_settings.paused) via pausedForMode — Review mode pauses all
- * automatic outbound applications (manual-review safety switch); Auto and Hybrid
- * leave them running. The dashboard Play/Pause is a SEPARATE control for the
- * prospector search pipeline and never touches `paused`.
+ * Review-mode selector. The selected mode no longer touches
+ * user_settings.paused: the server-authoritative claim_submission floor already
+ * enforces the Application-Behaviour contract per mode (review never submits
+ * autonomously and requires an explicit approval event). `paused` stays an
+ * independent user kill-switch so an approved Review-mode packet is not blocked.
+ * The dashboard Play/Pause is a SEPARATE control for the prospector search
+ * pipeline and never touches `paused`.
  */
 export function useReviewMode(): [ReviewModeId, (mode: ReviewModeId) => void] {
   const { settings, setField } = useAutoApplySettings()
   const set = useCallback(
     (mode: ReviewModeId) => {
       setField('reviewMode', mode)
-      setField('paused', pausedForMode(mode))
     },
     [setField],
   )

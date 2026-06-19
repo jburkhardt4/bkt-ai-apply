@@ -88,10 +88,20 @@ describe('actionRequiredService', () => {
     })
   })
 
-  it('falls back to zeros when the query layer throws, so the nav badge degrades gracefully', () => {
-    mockGetSupabaseClient.mockImplementation(() => {
-      throw new Error('connection refused')
-    })
+  it('falls back to zeros when a query rejects, so the nav badge degrades gracefully', () => {
+    const from = vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => Promise.reject(new Error('connection refused'))),
+          in: vi.fn(() => Promise.reject(new Error('connection refused'))),
+          is: vi.fn(() => ({ in: vi.fn(() => Promise.reject(new Error('connection refused'))) })),
+        })),
+      })),
+    }))
+
+    mockGetSupabaseClient.mockReturnValue({
+      from,
+    } as unknown as ReturnType<typeof getSupabaseClient>)
 
     return fetchActionRequiredCount('user-1').then((result) => {
       expect(result).toEqual({

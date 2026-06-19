@@ -49,6 +49,33 @@ function scrapeJob(config: BoardConfig): ScrapedJob {
   return { title, description, url: location.href, host: location.host }
 }
 
+/** Injects the floating-panel styles once. Fixed top-right, max z-index, and
+ *  !important rules so the panel is visible regardless of the host page's CSS
+ *  (a lightweight stand-in for the shadow-root isolation noted in spec §2). */
+function injectStyles(): void {
+  if (document.getElementById('bkt-apply-styles')) return
+  const style = document.createElement('style')
+  style.id = 'bkt-apply-styles'
+  style.textContent = `
+#bkt-apply-root, #bkt-fit-panel {
+  position: fixed !important; right: 16px !important; z-index: 2147483647 !important;
+  box-sizing: border-box !important; background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important; border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(15,23,42,.18) !important; color: #0f172a !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+#bkt-apply-root { top: 16px !important; display: flex !important; align-items: center !important; gap: 8px !important; padding: 10px 12px !important; }
+#bkt-fit-panel { top: 74px !important; width: 320px !important; max-height: 70vh !important; overflow: auto !important; padding: 12px 14px !important; font-size: 13px !important; line-height: 1.45 !important; }
+#bkt-fit-panel ul { margin: 4px 0 8px !important; padding-left: 18px !important; }
+#bkt-fit-panel [data-bkt="score"] { font-weight: 700 !important; font-size: 15px !important; }
+#bkt-score-btn, #bkt-autofill-btn { cursor: pointer !important; border: 0 !important; border-radius: 8px !important; padding: 8px 10px !important; font-size: 13px !important; font-weight: 600 !important; color: #fff !important; white-space: nowrap !important; }
+#bkt-score-btn { background: #2563eb !important; }
+#bkt-autofill-btn { background: #0f172a !important; }
+#bkt-apply-status { font-size: 12px !important; color: #475569 !important; max-width: 220px !important; }
+`
+  ;(document.head ?? document.documentElement).appendChild(style)
+}
+
 /** Initial panel so #bkt-fit-panel exists before the user scores (UAT-1);
  *  renderMatchScorePanel replaces it in place once a score arrives. */
 function renderInitialPanel(): void {
@@ -138,6 +165,7 @@ async function init(): Promise<void> {
 
   // Marker so a loaded-extension smoke (and the background) can confirm injection.
   document.documentElement.setAttribute('data-bkt-apply', config.ats)
+  injectStyles()
   renderInitialPanel()
   buildControls(config)
 

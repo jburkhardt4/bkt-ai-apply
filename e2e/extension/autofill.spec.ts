@@ -27,6 +27,28 @@ const payload = buildPayload({
   workAuthorization: 'Authorized to work in the US',
 })
 
+// Expanded profile exercising the new field set (preferred name, website,
+// location, sponsorship tri-state, EEO disclosures, custom screener answers).
+const fullPayload = buildPayload({
+  fullName: 'John Burkhardt',
+  preferredName: 'JB',
+  email: 'john@bktadvisory.com',
+  phone: '555-0100',
+  phoneCountry: 'United States (+1)',
+  linkedin: 'https://www.linkedin.com/in/jburkhardt',
+  website: 'https://bktadvisory.com',
+  location: 'Austin',
+  state: 'Texas',
+  workAuthorization: 'Authorized to work in the US',
+  requiresSponsorship: false,
+  // 'Male' is deliberate: the gender options list "Female" BEFORE "Male", and
+  // "Female" contains the substring "male" — a regression to substring matching
+  // would mis-select "Female". pickOption()'s exact-label-first tier must commit
+  // "Male" (autofill.ts), which is what makes EEO/gender dropdowns safe (UAT-4).
+  eeo: { gender: 'Male', race_ethnicity: 'White', veteran_status: 'I am not a veteran' },
+  answers: { years_experience: '12' },
+})
+
 test.describe('Apply-macro — host resolution @extension', () => {
   test('resolves supported boards and is inert otherwise (UAT-5)', () => {
     expect(resolveBoardConfig('boards.greenhouse.io')?.ats).toBe('greenhouse')
@@ -56,6 +78,38 @@ test.describe('Apply-macro autofill — Greenhouse @extension', () => {
     // The file input is reported for the human, never fabricated (§5.2).
     const skipped = Object.fromEntries(report.skipped.map((s) => [s.key, s.reason]))
     expect(skipped['resume']).toBe('manual_required')
+  })
+
+  test('fills the expanded field set: preferred name, website, location, sponsorship + EEO', async ({
+    page,
+  }) => {
+    await page.setContent(greenhouseFixtureHtml)
+    await page.evaluate(installReactSelectMock)
+    const report = await page.evaluate(applyAutofill, { config: greenhouseConfig, payload: fullPayload })
+
+    // New native inputs.
+    expect(await page.inputValue('#preferred_name')).toBe('JB')
+    expect(await page.inputValue('#job_application_location')).toBe('Austin')
+    expect(await page.inputValue('input[name="job_application[urls][Website]"]')).toBe(
+      'https://bktadvisory.com',
+    )
+    expect(report.filled).toEqual(
+      expect.arrayContaining(['preferred_name', 'website', 'location']),
+    )
+
+    // requires_sponsorship false → 'No' option committed on the react-select.
+    expect(await page.getAttribute('#sponsorship_control', 'data-value')).toBe('No')
+    // EEO gender committed EXACTLY "Male" — not the "Female" that contains it —
+    // proving pickOption's exact-label-first match (anti-collision, UAT-4).
+    expect(await page.getAttribute('#gender_control', 'data-value')).toBe('Male')
+    expect(report.filled).toEqual(
+      expect.arrayContaining(['requires_sponsorship', 'eeo_gender', 'work_auth']),
+    )
+
+    // Both file inputs (resume + cover letter) are flagged for the human (§5.2).
+    const skipped = Object.fromEntries(report.skipped.map((s) => [s.key, s.reason]))
+    expect(skipped['resume']).toBe('manual_required')
+    expect(skipped['cover_letter']).toBe('manual_required')
   })
 
   test('reports missing fields on DOM drift without throwing (§5.2)', async ({ page }) => {

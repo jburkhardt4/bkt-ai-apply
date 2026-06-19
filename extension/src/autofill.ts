@@ -43,17 +43,36 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
     }
   }
 
-  // react-select strategy: click the control to open the menu, then click the
-  // option whose visible text matches the desired value. Exact-ish: matches an
-  // option whose text contains the value (case-insensitive) so we never select
-  // the wrong option silently — if none matches, we report rather than guess.
+  // Pick the option whose visible text best matches the desired value, WITHOUT
+  // ever selecting the wrong one (UAT-4, §5.2). Tiers, most-specific first:
+  //   1. exact label  — "Male" matches "Male", never the "Female" that contains
+  //      it (plain substring matching mis-selected EEO/gender; this is the fix).
+  //   2. unique prefix — handles "U.S. Citizen" ⇄ "U.S. Citizen / National".
+  //   3. unique substring — last resort, only when exactly one option contains it.
+  // Ambiguous (≥2 candidates, no exact) → null, and we report rather than guess.
+  const pickOption = (opts: HTMLElement[], wanted: string): HTMLElement | null => {
+    const norm = (o: HTMLElement): string => (o.textContent ?? '').trim().toLowerCase()
+    const exact = opts.filter((o) => norm(o) === wanted)
+    if (exact.length) return exact[0]
+    const prefix = opts.filter((o) => {
+      const t = norm(o)
+      return t !== '' && (t.startsWith(wanted) || wanted.startsWith(t))
+    })
+    if (prefix.length === 1) return prefix[0]
+    const contains = opts.filter((o) => norm(o).includes(wanted))
+    if (contains.length === 1) return contains[0]
+    return null
+  }
+
+  // react-select strategy: click the control to open the menu, poll briefly for
+  // its options to render, then commit the anti-collision match (pickOption).
   const fillReactSelect = async (control: HTMLElement, value: string): Promise<boolean> => {
     control.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     control.click()
     const wanted = value.trim().toLowerCase()
     const option = await waitFor<HTMLElement>(() => {
       const opts = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'))
-      return opts.find((o) => (o.textContent ?? '').trim().toLowerCase().includes(wanted)) ?? null
+      return opts.length ? pickOption(opts, wanted) : null
     })
     if (!option) return false
     option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))

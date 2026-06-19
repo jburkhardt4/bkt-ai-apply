@@ -76,30 +76,85 @@ function makeUserClient(session: ExtractedSession): SupabaseClient {
 
 // --- candidate_profiles + resume text ---------------------------------------
 
+/** EEO/demographic disclosures as stored in candidate_profiles.eeo_disclosures
+ *  (jsonb). All optional — the user discloses what they choose. */
+interface EeoDisclosures {
+  gender?: string | null
+  race_ethnicity?: string | null
+  hispanic_latino?: string | null
+  veteran_status?: string | null
+  disability_status?: string | null
+}
+
 interface CandidateProfileRow {
   full_name: string | null
+  preferred_name: string | null
   email: string | null
   phone: string | null
+  phone_country: string | null
   linkedin_url: string | null
-  work_authorization: string | null
-  location: string | null
   website_url: string | null
+  location: string | null
+  state: string | null
+  work_authorization: string | null
+  requires_sponsorship: boolean | null
+  eeo_disclosures: EeoDisclosures | null
   master_resume_path: string | null
 }
+
+// Selected columns kept in one place so the typed Row and the PostgREST select
+// can never drift. Adds the expanded ATS field set (preferred name, phone
+// country, state, website, sponsorship, EEO) to the original 5 contact fields.
+const PROFILE_COLUMNS =
+  'full_name,preferred_name,email,phone,phone_country,linkedin_url,website_url,location,state,work_authorization,requires_sponsorship,eeo_disclosures,master_resume_path'
 
 async function fetchProfileRow(
   supabase: SupabaseClient,
   userId: string | null,
 ): Promise<CandidateProfileRow | null> {
-  let query = supabase
-    .from('candidate_profiles')
-    .select('full_name,email,phone,linkedin_url,work_authorization,location,website_url,master_resume_path')
+  let query = supabase.from('candidate_profiles').select(PROFILE_COLUMNS)
   // RLS is the security boundary; the explicit filter honors BR-005 when we know
   // the user id (we always do, from the session).
   if (userId) query = query.eq('user_id', userId)
   const { data, error } = await query.maybeSingle()
   if (error) return null
   return (data as CandidateProfileRow | null) ?? null
+}
+
+/** Custom screener answers the user pre-stored (application_answers table),
+ *  keyed by question_key → answer. RLS-scoped to the user's own rows (BR-005);
+ *  best-effort — never throws (autofill proceeds without them). These are used
+ *  for autofill ONLY and are NEVER sent to the LLM. */
+async function fetchApplicationAnswers(
+  supabase: SupabaseClient,
+  userId: string | null,
+): Promise<Record<string, string>> {
+  try {
+    let query = supabase.from('application_answers').select('question_key,answer')
+    if (userId) query = query.eq('user_id', userId)
+    const { data, error } = await query
+    if (error || !data) return {}
+    const out: Record<string, string> = {}
+    for (const row of data as { question_key: string | null; answer: string | null }[]) {
+      const key = row.question_key?.trim()
+      const answer = row.answer
+      if (key && typeof answer === 'string' && answer.trim()) out[key] = answer
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+/** Reads the jsonb eeo_disclosures into a flat string map, dropping null/empty
+ *  values so the payload builder only emits disclosed fields. */
+function toEeoMap(eeo: EeoDisclosures | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (!eeo || typeof eeo !== 'object') return out
+  for (const [key, value] of Object.entries(eeo)) {
+    if (typeof value === 'string' && value.trim()) out[key] = value
+  }
+  return out
 }
 
 function isTextPath(path: string | null | undefined): path is string {
@@ -219,14 +274,28 @@ async function handleProfile(): Promise<ProfileResponse> {
   if (!session) return { ok: false, reason: 'needs_login' }
   try {
     const supabase = makeUserClient(session)
-    const row = await fetchProfileRow(supabase, session.userId)
+    // Profile row and screener answers are independent reads → run concurrently
+    // so the extra table adds no serial latency to the (human-triggered) autofill.
+    const [row, answers] = await Promise.all([
+      fetchProfileRow(supabase, session.userId),
+      fetchApplicationAnswers(supabase, session.userId),
+    ])
     if (!row) return { ok: false, reason: 'no_profile' }
+    const eeo = toEeoMap(row.eeo_disclosures)
     const profile: ContactProfile = {
       fullName: row.full_name ?? undefined,
+      preferredName: row.preferred_name ?? undefined,
       email: row.email ?? undefined,
       phone: row.phone ?? undefined,
+      phoneCountry: row.phone_country ?? undefined,
       linkedin: row.linkedin_url ?? undefined,
+      website: row.website_url ?? undefined,
+      location: row.location ?? undefined,
+      state: row.state ?? undefined,
       workAuthorization: row.work_authorization ?? undefined,
+      requiresSponsorship: typeof row.requires_sponsorship === 'boolean' ? row.requires_sponsorship : undefined,
+      ...(Object.keys(eeo).length ? { eeo } : {}),
+      ...(Object.keys(answers).length ? { answers } : {}),
     }
     return { ok: true, profile }
   } catch (e) {

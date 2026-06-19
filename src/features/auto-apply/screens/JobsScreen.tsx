@@ -113,7 +113,7 @@ export function JobsScreen({
         <BktStatCard
           live={!paused}
           label={paused ? 'Paused' : 'Searching Now'}
-          liveText={paused ? 'Auto Apply is paused' : 'We are gathering matching jobs'}
+          liveText={paused ? 'Job search is paused' : 'We are gathering matching jobs'}
           action={
             <BktButton
               variant="outline"

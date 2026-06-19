@@ -151,10 +151,13 @@ export function AutoApplyDashboard() {
       toast('Job search paused', 'pause', 'var(--bkt-blue-300)')
       return
     }
-    toggleActive(true)
     setSearching(true)
     toast('Searching now — scanning sources…', 'play', 'var(--bkt-blue-300)')
-    triggerProspectorRun()
+    // Await activation before kicking the immediate run: prospector-cron reads
+    // active profiles with `.eq('is_active', true)`, so the run must not race
+    // ahead of the toggleActive write or it sees the profile still inactive.
+    toggleActive(true)
+      .then(() => triggerProspectorRun())
       .then((res) => {
         reload()
         if (!res.ok) toast(res.message, 'circle-alert', 'var(--bkt-warning)')

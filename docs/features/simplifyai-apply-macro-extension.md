@@ -1,6 +1,6 @@
 # BKT Apply-Macro — Chrome Extension Design Spec (Phase 2b)
 
-**Status:** Proposed — gated by [ADR-009](../adr/009-apply-macro-chrome-extension.md)
+**Status:** In progress — session handoff ([ADR-011](../adr/011-extension-session-handoff.md)), plus self-service profile + schema expansion + Answer Library + per-board field-config expansion ([ADR-012](../adr/012-candidate-profile-expansion-and-answer-library.md)) all landed 2026-06-19; field map in [`ats-field-audit.md`](./ats-field-audit.md). Gated by [ADR-009](../adr/009-apply-macro-chrome-extension.md)
 **Owner:** JB · **Branch:** `simplifyAI-apply-macro` · **Date:** 2026-06-16
 **Models:** match scoring reuses `match_scoring → anthropic` from `src/lib/ai-router.ts` (latest Claude per the routing matrix); no model IDs are hardcoded in the extension.
 
@@ -309,5 +309,11 @@ in the UI.
   not gated on a `.txt` resume existing.
 - Where field-mapping configs live (Supabase table vs storage JSON) + an authoring/QA
   loop for DOM drift.
-- Session handoff mechanics SPA↔extension (shared Supabase session vs a short-lived
-  token mint) and the privacy disclosure copy for the Web Store listing.
+- **Session handoff mechanics SPA↔extension — RESOLVED** (2026-06-18,
+  [ADR-011](../adr/011-extension-session-handoff.md)): "the extension reads the SPA
+  session" — a content script on the BKT origins reads the existing Supabase session
+  from `localStorage` and relays it to the background worker (no shared-client refactor,
+  no short-lived token mint). See also `docs/qa/apply-macro-phase2b-uat.md` for the
+  human verification gate.
+- Privacy-disclosure copy for the Web Store listing (the extension reads ATS page
+  content + the user's profile) — still **open**, required before any Store upload.

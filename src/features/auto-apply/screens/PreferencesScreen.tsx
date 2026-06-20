@@ -2,14 +2,32 @@
 // Ported 1:1 from the design-system UI kit (PreferencesScreen.jsx).
 // Sections: Role & Experience · Location · Compensation · Filtering ·
 //           Eligibility · Personal Info · Application Behaviour
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import type { ToastFn } from '@/components/bkt/toast'
+import { useAuth } from '@/contexts/auth-context'
+import {
+  deleteApplicationAnswer,
+  fetchApplicationAnswers,
+  fetchCandidateProfile,
+  upsertApplicationAnswer,
+  upsertCandidateProfile,
+} from '@/features/applications/services/candidateProfileWriteService'
 import { brandAsset } from '../assets'
 import { REVIEW_MODES } from '../reviewModes'
 import { useReviewMode } from '../state'
 import type { ReviewModeId } from '../types'
+import {
+  EEO_QUESTIONS,
+  PROFILE_FORM_DEFAULT,
+  formToProfilePatch,
+  parseEeoDisclosures,
+  profileRowToForm,
+  slugifyQuestionKey,
+  type EeoDisclosures,
+  type ProfileForm,
+} from './preferencesProfile'
 
 /* ─────────────── COMPENSATION CONVERSION HELPERS ─────────────── */
 // Standard US work year used for hourly⇄salary conversion.
@@ -476,6 +494,222 @@ function ModeCards({ mode, onChange, stack = false }: { mode: ReviewModeId; onCh
   )
 }
 
+/* ─────────────────────── ANSWER LIBRARY TAB ─────────────────────── */
+
+/** Multi-line answer field — matches PrefInput's chrome but grows vertically
+ *  for the longer free-text screener answers. */
+function PrefTextArea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [focus, setFocus] = useState(false)
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={() => setFocus(true)}
+      onBlur={() => setFocus(false)}
+      placeholder={placeholder}
+      rows={3}
+      style={{
+        width: '100%',
+        resize: 'vertical',
+        minHeight: 76,
+        padding: '10px 14px',
+        background: 'var(--surface)',
+        border: `1.5px solid ${focus ? 'var(--primary)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius-md)',
+        outline: 'none',
+        font: '400 var(--text-sm)/1.5 var(--font-body)',
+        color: 'var(--text-strong)',
+        boxShadow: focus ? '0 0 0 3px color-mix(in oklab, var(--primary) 16%, transparent)' : 'none',
+        transition: 'border-color var(--dur-fast) var(--ease-standard)',
+      }}
+    />
+  )
+}
+
+/** One saved custom screener answer — edit the answer text in place, or remove
+ *  the row. The label is the stable identity (its slug is the storage key), so
+ *  it is shown read-only here; re-add with a new label to create a new row. */
+function AnswerRow({
+  label,
+  answer,
+  onSave,
+  onRemove,
+}: {
+  label: string
+  answer: string
+  onSave: (label: string, answer: string) => void
+  onRemove: () => void
+}) {
+  const [draft, setDraft] = useState(answer)
+  const dirty = draft !== answer
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, background: 'var(--bkt-zinc-50)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <span style={{ flex: 1, font: '600 var(--text-sm)/1.4 var(--font-body)', color: 'var(--text-strong)' }}>{label}</span>
+        <button
+          onClick={onRemove}
+          aria-label="Remove answer"
+          className="bkt-press"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 30,
+            height: 30,
+            flexShrink: 0,
+            background: 'transparent',
+            border: '1.5px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            cursor: 'pointer',
+            color: 'var(--text-muted)',
+            transition: 'border-color var(--dur-fast), color var(--dur-fast)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--bkt-danger)'
+            e.currentTarget.style.color = 'var(--bkt-danger)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border)'
+            e.currentTarget.style.color = 'var(--text-muted)'
+          }}
+        >
+          <Icon name="trash-2" size={14} />
+        </button>
+      </div>
+      <PrefTextArea value={draft} onChange={setDraft} placeholder="Your answer…" />
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => onSave(label, draft)}
+          disabled={!dirty}
+          className="bkt-press"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
+            height: 32,
+            padding: '0 14px',
+            background: dirty ? 'var(--primary)' : 'var(--accent)',
+            color: dirty ? 'var(--primary-foreground)' : 'var(--text-muted)',
+            border: 'none',
+            borderRadius: 'var(--radius-pill)',
+            cursor: dirty ? 'pointer' : 'default',
+            font: '600 var(--text-xs)/1 var(--font-body)',
+            transition: 'background var(--dur-fast) var(--ease-standard)',
+          }}
+        >
+          <Icon name="check" size={13} />
+          {dirty ? 'Save answer' : 'Saved'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Composer for a brand-new screener answer (label + answer). Clears itself on
+ *  add so multiple answers can be entered in a row. */
+function AnswerComposer({ onAdd }: { onAdd: (label: string, answer: string) => void }) {
+  const [label, setLabel] = useState('')
+  const [answer, setAnswer] = useState('')
+  const ready = label.trim().length > 0
+  const add = () => {
+    if (!ready) return
+    onAdd(label, answer)
+    setLabel('')
+    setAnswer('')
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 18, background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-lg)' }}>
+      <div>
+        <PrefLabel note="The exact question an application asks">Question</PrefLabel>
+        <PrefInput value={label} onChange={setLabel} placeholder="e.g. Why do you want to work here?" />
+      </div>
+      <div>
+        <PrefLabel>Answer</PrefLabel>
+        <PrefTextArea value={answer} onChange={setAnswer} placeholder="The reusable answer the macro should fill in…" />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={add}
+          disabled={!ready}
+          className="bkt-press"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            height: 36,
+            padding: '0 18px',
+            background: ready ? 'var(--primary)' : 'var(--accent)',
+            color: ready ? 'var(--primary-foreground)' : 'var(--text-muted)',
+            border: 'none',
+            borderRadius: 'var(--radius-pill)',
+            cursor: ready ? 'pointer' : 'default',
+            font: '600 var(--text-sm)/1 var(--font-body)',
+            transition: 'background var(--dur-fast) var(--ease-standard)',
+          }}
+        >
+          <Icon name="plus" size={15} />
+          Add answer
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function AnswerLibraryTab({
+  eeo,
+  answers,
+  onSetEeo,
+  onSaveAnswer,
+  onRemoveAnswer,
+}: {
+  eeo: EeoDisclosures
+  answers: { key: string; label: string; answer: string }[]
+  onSetEeo: (key: (typeof EEO_QUESTIONS)[number]['key'], value: string) => void
+  onSaveAnswer: (label: string, answer: string) => void
+  onRemoveAnswer: (key: string) => void
+}) {
+  return (
+    <>
+      <p style={{ padding: '20px 0 0', margin: 0, font: '400 var(--text-sm)/1.65 var(--font-body)', color: 'var(--text-muted)', maxWidth: 680 }}>
+        Save the answers that applications ask for over and over, so they can be filled in for you. Demographic questions are always optional, you can decline any of them.
+      </p>
+
+      <PrefSection title="EEO / Demographics" idx={0}>
+        <p style={{ margin: 0, font: '400 var(--text-sm)/1.6 var(--font-body)', color: 'var(--text-muted)', maxWidth: 620 }}>
+          Voluntary self-identification. Anything you leave on "Decline to answer" is never shared.
+        </p>
+        {EEO_QUESTIONS.map((q) => (
+          <div key={q.key}>
+            <PrefLabel>{q.label}</PrefLabel>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {q.options.map((o) => (
+                <PrefToggleChip key={o} label={o} active={eeo[q.key] === o} onClick={() => onSetEeo(q.key, o)} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </PrefSection>
+
+      <PrefSection title="Custom screener answers" idx={1}>
+        {answers.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {answers.map((a) => (
+              <AnswerRow key={a.key} label={a.label} answer={a.answer} onSave={onSaveAnswer} onRemove={() => onRemoveAnswer(a.key)} />
+            ))}
+          </div>
+        )}
+        {answers.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '28px 0 4px', color: 'var(--text-muted)' }}>
+            <Icon name="book-open" size={26} />
+            <span style={{ font: '400 var(--text-sm)/1.5 var(--font-body)' }}>No saved answers yet. Add your first one below.</span>
+          </div>
+        )}
+        <AnswerComposer onAdd={onSaveAnswer} />
+      </PrefSection>
+    </>
+  )
+}
+
 /* ─────────────────────── MAIN SCREEN ─────────────────────── */
 export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   const TABS = ['Quick Settings', 'Job Preferences', 'Answer Library', 'Rejection reasons']
@@ -522,14 +756,52 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   const [minHourly, setMinHourly] = useState(() => formatHourly(150000 / HOURS_PER_YEAR))
   const [maxHourly, setMaxHourly] = useState('')
   const [excluded, setExcluded] = useState(['Evertas', 'SkyView Advisors', 'PricewaterhouseCoopers'])
-  const [workAuth, setWorkAuth] = useState('US Citizen')
-  const [clearance, setClearance] = useState('No')
-  const [driverLic, setDriverLic] = useState('Yes')
-  const [fullName, setFullName] = useState('John Burkhardt')
-  const [linkedin, setLinkedin] = useState('linkedin.com/in/johnburkhardt')
-  const [phone, setPhone] = useState('(555) 867-5309')
-  const [email, setEmail] = useState('john@bktadvisory.com')
   const [relocation, setRelocation] = useState(false)
+
+  // ── candidate_profiles-backed identity + eligibility ──────────────
+  // The current signed-in user (AuthProvider is the single source of auth, BR-008);
+  // writes are gated on a non-null id so demo/unauthed review never persists.
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+  // One consolidated form object (instead of a useState-per-field) so the mount
+  // load can replace the whole identity/eligibility block in a single setState.
+  const [profile, setProfile] = useState<ProfileForm>(PROFILE_FORM_DEFAULT)
+  const [eeo, setEeo] = useState<EeoDisclosures>({})
+  const [answers, setAnswers] = useState<{ key: string; label: string; answer: string }[]>([])
+  const [saving, setSaving] = useState(false)
+
+  // Update a single identity/eligibility field on the consolidated form.
+  const setProfileField = useCallback(
+    <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) =>
+      setProfile((p) => ({ ...p, [key]: value })),
+    [],
+  )
+
+  // Load the profile (+ answers) once per user. set-state-in-effect rule:
+  // every setState below runs INSIDE the promise callbacks, never synchronously
+  // in the effect body (mirrors AutoApplySettingsProvider's loader).
+  useEffect(() => {
+    if (!userId) return
+    let alive = true
+    fetchCandidateProfile(userId).then(
+      (row) => {
+        if (alive && row) {
+          setProfile(profileRowToForm(row))
+          setEeo(parseEeoDisclosures(row.eeo_disclosures))
+        }
+      },
+      () => undefined,
+    )
+    fetchApplicationAnswers(userId).then(
+      (rows) => {
+        if (alive) setAnswers(rows.map((r) => ({ key: r.question_key, label: r.question_label, answer: r.answer })))
+      },
+      () => undefined,
+    )
+    return () => {
+      alive = false
+    }
+  }, [userId])
   // Same setting as the dashboard ReviewModeMenu (user_settings.review_mode),
   // so the mode cards and the dashboard toggle stay in lockstep.
   const [reviewMode, setReviewMode] = useReviewMode()
@@ -562,6 +834,13 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   ]
   const WORK_OPTS = ['Full-time', 'Part-time', 'Contract/Freelance', 'Internship']
   const AUTH_OPTS = ['US Citizen', 'Permanent Resident (Green Card)', 'H-1B', 'H-4 EAD', 'OPT', 'TN (USMCA)', 'Not yet authorized']
+  // requires_sponsorship is a boolean|null column; the third chip clears it back
+  // to "unanswered" (null) rather than forcing a Yes/No.
+  const SPONSORSHIP_OPTS: { label: string; value: boolean | null }[] = [
+    { label: 'No', value: false },
+    { label: 'Yes', value: true },
+    { label: 'I do not wish to provide this information', value: null },
+  ]
 
   // ── Compensation: 2080-hour work-year conversion ──────────────
   // Hourly row sits above salary only when Contract is the active direction
@@ -639,7 +918,66 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
     </div>
   )
 
-  const save = () => onToast('Preferences saved', 'circle-check', 'var(--bkt-success)')
+  // Persists the identity + eligibility + EEO patch to candidate_profiles.
+  // Best-effort like persistSettings: a successful round-trip toasts success,
+  // a failure surfaces the reason instead of silently dropping the edit. In
+  // demo / unconfigured-Supabase mode the upsert no-ops and still confirms.
+  const save = () => {
+    if (saving) return
+    if (!userId) {
+      onToast('Preferences saved', 'circle-check', 'var(--bkt-success)')
+      return
+    }
+    setSaving(true)
+    upsertCandidateProfile(userId, formToProfilePatch(profile, eeo))
+      .then(() => onToast('Preferences saved', 'circle-check', 'var(--bkt-success)'))
+      .catch((err: unknown) => onToast(`Could not save — ${String(err)}`, 'circle-x', 'var(--bkt-danger)'))
+      .finally(() => setSaving(false))
+  }
+
+  /* ── Answer Library actions ──────────────────────────────────────── */
+
+  // EEO is part of the candidate_profiles row; persist it with the rest of the
+  // profile patch so a single upsert keeps the jsonb column authoritative.
+  const setEeoField = (key: (typeof EEO_QUESTIONS)[number]['key'], value: string) => {
+    const next: EeoDisclosures = { ...eeo, [key]: value }
+    setEeo(next)
+    if (!userId) return
+    upsertCandidateProfile(userId, formToProfilePatch(profile, next)).catch((err: unknown) =>
+      onToast(`Could not save — ${String(err)}`, 'circle-x', 'var(--bkt-danger)'),
+    )
+  }
+
+  // Add or update a custom screener answer. The slug is the stable storage key,
+  // so re-saving the same label edits the row in place (upsert on user+key).
+  const saveAnswer = (label: string, answer: string) => {
+    const trimmedLabel = label.trim()
+    const key = slugifyQuestionKey(trimmedLabel)
+    if (!key) {
+      onToast('Add a question before saving', 'circle-alert', 'var(--bkt-blue-300)')
+      return
+    }
+    setAnswers((list) => {
+      const existing = list.find((a) => a.key === key)
+      if (existing) return list.map((a) => (a.key === key ? { key, label: trimmedLabel, answer } : a))
+      return [...list, { key, label: trimmedLabel, answer }]
+    })
+    if (!userId) return
+    upsertApplicationAnswer(userId, {
+      question_key: key,
+      question_label: trimmedLabel,
+      answer,
+      answer_type: 'text',
+    }).catch((err: unknown) => onToast(`Could not save answer — ${String(err)}`, 'circle-x', 'var(--bkt-danger)'))
+  }
+
+  const removeAnswer = (key: string) => {
+    setAnswers((list) => list.filter((a) => a.key !== key))
+    if (!userId) return
+    deleteApplicationAnswer(userId, key).catch((err: unknown) =>
+      onToast(`Could not remove answer — ${String(err)}`, 'circle-x', 'var(--bkt-danger)'),
+    )
+  }
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -652,6 +990,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
           <div style={{ flex: 1 }} />
           <button
             onClick={save}
+            disabled={saving}
             className="bkt-press"
             style={{
               display: 'inline-flex',
@@ -663,12 +1002,14 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               color: 'var(--primary-foreground)',
               border: 'none',
               borderRadius: 'var(--radius-pill)',
-              cursor: 'pointer',
+              cursor: saving ? 'default' : 'pointer',
+              opacity: saving ? 0.65 : 1,
+              transition: 'opacity var(--dur-fast) var(--ease-standard)',
               font: '600 var(--text-sm)/1 var(--font-body)',
             }}
           >
             <Icon name="save" size={14} />
-            Save
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
         {/* tabs */}
@@ -874,7 +1215,20 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {AUTH_OPTS.map((o) => (
-                    <PrefRadioCard key={o} label={o} active={workAuth === o} onClick={() => setWorkAuth(o)} />
+                    <PrefRadioCard key={o} label={o} active={profile.work_authorization === o} onClick={() => setProfileField('work_authorization', o)} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <PrefLabel>Will you now or in the future require visa sponsorship for employment?</PrefLabel>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {SPONSORSHIP_OPTS.map((o) => (
+                    <PrefToggleChip
+                      key={o.label}
+                      label={o.label}
+                      active={profile.requires_sponsorship === o.value}
+                      onClick={() => setProfileField('requires_sponsorship', o.value)}
+                    />
                   ))}
                 </div>
               </div>
@@ -882,7 +1236,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                 <PrefLabel>Do you currently have an active United States security clearance?</PrefLabel>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {['No', 'Yes', 'I do not wish to provide this information'].map((o) => (
-                    <PrefToggleChip key={o} label={o} active={clearance === o} onClick={() => setClearance(o)} />
+                    <PrefToggleChip key={o} label={o} active={profile.security_clearance === o} onClick={() => setProfileField('security_clearance', o)} />
                   ))}
                 </div>
               </div>
@@ -890,7 +1244,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                 <PrefLabel>Do you have a current driver's license?</PrefLabel>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {['Yes', 'No', 'I do not wish to provide this information'].map((o) => (
-                    <PrefToggleChip key={o} label={o} active={driverLic === o} onClick={() => setDriverLic(o)} />
+                    <PrefToggleChip key={o} label={o} active={profile.drivers_license === o} onClick={() => setProfileField('drivers_license', o)} />
                   ))}
                 </div>
               </div>
@@ -900,15 +1254,15 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <PrefLabel>Full name</PrefLabel>
-                  <PrefInput value={fullName} onChange={setFullName} placeholder="John Burkhardt" />
+                  <PrefInput value={profile.full_name} onChange={(v) => setProfileField('full_name', v)} placeholder="John Burkhardt" />
                 </div>
                 <div>
-                  <PrefLabel>LinkedIn URL</PrefLabel>
-                  <PrefInput value={linkedin} onChange={setLinkedin} placeholder="linkedin.com/in/..." />
+                  <PrefLabel note="Goes on applications that ask for a preferred / first name">Preferred name</PrefLabel>
+                  <PrefInput value={profile.preferred_name} onChange={(v) => setProfileField('preferred_name', v)} placeholder="John" />
                 </div>
                 <div>
                   <PrefLabel>Email address</PrefLabel>
-                  <PrefInput value={email} onChange={setEmail} placeholder="you@company.com" />
+                  <PrefInput value={profile.email} onChange={(v) => setProfileField('email', v)} type="email" placeholder="you@company.com" />
                 </div>
                 <div>
                   <PrefLabel>Phone number</PrefLabel>
@@ -930,8 +1284,24 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                       <span style={{ font: '400 var(--text-sm)/1 var(--font-body)', color: 'var(--text-strong)' }}>🇺🇸 +1</span>
                       <Icon name="chevron-down" size={13} color="var(--text-muted)" />
                     </div>
-                    <PrefInput value={phone} onChange={setPhone} placeholder="(555) 000-0000" style={{ flex: 1 }} />
+                    <PrefInput value={profile.phone} onChange={(v) => setProfileField('phone', v)} type="tel" inputMode="text" placeholder="(555) 000-0000" style={{ flex: 1 }} />
                   </div>
+                </div>
+                <div>
+                  <PrefLabel>City</PrefLabel>
+                  <PrefInput value={profile.location} onChange={(v) => setProfileField('location', v)} placeholder="Los Angeles" />
+                </div>
+                <div>
+                  <PrefLabel>State</PrefLabel>
+                  <PrefInput value={profile.state} onChange={(v) => setProfileField('state', v)} placeholder="California" />
+                </div>
+                <div>
+                  <PrefLabel>LinkedIn URL</PrefLabel>
+                  <PrefInput value={profile.linkedin_url} onChange={(v) => setProfileField('linkedin_url', v)} type="url" placeholder="linkedin.com/in/..." />
+                </div>
+                <div>
+                  <PrefLabel note="Optional — portfolio, GitHub, or personal site">Website</PrefLabel>
+                  <PrefInput value={profile.website_url} onChange={(v) => setProfileField('website_url', v)} type="url" placeholder="yoursite.com" />
                 </div>
               </div>
 
@@ -1006,6 +1376,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             <div style={{ paddingTop: 28, paddingBottom: 8 }}>
               <button
                 onClick={save}
+                disabled={saving}
                 className="bkt-press"
                 style={{
                   display: 'inline-flex',
@@ -1017,25 +1388,39 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                   color: 'var(--primary-foreground)',
                   border: 'none',
                   borderRadius: 'var(--radius-pill)',
-                  cursor: 'pointer',
+                  cursor: saving ? 'default' : 'pointer',
+                  opacity: saving ? 0.65 : 1,
+                  transition: 'opacity var(--dur-fast) var(--ease-standard)',
                   font: '600 var(--text-base)/1 var(--font-body)',
                 }}
               >
                 <Icon name="save" size={16} />
-                Save Preferences
+                {saving ? 'Saving…' : 'Save Preferences'}
               </button>
             </div>
           </div>
         )}
 
-        {(tab === 'Answer Library' || tab === 'Rejection reasons') && (
+        {tab === 'Answer Library' && (
+          <div key="answers" className="bkt-blur-in">
+            <AnswerLibraryTab
+              eeo={eeo}
+              answers={answers}
+              onSetEeo={setEeoField}
+              onSaveAnswer={saveAnswer}
+              onRemoveAnswer={removeAnswer}
+            />
+          </div>
+        )}
+
+        {tab === 'Rejection reasons' && (
           <div
-            key={tab}
+            key="rejection"
             className="bkt-blur-in"
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 10, color: 'var(--text-muted)' }}
           >
-            <Icon name={tab === 'Answer Library' ? 'book-open' : 'thumbs-down'} size={32} />
-            <span style={{ font: '600 var(--text-lg)/1.3 var(--font-display)', color: 'var(--text-strong)' }}>{tab}</span>
+            <Icon name="thumbs-down" size={32} />
+            <span style={{ font: '600 var(--text-lg)/1.3 var(--font-display)', color: 'var(--text-strong)' }}>Rejection reasons</span>
             <span style={{ font: '400 var(--text-sm)/1.5 var(--font-body)' }}>This section is coming soon.</span>
           </div>
         )}

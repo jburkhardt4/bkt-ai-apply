@@ -6,7 +6,7 @@
 
 ---
 
-## 14 Core Entities
+## 16 Core Entities
 
 ### E-001 — users
 
@@ -296,6 +296,55 @@ Token and cost tracking per AI API call.
 
 ---
 
+### E-015 — candidate_profiles
+
+Single editable source-of-truth for the user's identity / eligibility PII used by
+apply-macro autofill and server-side submission. One row per user. Added by migration
+`20260614000001`, expanded by `20260619000001` (ADR-012). Self-served from Preferences →
+"Job Preferences" (no manual seeding) via `candidateProfileWriteService.upsertCandidateProfile`.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | uuid | Primary key |
+| user_id | uuid | FK → users.id, UNIQUE (one per user) |
+| full_name / preferred_name | text | |
+| email / phone / phone_country | text | |
+| location / state | text | City + state/region |
+| linkedin_url / website_url | text | nullable |
+| work_authorization | text | e.g. 'U.S. Citizen' |
+| requires_sponsorship | boolean | nullable tri-state (Yes / No / unset) |
+| security_clearance / drivers_license | text | |
+| master_resume_path | text | nullable; path in `documents` bucket |
+| employment_history | jsonb | default `[]` (repeatable blocks; UI deferred) |
+| eeo_disclosures | jsonb | default `{}`; fixed EEO answers (gender, race_ethnicity, hispanic_latino, veteran_status, disability_status) |
+| created_at / updated_at | timestamptz | |
+
+**RLS:** user_id scoped (`user_id = auth.uid()` for SELECT/INSERT/UPDATE/DELETE). The
+extension reads it with the user's JWT — no service role (ADR-011). EEO + answers are
+autofill-only, never sent to the LLM (BR-155).
+
+---
+
+### E-016 — application_answers
+
+Reusable "answer library" of arbitrary custom screener Q&A — the table half of the hybrid
+storage (fixed EEO lives in `candidate_profiles.eeo_disclosures`). Added by migration
+`20260619000001` (ADR-012).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | uuid | Primary key |
+| user_id | uuid | FK → users.id |
+| question_key | text | stable slug; UNIQUE (user_id, question_key) |
+| question_label | text | the question text as last seen |
+| answer | text | |
+| answer_type | text | 'text' \| 'boolean' \| 'choice' |
+| created_at / updated_at | timestamptz | |
+
+**RLS:** user_id scoped (own-row SELECT/INSERT/UPDATE/DELETE).
+
+---
+
 ## Entity Relationship Summary
 
 ```text
@@ -311,4 +360,6 @@ jobs ──< ai_scores
 users ──< recruiters ──> companies
 users ──< ai_model_usage
 users ──< documents
+users ──< candidate_profiles (1:1)
+users ──< application_answers
 ```

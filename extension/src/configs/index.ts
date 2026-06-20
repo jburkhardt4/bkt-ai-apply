@@ -2,9 +2,12 @@ import type { BoardConfig } from '../types'
 import { greenhouseConfig } from './greenhouse'
 import { leverConfig } from './lever'
 import { ashbyConfig } from './ashby'
+import { workdayConfig } from './workday'
 
-/** All board configs the macro currently knows (Wave 1; spec §7). */
-export const BOARD_CONFIGS: BoardConfig[] = [greenhouseConfig, leverConfig, ashbyConfig]
+/** All board configs the macro currently knows. Wave 1 = Greenhouse/Lever/Ashby
+ *  (verified selectors); Wave 2 adds Workday (best-effort, high-drift — see
+ *  workday.ts; every selector is LIVE-TUNE) (spec §7). */
+export const BOARD_CONFIGS: BoardConfig[] = [greenhouseConfig, leverConfig, ashbyConfig, workdayConfig]
 
 /**
  * Resolves the board config for a host (JSON-config referencing, spec §3.1).

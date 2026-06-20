@@ -10,6 +10,8 @@
     "https://jobs.lever.co/*",
     "https://jobs.ashbyhq.com/*",
     "https://*.ashbyhq.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://*.workday.com/*",
     "https://bkt-ai-apply.vercel.app/*",
     "https://*.supabase.co/*"
   ],
@@ -21,7 +23,9 @@
         "https://job-boards.greenhouse.io/*",
         "https://jobs.lever.co/*",
         "https://jobs.ashbyhq.com/*",
-        "https://*.ashbyhq.com/*"
+        "https://*.ashbyhq.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.workday.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

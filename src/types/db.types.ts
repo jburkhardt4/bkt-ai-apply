@@ -137,6 +137,39 @@ export type Database = {
           },
         ]
       }
+      application_answers: {
+        Row: {
+          answer: string
+          answer_type: string
+          created_at: string
+          id: string
+          question_key: string
+          question_label: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer?: string
+          answer_type?: string
+          created_at?: string
+          id?: string
+          question_key: string
+          question_label?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          answer_type?: string
+          created_at?: string
+          id?: string
+          question_key?: string
+          question_label?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       application_events: {
         Row: {
           actor: string
@@ -350,14 +383,21 @@ export type Database = {
       candidate_profiles: {
         Row: {
           created_at: string
+          drivers_license: string
           eeo_disclosures: Json
           email: string
+          employment_history: Json
           full_name: string
           id: string
           linkedin_url: string | null
           location: string
           master_resume_path: string | null
           phone: string
+          phone_country: string
+          preferred_name: string
+          requires_sponsorship: boolean | null
+          security_clearance: string
+          state: string
           updated_at: string
           user_id: string
           website_url: string | null
@@ -365,14 +405,21 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          drivers_license?: string
           eeo_disclosures?: Json
           email?: string
+          employment_history?: Json
           full_name?: string
           id?: string
           linkedin_url?: string | null
           location?: string
           master_resume_path?: string | null
           phone?: string
+          phone_country?: string
+          preferred_name?: string
+          requires_sponsorship?: boolean | null
+          security_clearance?: string
+          state?: string
           updated_at?: string
           user_id: string
           website_url?: string | null
@@ -380,14 +427,21 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          drivers_license?: string
           eeo_disclosures?: Json
           email?: string
+          employment_history?: Json
           full_name?: string
           id?: string
           linkedin_url?: string | null
           location?: string
           master_resume_path?: string | null
           phone?: string
+          phone_country?: string
+          preferred_name?: string
+          requires_sponsorship?: boolean | null
+          security_clearance?: string
+          state?: string
           updated_at?: string
           user_id?: string
           website_url?: string | null

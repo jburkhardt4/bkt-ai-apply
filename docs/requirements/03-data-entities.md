@@ -6,7 +6,7 @@
 
 ---
 
-## 16 Core Entities
+## 18 Core Entities
 
 ### E-001 — users
 
@@ -345,6 +345,66 @@ storage (fixed EEO lives in `candidate_profiles.eeo_disclosures`). Added by migr
 
 ---
 
+### E-017 — prepared_applications
+
+One row per "headless prep + human submit" attempt. The server prep pipeline reads an ATS
+application-form schema via its public read API and maps the user's profile onto it; it never
+submits. Added by migration `20260620000001` (ADR-013). Distinct from `submission_previews`
+(the 1:1 would-be-POST snapshot for the frozen headless-submit path).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | uuid | Primary key |
+| user_id | uuid | FK → users.id (RLS) |
+| application_id | uuid | FK → applications.id, **nullable** (prep may precede the lifecycle row); ON DELETE SET NULL |
+| job_id | uuid | FK → jobs.id, nullable |
+| job_ref | jsonb | `{ source_board, source_url, external_job_id }` |
+| ats_family | text | 'greenhouse' \| 'lever' \| 'ashby' \| 'smartrecruiters' \| 'workday' \| 'other' |
+| antibot_tier | text | 'low' \| 'medium' \| 'high' \| 'unknown' (gates Auto-mode; BR-157) |
+| form_schema_snapshot | jsonb | Immutable raw schema detected at prep time |
+| match_score | numeric | Job Score; nullable |
+| mode | text | 'auto' \| 'hybrid' |
+| status | text | 'prepared' \| 'needs_review' \| 'ready_to_fill' \| 'submitted' \| 'stale' \| 'blocked' |
+| gating_reason | text | Why it landed in needs_review/blocked; null when clean |
+| document_versions | jsonb | FKs to immutable resume/cover-letter versions |
+| prepared_by | text | 'cron' \| 'on_demand' |
+| created_at / updated_at | timestamptz | |
+
+**RLS:** user_id scoped (own-row CRUD). Upsert key `UNIQUE (user_id, job_id) WHERE job_id IS NOT NULL`.
+Service role (prep cron) bypasses RLS to write for any user. Prep is **not** event-sourced into
+`application_events` (BR-158) — it changes no `applications.stage`.
+
+---
+
+### E-018 — prepared_application_fields
+
+One row per mapped field of a prepared application — keeps per-field provenance, confidence, and
+sensitivity. Added by migration `20260620000001` (ADR-013).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | uuid | Primary key |
+| prepared_application_id | uuid | FK → prepared_applications.id, ON DELETE CASCADE |
+| user_id | uuid | Denormalized for RLS |
+| field_key | text | Canonical key (matches the extension payload vocabulary) |
+| field_label | text | The ATS field label as detected |
+| field_type | text | text / select / react-select / file / … |
+| mapped_value | jsonb | Resolved value; nullable |
+| value_source | text | 'profile' \| 'derived' \| 'ai_draft' \| 'default' |
+| confidence | numeric | 0–1 |
+| is_sensitive | bool | EEO/demographic, work-auth, salary, clearance, legal |
+| review_gate | bool | **Forced true whenever is_sensitive** (trigger + CHECK; BR-156) |
+| free_text_draft | text | Nullable; AI draft (Phase 5), always review-gated |
+| redaction_safe | bool | |
+| created_at / updated_at | timestamptz | |
+
+**RLS:** user_id scoped (own-row CRUD). UNIQUE `(prepared_application_id, field_key)`.
+**Hard invariant (BR-156):** `is_sensitive = true ⇒ review_gate = true`, DB-enforced by
+`fn_prepared_field_force_gate` (auto-forces) + `CHECK (NOT is_sensitive OR review_gate)`. Sensitive
+fields are stored but **never auto-filled**.
+
+---
+
 ## Entity Relationship Summary
 
 ```text
@@ -362,4 +422,6 @@ users ──< ai_model_usage
 users ──< documents
 users ──< candidate_profiles (1:1)
 users ──< application_answers
+users ──< prepared_applications ──> jobs / applications
+prepared_applications ──< prepared_application_fields
 ```

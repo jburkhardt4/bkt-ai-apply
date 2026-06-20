@@ -1,117 +1,98 @@
-# Overnight Run — Candidate Profile Expansion + Answer Library + Autofill Surface
+# Overnight Run — Headless Prep Pipeline + `prepared_*` Data Model (ADR-013)
 
-**Date:** 2026-06-19 (overnight, autonomous) · **Branch:** `simplifyAI-apply-macro`
-**Exit condition MET:** schema + configs mapped, suite passes with **0 errors**.
-
-> **TL;DR** — The apply-macro now has a real, self-service candidate profile. The
-> Preferences UI persists to `candidate_profiles` (no more manual SQL seeding), the
-> schema grew to the full ATS field surface + a hybrid Answer Library, and the
-> extension fills the expanded field set across Greenhouse / Lever / Ashby (+ a
-> best-effort Workday config). **Not committed/pushed — left staged + green for your
-> review.**
+**Date:** 2026-06-20 (overnight, autonomous) · **Branch:** `simplifyAI-apply-macro`
+**Exit condition MET:** schema + configs fully mapped, full suite passes with **0 errors**.
 
 ---
 
-## Green status (authoritative)
+## TL;DR
+
+Built the **"headless prep + human submit"** pipeline from the 2026-06-20 job-board research, at the
+scope you locked: **Full pipeline + extension**, **new `prepared_*` tables**, **Complement** (the
+ADR-006 live ATS-POST adapters stay frozen; prep + the human-in-the-loop extension is the gap-filler).
+The server reads a posting's ATS form schema from its **public, auth-free read API**, maps your profile
+onto it with per-field confidence + sensitivity, and the extension fills the **non-sensitive** fields in
+your own session — you click submit. Sensitive fields (EEO/work-auth/salary/legal) are **review-gated in
+the database** and never auto-filled.
+
+Delegated per your Step D: `@ai-integrations` built the server prep layer + the extension changes;
+`@feature-dev` built the frontend service/hook/review surface. I owned the stateful spine (migration,
+types, authoritative validation, self-heal, docs).
+
+## Green gates (authoritative, run by the orchestrator)
 
 | Gate | Result |
 | --- | --- |
-| `pnpm validate` (typecheck + lint + unit) | ✅ tsc 0 · eslint 0 · **279/279** tests (was 264) |
-| `pnpm build:ext` | ✅ builds content/background/spa-session + manifest |
-| `pnpm test:ext` (xvfb) | ✅ **22/22** (incl. loaded-extension smoke + new payload/config specs) |
-| Tailwind arbitrary-value grep (changed UI files) | ✅ clean |
-| MV3 guardrail (`requireNative`/`bindingUtil`) | ✅ none — standard `chrome.*` only |
+| `pnpm typecheck` (`tsc -b`) | ✅ 0 errors |
+| `pnpm lint` (`eslint .`) | ✅ 0 problems |
+| `pnpm test` (vitest) | ✅ 41 files / **375 tests** |
+| `pnpm build:ext` | ✅ bundle ready |
+| `deno check` (prepare-application) | ✅ 0 (after import-map fix) |
+| `xvfb-run pnpm test:ext` (Playwright) | ✅ **25/25** (incl. 3 new prepared-fill specs) |
 
----
+Independent adversarial verifiers (one per tree) re-ran scoped validation and returned **pass** on all
+three, confirming the changes are additive (broke no existing test) and the invariants hold.
 
-## What shipped, by your Step A–E
+## What shipped
 
-### Step A + B — Schema (orchestrator) — `migration 20260619000001`
-Additive, RLS-on, applied via MCP; types regenerated into `src/types/db.types.ts`.
-- **`candidate_profiles` +7 columns:** `preferred_name`, `phone_country`, `state`,
-  `requires_sponsorship` (bool, tri-state nullable), `security_clearance`,
-  `drivers_license`, `employment_history` (jsonb).
-- **Hybrid Answer Library:**
-  - Fixed EEO/demographics → existing `eeo_disclosures` jsonb
-    (`{ gender, race_ethnicity, hispanic_latino, veteran_status, disability_status }`).
-  - Arbitrary custom screeners → **new `application_answers` table**
-    (`question_key`, `question_label`, `answer`, `answer_type`; UNIQUE(user_id,
-    question_key); full own-row RLS).
+### Database — migration `20260620000001_prepared_applications` (applied to hosted `rmoyuwesfljuygvpdolf` via MCP)
+- **`prepared_applications`** — one row per prep attempt: `job_ref`, `ats_family`, `antibot_tier`,
+  `form_schema_snapshot`, `match_score`, `mode`, `status`, `gating_reason`, `document_versions`,
+  `prepared_by`. RLS own-row; `(user_id, job_id)` upsert index.
+- **`prepared_application_fields`** — one row per mapped field: `value_source`, `confidence`,
+  `is_sensitive`, `review_gate`, `free_text_draft`, `redaction_safe`. RLS own-row.
+- **BR-156 enforced in the DB**: trigger `fn_prepared_field_force_gate` forces `review_gate=true` when
+  `is_sensitive=true`, plus `CHECK (NOT is_sensitive OR review_gate)`. Security advisor clean
+  (`search_path=''`).
 
-### Step A — UI/DB wiring (delegated → @feature-dev)
-- New **`candidateProfileWriteService.ts`** (read/upsert profile + answers; mirrors
-  `settingsService` upsert; BR-004/005 — `user_id` forced from the trusted arg) + **15 unit tests**.
-- **`PreferencesScreen.tsx`** "Personal Information" + "Eligibility" now **load from /
-  save to `candidate_profiles`** (mock `useState` replaced; Save persists). Added the
-  missing inputs (preferred name, city, state, website, sponsorship tri-state).
-- **Answer Library tab** (was a stub): EEO/demographics editor (→ `eeo_disclosures`)
-  + add/edit/remove custom screener answers (→ `application_answers`).
-- Exported helpers split into sibling `preferencesProfile.ts` (react-refresh rule);
-  mount loader sets state only inside promise callbacks (set-state-in-effect rule).
+### Server prep layer (`@ai-integrations`) — `supabase/functions/`
+- Pure, Deno-free, **vitest-tested (63 tests)** modules in `_shared/prep/`: `atsFamily`,
+  `buildReadEndpoint`, `schemaParse` (Greenhouse/Lever/Ashby/SmartRecruiters), `canonicalKey`,
+  `sensitivity`, `fieldMap`, `gating`, `draftFreeText` (Phase-5 scaffold).
+- `prepare-application/` edge function — on-demand, **RLS-scoped to the caller** (anon key + forwarded
+  JWT, `user_id` from `auth.getUser()`, no service-role), reads schema → maps → gates → upserts the prep
+  rows. `deno check` green via the import-map bare specifier.
 
-### Step C — Configs + field audit (delegated → @ai-integrations)
-- **`payload.ts` / `background/index.ts`:** `ContactProfile` + `buildPayload` expanded
-  (preferredName, phoneCountry, location, state, website, requiresSponsorship→Yes/No,
-  `eeo_*`, `answer:<key>`); background reads the new columns + `application_answers`
-  (concurrent read), maps `eeo_disclosures`. No PII/EEO sent to the LLM (ADR-011 upheld).
-- **Configs:** Greenhouse (+12), Lever (+6), Ashby (+9) field mappings; **new
-  `workday.ts`** registered. `docs/features/ats-field-audit.md` written.
+### Extension (`@ai-integrations`) — `extension/src/`
+- `preparedFill.ts` (excludes review-gated fields), `stopConditions.ts` (CAPTCHA/MFA/login-wall),
+  `BKT_PREPARED` message + `handlePrepared`. Content script **prefers** prepared data, surfaces gated
+  fields + stop-conditions, **never auto-submits** (`autoClick:false`). Greenhouse config +
+  `phone_country`. New `preparedFill.spec.ts` (Playwright).
 
-### Step D — Delegation
-Orchestrated: I owned the schema/types (delicate MCP work) + integration; the two
-specialists ran **in parallel on disjoint trees** (`src/features` vs `extension/src`),
-then I integrated and ran the authoritative full suite.
+### Frontend (`@feature-dev`) — `src/features/`
+- `preparedApplicationService.ts` (+17 tests), `usePreparedApplications` hook, `PreparedApplicationReview.tsx`
+  (flags review-gated fields "Needs your review", hides their values). Verified the existing
+  Preferences→`candidate_profiles` wiring is intact (no redo).
 
-### Step E — Validation + self-heal (orchestrator)
-Two real issues the specialists surfaced, **fixed at integration**:
-1. **react-select substring collision** (`"Male"` ⊂ `"Female"` → wrong EEO option).
-   Rewrote the matcher to **exact-label → unique-prefix → unique-substring**, refusing
-   to guess on ambiguity (`autofill.ts`). Flipped the test to assert `gender:"Male"` →
-   `"Male"` as a **regression guard** (the fixture lists `Female` before `Male`).
-2. **Workday manifest gap** — added `*.myworkdayjobs.com` / `*.workday.com` to
-   `host_permissions` + the ATS `content_scripts` match so the macro actually injects.
+## Mode-gating policy (BR-157)
+Auto-mode unattended prep is allowed only when **all** hold: family in the low anti-bot tier
+{greenhouse, lever, ashby, smartrecruiters} · no sensitive field in the schema · `match_score ≥ 75` ·
+source is a read-API surface. Otherwise → `needs_review` with a `gating_reason`.
+**Workday / LinkedIn / Indeed are never Auto-eligible and are never headless-read.**
 
----
+## Docs updated
+- `docs/adr/013-headless-prep-and-prepared-applications.md` (new)
+- `docs/requirements/03-data-entities.md` → E-017/E-018, count 16→18
+- `docs/domain/business-rules.md` → BR-156–160
+- Project memory: `headless-prep-pipeline.md` (+ index)
 
-## ⚠️ Honest caveats / live-tuning needed (not blockers, flagged)
+## Remaining (live-tune / follow-ups — NOT blockers; build is green)
+1. **ATS read-endpoint shapes are live-tune**: Ashby + SmartRecruiters response envelopes and the Lever
+   custom-question key are UNVERIFIED against real postings. Parsers fail safe (a misparse downgrades to
+   `needs_review`, never a silent auto-prep). Verify each against one live posting before production prep.
+2. **Prep cron** (`prepared_by='cron'`) is a guarded **501 scaffold** — batch auto-prep is the next build.
+3. **AI free-text drafting** (`draftFreeText`) is a Phase-5 scaffold (returns `{draft:null}`); wiring it
+   through `src/lib/ai-router.ts` is the next step (always review-gated, never to the LLM for EEO/answers).
+4. **`PreparedApplicationReview`** is built and tested but **not yet mounted** in a route — wire it into the
+   auto-apply UI when the prep flow goes live.
+5. **`employment_history` editor** in Preferences deferred (column exists; UI carried disproportionate risk).
+6. `prepare-application` edge function is **not yet deployed** to the hosted project (separate
+   `deploy_edge_function` step when you're ready to exercise on-demand prep live).
 
-- **Workday config is best-effort — every selector is UNCERTAIN** (multi-step wizard;
-  `data-automation-id` guesses). Degrades safely to `not_found`/`needs_strategy`. Needs
-  a pass against a real tenant before trusting.
-- **Ashby** uses hashed control ids in the live DOM; configs lean on aria-label
-  fallbacks — verify live. **Lever** native-`<select>` EEO fills by option *value*, not
-  label — coded values (e.g. `decline`) need a label→value map.
-- **`employment_history`** column exists; the repeatable UI + autofill of employment
-  blocks is **deferred** (high-effort, like Workday wizards).
-- **File uploads** (resume, cover letter) remain `manual_required` (browsers block
-  programmatic file-set) — by design; the human attaches + submits (BR-151).
-
----
-
-## What needs you
-
-1. **Review + commit.** 23 files staged, **uncommitted** (you didn't ask me to push, and a
-   big diff is safer reviewed first). `git diff` / `git status` to review; say the word and
-   I'll commit to `simplifyAI-apply-macro`.
-2. **Try the self-service profile live:** `pnpm dev` → Preferences → Job Preferences →
-   fill Personal Info / Eligibility / Answer Library → Save → reload re-hydrates from
-   `candidate_profiles`. Then rebuild the extension (`pnpm build:ext`) and re-test Autofill
-   on the Headspace/Greenhouse page — more fields should fill now.
-3. **Your seeded row:** your earlier row has `location:"Los Angeles, CA"` (city+state in one
-   field); the new `state` column is empty — fix via the new UI when convenient.
-4. **Housekeeping:** `BKT-Autofill-Bug-Screenshot.webp` landed untracked in the repo root
-   (your paste) — gitignore or remove it.
-
----
-
-## File inventory
-
-**New:** `supabase/migrations/20260619000001_candidate_profile_expansion_and_answers.sql`,
-`src/features/applications/services/candidateProfileWriteService.ts` (+`.test.ts`),
-`src/features/auto-apply/screens/preferencesProfile.ts`,
-`extension/src/configs/workday.ts`, `e2e/extension/payload.spec.ts`,
-`docs/features/ats-field-audit.md`, `docs/adr/012-candidate-profile-expansion-and-answer-library.md`.
-**Modified:** `src/types/db.types.ts`, `src/features/auto-apply/screens/PreferencesScreen.tsx`,
-`extension/src/{payload,background/index,autofill}.ts`,
-`extension/src/configs/{greenhouse,lever,ashby,index}.ts`, `extension/manifest.json`,
-`e2e/extension/autofill.spec.ts`, `e2e/extension/fixtures/greenhouse.ts`.
+## Notes
+- **Not committed** — you said "commit" only last time after the run; this run's exit condition was the
+  green suite + this summary. Everything is staged-ready. Say the word and I'll commit (and/or push).
+- A stray **`BKT-Autofill-Bug-Screenshot.webp`** (prior session) and a **`supabase/functions/deno.lock`**
+  (created by my `deno check`) are untracked and intentionally excluded.
+- Your message "ignore the writingtools prompt please delete now" matched **nothing** in the repo, memory,
+  or filenames — I deleted nothing. If you meant the stray screenshot above, confirm and I'll remove it.

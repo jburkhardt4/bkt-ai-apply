@@ -30,6 +30,25 @@ export const greenhouseConfig: BoardConfig = {
     },
     { key: 'email', selector: '#email', type: 'email' },
     { key: 'phone', selector: '#phone', type: 'tel' },
+    // Phone country-code widget. Greenhouse renders an intl-tel-input style
+    // country selector adjacent to the phone field on postings that collect it;
+    // it is a react-select on the newer template and a native <select> on some.
+    // We map it as react-select (the macro's pickOption tolerates a missing
+    // control via report.missing). LIVE-TUNE — the container id varies per
+    // posting; leave the human to set it if the selector does not resolve.
+    {
+      key: 'phone_country',
+      selector:
+        '#phone_country_control, [id*="phone_country"] .select__control, [class*="country"] .select__control',
+      type: 'react-select',
+      strategy: 'react-select',
+    },
+    // NOTE: employment_history is intentionally NOT mapped. Greenhouse's standard
+    // application form has no stable flat inputs for prior employment (it is
+    // resume-driven; some postings add bespoke custom questions with hashed
+    // names). Inventing selectors here would risk filling the wrong field
+    // (UAT-4). The prepared-application path surfaces employment_history as a
+    // review-gated block for the human instead — see preparedFill.ts.
     {
       key: 'linkedin',
       selector: 'input[name*="urls"][name*="LinkedIn"], input[name*="linkedin"]',

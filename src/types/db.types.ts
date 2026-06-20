@@ -973,6 +973,140 @@ export type Database = {
           },
         ]
       }
+      prepared_application_fields: {
+        Row: {
+          confidence: number
+          created_at: string
+          field_key: string
+          field_label: string
+          field_type: string
+          free_text_draft: string | null
+          id: string
+          is_sensitive: boolean
+          mapped_value: Json | null
+          prepared_application_id: string
+          redaction_safe: boolean
+          review_gate: boolean
+          updated_at: string
+          user_id: string
+          value_source: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          field_key: string
+          field_label?: string
+          field_type?: string
+          free_text_draft?: string | null
+          id?: string
+          is_sensitive?: boolean
+          mapped_value?: Json | null
+          prepared_application_id: string
+          redaction_safe?: boolean
+          review_gate?: boolean
+          updated_at?: string
+          user_id: string
+          value_source?: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          field_key?: string
+          field_label?: string
+          field_type?: string
+          free_text_draft?: string | null
+          id?: string
+          is_sensitive?: boolean
+          mapped_value?: Json | null
+          prepared_application_id?: string
+          redaction_safe?: boolean
+          review_gate?: boolean
+          updated_at?: string
+          user_id?: string
+          value_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prepared_application_fields_prepared_application_id_fkey"
+            columns: ["prepared_application_id"]
+            isOneToOne: false
+            referencedRelation: "prepared_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prepared_applications: {
+        Row: {
+          antibot_tier: string
+          application_id: string | null
+          ats_family: string
+          created_at: string
+          document_versions: Json
+          form_schema_snapshot: Json
+          gating_reason: string | null
+          id: string
+          job_id: string | null
+          job_ref: Json
+          match_score: number | null
+          mode: string
+          prepared_by: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          antibot_tier?: string
+          application_id?: string | null
+          ats_family?: string
+          created_at?: string
+          document_versions?: Json
+          form_schema_snapshot?: Json
+          gating_reason?: string | null
+          id?: string
+          job_id?: string | null
+          job_ref?: Json
+          match_score?: number | null
+          mode?: string
+          prepared_by?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          antibot_tier?: string
+          application_id?: string | null
+          ats_family?: string
+          created_at?: string
+          document_versions?: Json
+          form_schema_snapshot?: Json
+          gating_reason?: string | null
+          id?: string
+          job_id?: string | null
+          job_ref?: Json
+          match_score?: number | null
+          mode?: string
+          prepared_by?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prepared_applications_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prepared_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospecting_profiles: {
         Row: {
           created_at: string

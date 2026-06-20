@@ -20,11 +20,14 @@ import {
   MSG,
   type AuthStatusResponse,
   type BackgroundRequest,
+  type PreparedJobRef,
+  type PreparedResponse,
   type ProfileResponse,
   type ScoreResponse,
   type ScrapedJob,
 } from '../messages'
 import type { ContactProfile } from '../payload'
+import { preparedToPayload, type PreparedFieldRow } from '../preparedFill'
 import type { ExtractedSession } from '../auth/session'
 import type { FitPanelData } from '../types'
 
@@ -303,6 +306,94 @@ async function handleProfile(): Promise<ProfileResponse> {
   }
 }
 
+// --- Prepared applications ---------------------------------------------------
+
+/** Columns read from prepared_applications. The unique upsert key is
+ *  (user_id, job_id WHERE job_id IS NOT NULL); when the page has no job_id we
+ *  fall back to matching job_ref->>source_url. */
+const PREPARED_COLUMNS = 'id,status,job_id,job_ref'
+/** Columns read from prepared_application_fields → preparedToPayload consumes
+ *  the gate flags + value. */
+const PREPARED_FIELD_COLUMNS =
+  'field_key,mapped_value,free_text_draft,review_gate,is_sensitive'
+
+interface PreparedRow {
+  id: string
+  status: string | null
+}
+
+/** Resolves the user's prepared_applications row for this page: by job_id when
+ *  the page supplied one (hits the unique index), else by job_ref->>source_url.
+ *  RLS confines the read to the user's own rows; the explicit user_id filter
+ *  honors BR-005. Best-effort — returns null on any miss/error. */
+async function findPreparedRow(
+  supabase: SupabaseClient,
+  userId: string | null,
+  job: PreparedJobRef,
+): Promise<PreparedRow | null> {
+  try {
+    let query = supabase.from('prepared_applications').select(PREPARED_COLUMNS)
+    if (userId) query = query.eq('user_id', userId)
+    if (job.jobId) {
+      query = query.eq('job_id', job.jobId)
+    } else if (job.url) {
+      // job_ref is jsonb { source_url, ... }; PostgREST ->> text match.
+      query = query.eq('job_ref->>source_url', job.url)
+    } else {
+      return null
+    }
+    // Most-recent first so a re-prepared row wins; one row is expected.
+    const { data, error } = await query
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error || !data) return null
+    const row = data as { id?: unknown; status?: unknown }
+    if (typeof row.id !== 'string') return null
+    return { id: row.id, status: typeof row.status === 'string' ? row.status : null }
+  } catch {
+    return null
+  }
+}
+
+/** Loads the prepared fields for a prepared_applications row (RLS-scoped). */
+async function fetchPreparedFields(
+  supabase: SupabaseClient,
+  userId: string | null,
+  preparedId: string,
+): Promise<PreparedFieldRow[]> {
+  try {
+    let query = supabase
+      .from('prepared_application_fields')
+      .select(PREPARED_FIELD_COLUMNS)
+      .eq('prepared_application_id', preparedId)
+    if (userId) query = query.eq('user_id', userId)
+    const { data, error } = await query
+    if (error || !data) return []
+    return data as PreparedFieldRow[]
+  } catch {
+    return []
+  }
+}
+
+/** Returns the prepared payload (non-gated fields) + gated list + status for the
+ *  page. Never throws — the content script falls back to the static-config path
+ *  on any failure. The macro still never auto-submits (BR-151). */
+async function handlePrepared(job: PreparedJobRef): Promise<PreparedResponse> {
+  const session = await getStoredSession()
+  if (!session) return { ok: false, reason: 'needs_login' }
+  try {
+    const supabase = makeUserClient(session)
+    const row = await findPreparedRow(supabase, session.userId, job)
+    if (!row) return { ok: false, reason: 'no_prep' }
+    const fields = await fetchPreparedFields(supabase, session.userId, row.id)
+    const { payload, gated } = preparedToPayload(fields)
+    return { ok: true, payload, gated, status: row.status ?? 'prepared' }
+  } catch (e) {
+    return { ok: false, reason: 'error', message: errMessage(e) }
+  }
+}
+
 // --- Message routing ---------------------------------------------------------
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -328,6 +419,9 @@ chrome.runtime.onMessage.addListener((message: BackgroundRequest, _sender, sendR
           return
         case MSG.PROFILE:
           sendResponse(await handleProfile())
+          return
+        case MSG.PREPARED:
+          sendResponse(await handlePrepared(message.job))
           return
         default:
           sendResponse({ ok: false, reason: 'error', message: 'unknown message' })

@@ -10,12 +10,14 @@
 import { resolveBoardConfig } from '../configs'
 import { applyAutofill } from '../autofill'
 import { renderMatchScorePanel } from '../matchScorePanel'
-import type { BoardConfig } from '../types'
+import type { AutofillPayload, BoardConfig } from '../types'
 import { buildPayload } from '../payload'
+import { detectStopConditions, describeStopReason } from '../stopConditions'
 import {
   MSG,
   type AuthStatusResponse,
   type BackgroundRequest,
+  type PreparedResponse,
   type ProfileResponse,
   type ScoreResponse,
   type ScrapedJob,
@@ -108,7 +110,64 @@ async function onScore(config: BoardConfig): Promise<void> {
   }
 }
 
+/** Surfaces hard stop-conditions on the page (CAPTCHA / MFA / login wall). The
+ *  macro stands down on these — it never bypasses or auto-submits past them
+ *  (BR-151). Returns a human-readable clause appended to the status, or ''. */
+function stopConditionNote(): string {
+  const { reasons } = detectStopConditions(document)
+  if (!reasons.length) return ''
+  const list = reasons.map(describeStopReason).join(', ')
+  return ` This page also has ${list} — finish that step yourself.`
+}
+
+/** Note for any review-gated fields the macro deliberately left for the human
+ *  (sensitive: work auth, sponsorship, EEO, salary, legal — always DB-gated). */
+function gatedNote(gated: string[]): string {
+  if (!gated.length) return ''
+  return ` ${gated.length} sensitive field(s) need your review — fill those yourself.`
+}
+
+/** Runs the autofill macro with a payload and reports the outcome to the user,
+ *  appending file/gated/stop-condition guidance. Never auto-submits (BR-151). */
+async function runAutofill(
+  config: BoardConfig,
+  payload: AutofillPayload,
+  gated: string[],
+  source: 'prepared' | 'profile',
+): Promise<void> {
+  const report = await applyAutofill({ config, payload })
+  const fileNote = report.skipped.some((s) => s.reason === 'manual_required')
+    ? ' Attach your resume manually.'
+    : ''
+  const label = source === 'prepared' ? 'Prepared autofill' : 'Filled'
+  setStatus(
+    `${label}: ${report.filled.length} field(s). Review, then submit yourself.` +
+      `${fileNote}${gatedNote(gated)}${stopConditionNote()}`,
+  )
+}
+
+/** Prefer a server-prepared application for this page (non-gated fields only);
+ *  null when none exists / not signed in / on error → caller falls back to the
+ *  profile path. Best-effort and never throws. */
+async function tryPreparedAutofill(config: BoardConfig): Promise<boolean> {
+  const res = await send<PreparedResponse>({ type: MSG.PREPARED, job: { url: location.href } })
+  if (!res || !res.ok) return false
+  // A blocked prepared row is a hard stop — surface it, do not fill.
+  if (res.status === 'blocked') {
+    setStatus(`This application is blocked from autofill — open it in the BKT app.${gatedNote(res.gated)}`)
+    return true
+  }
+  await runAutofill(config, res.payload, res.gated, 'prepared')
+  return true
+}
+
 async function onAutofill(config: BoardConfig): Promise<void> {
+  setStatus('Looking for a prepared application…')
+  // Prefer server-prepared data when it exists for this page (it carries only the
+  // non-gated fields; sensitive fields stay with the human). Fall back to the
+  // static-config profile path otherwise.
+  if (await tryPreparedAutofill(config)) return
+
   setStatus('Fetching your profile…')
   const res = await send<ProfileResponse>({ type: MSG.PROFILE })
   if (!res) {
@@ -125,11 +184,7 @@ async function onAutofill(config: BoardConfig): Promise<void> {
     )
     return
   }
-  const report = await applyAutofill({ config, payload: buildPayload(res.profile) })
-  const fileNote = report.skipped.some((s) => s.reason === 'manual_required')
-    ? ' Attach your resume manually.'
-    : ''
-  setStatus(`Filled ${report.filled.length} field(s). Review, then submit yourself.${fileNote}`)
+  await runAutofill(config, buildPayload(res.profile), [], 'profile')
 }
 
 function buildControls(config: BoardConfig): void {

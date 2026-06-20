@@ -1,5 +1,7 @@
-// BKT AI-Apply — JD detail sidebar (Overview / Application / Job Fit tabs).
-// Ported 1:1 from the design-system UI kit (JDSidebar.jsx).
+// BKT AI-Apply — JD detail sidebar (Overview / Application / Job Fit / Prepare).
+// Ported from the design-system UI kit (JDSidebar.jsx); the optional Prepare tab
+// (ADR-013) is dashboard-only — it appears when an `onPrepare` handler is passed
+// and hosts the read-only PreparedApplicationReview surface once prep completes.
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
@@ -8,6 +10,7 @@ import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import { ChipPill, QualLine, SkillTag } from '@/components/bkt/bits'
 import { companyLogo } from '@/components/bkt/format'
+import { PreparedApplicationReview } from '@/features/applications/components/PreparedApplicationReview'
 import { openSourceUrl } from '../openSourceUrl'
 import type { TimelineEvent } from '../services/autoApplyService'
 import type { JobMatch, SearchJob } from '../types'
@@ -60,10 +63,29 @@ export interface JDSidebarProps {
   /** Event-sourced application timeline shown on the Application tab. */
   auditEvents?: TimelineEvent[]
   auditLoading?: boolean
+  /** Dashboard-only: kick off an on-demand prep for the open job. When omitted
+   *  (e.g. the /search + /saved drawers) the Prepare tab is hidden entirely. */
+  onPrepare?: () => void
+  /** True while an on-demand prep is in flight — disables the Prepare CTA. */
+  preparing?: boolean
+  /** The prepared_applications.id already prepared for the open job, if any;
+   *  renders the read-only review surface in place of the Prepare CTA. */
+  preparedApplicationId?: string | null
 }
 
-export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, auditLoading }: JDSidebarProps) {
-  const [tab, setTab] = useState<'overview' | 'application' | 'fit'>('overview')
+export function JDSidebar({
+  job,
+  onClose,
+  onApply,
+  onDecline,
+  auditEvents,
+  auditLoading,
+  onPrepare,
+  preparing = false,
+  preparedApplicationId = null,
+}: JDSidebarProps) {
+  const showPrepare = onPrepare != null
+  const [tab, setTab] = useState<'overview' | 'application' | 'fit' | 'prepare'>('overview')
   // Reset to Overview when a different job opens (adjust-state-during-render).
   const jobId = job?.id
   const [prevJobId, setPrevJobId] = useState(jobId)
@@ -159,6 +181,7 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
             <JDTab label="Overview" active={tab === 'overview'} onClick={() => setTab('overview')} />
             <JDTab label="Application" active={tab === 'application'} onClick={() => setTab('application')} />
             <JDTab label="Job Fit" badge={job.score} active={tab === 'fit'} onClick={() => setTab('fit')} />
+            {showPrepare && <JDTab label="Prepare" active={tab === 'prepare'} onClick={() => setTab('prepare')} />}
           </div>
         </div>
 
@@ -307,6 +330,53 @@ export function JDSidebar({ job, onClose, onApply, onDecline, auditEvents, audit
               </div>
             </>
           )}
+
+          {/* Prepare tab — on-demand prep CTA, swapped for the read-only review
+              surface once a prepared_applications row exists for this job. The
+              human always supplies sensitive/gated values; nothing auto-submits
+              (BR-151 / BR-156). */}
+          {tab === 'prepare' &&
+            showPrepare &&
+            (preparedApplicationId ? (
+              <PreparedApplicationReview preparedApplicationId={preparedApplicationId} />
+            ) : (
+              <div
+                style={{
+                  border: '1px dashed var(--border-strong)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '28px 22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  gap: 12,
+                }}
+              >
+                <Icon name="clipboard-list" size={26} color="var(--text-muted)" />
+                <div style={{ font: '700 var(--text-md)/1.3 var(--font-display)', color: 'var(--text-strong)' }}>
+                  Prepare this application
+                </div>
+                <p style={{ margin: 0, maxWidth: 360, font: '400 var(--text-sm)/1.55 var(--font-body)', color: 'var(--text-muted)' }}>
+                  We&rsquo;ll read the posting&rsquo;s form, map your saved profile onto it, and flag anything
+                  sensitive for your review. Nothing is submitted — you stay in control.
+                </p>
+                <BktButton
+                  variant="primary"
+                  size="md"
+                  style={{ borderRadius: 'var(--radius-pill)', minWidth: 180, color: 'var(--bkt-zinc-50)' }}
+                  iconLeft={<Icon name="wand-2" size={15} />}
+                  disabled={preparing || !job.sourceUrl}
+                  onClick={() => onPrepare?.()}
+                >
+                  {preparing ? 'Preparing…' : 'Prepare application'}
+                </BktButton>
+                {!job.sourceUrl && (
+                  <span style={{ font: '400 var(--text-xs)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+                    No source link for this role yet — prep needs the posting URL.
+                  </span>
+                )}
+              </div>
+            ))}
         </div>
 
         {/* footer */}

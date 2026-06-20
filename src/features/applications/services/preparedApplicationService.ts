@@ -36,24 +36,54 @@ export interface PreparedApplicationWithFields {
   fields: PreparedApplicationFieldRow[]
 }
 
-/** The job reference the user passes when kicking off an on-demand prep. Mirrors
- *  the `job_ref` jsonb shape + the optional job_id FK; the Edge Function resolves
- *  the ATS family / read endpoint from source_url server-side. */
+/** The posting descriptor + optional hints the user passes when kicking off an
+ *  on-demand prep. The Edge Function reads `job.url` to detect the ATS family and
+ *  resolve the public read endpoint, then RE-DERIVES the authoritative ats_family,
+ *  anti-bot tier, and gating decision server-side — the hints here are display
+ *  context only, never authority (the server builds the canonical `job_ref`). */
 export interface TriggerPrepareInput {
-  jobId?: string | null
-  jobRef: {
-    source_board?: string
-    source_url: string
-    external_job_id?: string
+  job: {
+    /** The public posting URL — REQUIRED; the server detects the ATS from it. */
+    url: string
+    /** Posting title, persisted on the prepared row's job_ref for display. */
+    title?: string
+    /** The board's own posting id, when known. */
+    externalJobId?: string
   }
+  /** Internal `jobs`-table FK, ONLY when the caller holds a real jobs.id. The
+   *  dashboard rows expose an `applications.id` (not a jobs id), so they pass null
+   *  and the server keys the prepared row by job_ref.source_url instead — sending
+   *  a non-jobs id here would violate the prepared_applications.job_id FK. */
+  jobId?: string | null
+  /** Application-behaviour hint ('auto' | 'hybrid'); the server defaults to
+   *  'hybrid' and re-asserts the authoritative mode-gating policy (ADR-013). */
+  mode?: 'auto' | 'hybrid'
+  /** The job's match score, surfaced on the prepared row for context. */
+  matchScore?: number
 }
 
-/** The shape the `prepare-application` Edge Function returns on success: the
- *  freshly written prepared row plus its mapped fields. Kept permissive (the
- *  Edge Function owns the contract) but typed enough for callers to consume. */
+/** One mapped field as SUMMARIZED by the Edge Function response — flags/metadata
+ *  only, never a raw value (sensitive/gated values never cross this wire). The
+ *  full field rows are read back via fetchPreparedApplicationWithFields when the
+ *  review surface mounts. */
+export interface PreparedFieldSummary {
+  field_key: string
+  field_type: string
+  value_source: string
+  confidence: number
+  is_sensitive: boolean
+  review_gate: boolean
+}
+
+/** The `prepare-application` Edge Function success response: the id of the freshly
+ *  written prepared row, its server-authoritative status + gating reason, and the
+ *  per-field summary. This mirrors the function's real return shape EXACTLY so the
+ *  caller can open the review surface by id and surface a status/count toast. */
 export interface TriggerPrepareResult {
-  prepared: PreparedApplicationRow
-  fields: PreparedApplicationFieldRow[]
+  prepared_application_id: string
+  status: PreparedApplicationRow['status']
+  gating_reason: string | null
+  fields: PreparedFieldSummary[]
 }
 
 /** Raised when the on-demand prep Edge Function fails, carrying the real,
@@ -120,7 +150,10 @@ export async function fetchPreparedApplicationWithFields(
  *  function writes the RLS-scoped prep rows as the caller and applies the
  *  server-authoritative gating policy + the BR-156 sensitive-field gate. user_id
  *  is NOT sent in the body — the server trusts the JWT, never client input
- *  (BR-005). Throws PrepareApplicationError with the real cause on failure. */
+ *  (BR-005). The body matches the function's read contract verbatim: a `job`
+ *  descriptor (the function detects the ATS from job.url) plus optional mode /
+ *  match_score hints. Throws PrepareApplicationError with the real cause on
+ *  failure. */
 export async function triggerPrepare(input: TriggerPrepareInput): Promise<TriggerPrepareResult> {
   const supabase = getSupabaseClientSafe()
   if (!supabase) {
@@ -132,8 +165,14 @@ export async function triggerPrepare(input: TriggerPrepareInput): Promise<Trigge
   const { data, error } = await supabase.functions.invoke<TriggerPrepareResult>('prepare-application', {
     body: {
       prepared_by: 'on_demand',
-      job_id: input.jobId ?? null,
-      job_ref: input.jobRef,
+      ...(input.mode ? { mode: input.mode } : {}),
+      ...(typeof input.matchScore === 'number' ? { match_score: input.matchScore } : {}),
+      job: {
+        url: input.job.url,
+        ...(input.job.title ? { title: input.job.title } : {}),
+        ...(input.job.externalJobId ? { external_job_id: input.job.externalJobId } : {}),
+        ...(input.jobId ? { job_id: input.jobId } : {}),
+      },
     },
   })
 
@@ -141,7 +180,7 @@ export async function triggerPrepare(input: TriggerPrepareInput): Promise<Trigge
     const message = await readEdgeFunctionError(error, 'Could not prepare this application.')
     throw new PrepareApplicationError(message)
   }
-  if (!data) {
+  if (!data || !data.prepared_application_id) {
     throw new PrepareApplicationError('prepare-application returned an empty response.')
   }
   return data

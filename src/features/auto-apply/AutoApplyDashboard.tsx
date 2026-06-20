@@ -19,6 +19,7 @@ import { openSourceUrl } from './openSourceUrl'
 import { fetchSubmittedCount } from '@/features/applications/services/applicationService'
 import { useProspectorProfile } from '@/features/jobs/hooks/useProspectorProfile'
 import { triggerProspectorRun } from '@/features/jobs/services/prospectorRunService'
+import { usePreparedApplications } from './hooks/usePreparedApplications'
 import { useAsyncData } from './hooks/useAutoApplyData'
 import { useBudget, useCredits, useReviewMode } from './state'
 import { JOBS_SEED } from './data/jobsData'
@@ -173,6 +174,54 @@ export function AutoApplyDashboard() {
     [userId, openApplicationId],
   )
 
+  // ADR-013 on-demand prep: the dashboard owns the prepared-applications list +
+  // the prepare() action; the JD drawer renders the Prepare CTA / review surface.
+  // The open job's prepared row is matched by job_ref.source_url — dashboard
+  // JobMatch ids are application ids (not jobs ids), so prep is keyed by posting
+  // URL and job_id is always null (sending an app id would break the jobs FK).
+  const preparedApps = usePreparedApplications()
+  const openSource = openJob?.sourceUrl ?? null
+  const [justPreparedBySource, setJustPreparedBySource] = useState<Record<string, string>>({})
+  const preparedIdForOpen = ((): string | null => {
+    if (!openSource) return null
+    if (justPreparedBySource[openSource]) return justPreparedBySource[openSource]
+    const match = preparedApps.items.find(
+      (p) => (p.job_ref as { source_url?: string } | null)?.source_url === openSource,
+    )
+    return match?.id ?? null
+  })()
+
+  const prepareOpenJob = () => {
+    const j = openJob
+    if (!j) return
+    if (!j.sourceUrl) {
+      toast('No source link to prepare from', 'circle-alert', 'var(--bkt-warning)')
+      return
+    }
+    const source = j.sourceUrl
+    preparedApps
+      .prepare({
+        job: { url: source, title: j.title },
+        jobId: null,
+        mode: reviewMode === 'auto' ? 'auto' : 'hybrid',
+        matchScore: typeof j.score === 'number' ? j.score : undefined,
+      })
+      .then((res) => {
+        setJustPreparedBySource((m) => ({ ...m, [source]: res.prepared_application_id }))
+        const gated = res.fields.filter((f) => f.review_gate).length
+        const tail =
+          res.status === 'needs_review'
+            ? ' — needs your review'
+            : gated > 0
+              ? ` — ${gated} to review`
+              : ''
+        toast(`Prepared ${j.company}${tail}`, 'circle-check', 'var(--bkt-success)')
+      })
+      .catch((e: unknown) => {
+        toast(e instanceof Error ? e.message : 'Could not prepare this application', 'circle-alert', 'var(--bkt-danger)')
+      })
+  }
+
   return (
     <>
       <TopBar
@@ -224,6 +273,9 @@ export function AutoApplyDashboard() {
         onDecline={decline}
         auditEvents={timeline ?? []}
         auditLoading={timelineLoading}
+        onPrepare={prepareOpenJob}
+        preparing={preparedApps.preparing}
+        preparedApplicationId={preparedIdForOpen}
       />
       <BudgetModal
         open={budgetOpen}

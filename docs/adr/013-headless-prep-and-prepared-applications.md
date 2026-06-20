@@ -100,3 +100,28 @@ server-prepared fields with no translation layer.
 - AI free-text drafting (`draftFreeText`) is scaffolded only; any future draft is **always**
   `review_gate = true` and never auto-submitted, and EEO/answers are never sent to the LLM.
 - Workday/other families return "unsupported for headless read" and route to the extension session.
+
+## Rollout status (2026-06-20)
+
+On-demand prep is live end-to-end:
+
+- **Edge function deployed** — `prepare-application` v1 on project `rmoyuwesfljuygvpdolf`,
+  `verify_jwt = true` (the gateway enforces a valid JWT; the function additionally re-derives the
+  caller via `auth.getUser()` and scopes every read/write to that user). The guarded `cron` branch
+  stays a 501 scaffold (Decision: BR-157 batch prep is a later packet).
+- **Client ⇄ function contract reconciled** — `triggerPrepare` sends the shape the function reads
+  verbatim: `{ prepared_by:'on_demand', mode?, match_score?, job:{ url, title?, external_job_id?,
+  job_id? } }` (the server detects the ATS from `job.url` and builds the canonical `job_ref`), and
+  returns `{ prepared_application_id, status, gating_reason, fields:[{ field_key, field_type,
+  value_source, confidence, is_sensitive, review_gate }] }` — a flags-only summary, never raw
+  values.
+- **UI entry point** — the Auto-Apply dashboard JD drawer (`JDSidebar`) gains an optional
+  **Prepare** tab (shown only when the dashboard passes `onPrepare`; hidden on the /search + /saved
+  drawers). It kicks off on-demand prep and, on success, mounts the read-only
+  `PreparedApplicationReview` for the returned `prepared_application_id`. Dashboard `JobMatch` ids
+  are `applications.id`, not `jobs.id`, so prep is sent with `job_id = null` and the open job is
+  matched to its prepared row by `job_ref.source_url` (sending an application id as `job_id` would
+  violate the `prepared_applications.job_id` FK).
+- **Still manual-gated** — a real signed-in LIVE verification (authenticated session + a
+  `candidate_profiles` row + a low-anti-bot posting URL) remains the acceptance gate, same as prior
+  apply-macro phases.

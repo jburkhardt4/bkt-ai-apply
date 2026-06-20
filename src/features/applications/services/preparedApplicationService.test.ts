@@ -46,7 +46,7 @@ describe('preparedApplicationService', () => {
 
     it('triggerPrepare throws a PrepareApplicationError (no backend to call)', async () => {
       await expect(
-        triggerPrepare({ jobRef: { source_url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
+        triggerPrepare({ job: { url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
       ).rejects.toBeInstanceOf(PrepareApplicationError)
     })
   })
@@ -185,38 +185,61 @@ describe('preparedApplicationService', () => {
   })
 
   describe('triggerPrepare', () => {
-    it('invokes prepare-application with on_demand prep + the job_ref and NEVER sends user_id', async () => {
-      const prepared = { id: 'prep-9', user_id: 'user-1', status: 'needs_review' }
-      const fields = [{ id: 'f1', prepared_application_id: 'prep-9', user_id: 'user-1', field_key: 'email' }]
-      const invoke = vi.fn().mockResolvedValue({ data: { prepared, fields }, error: null })
+    it('invokes prepare-application with on_demand prep + the job descriptor and NEVER sends user_id', async () => {
+      const fnResult = {
+        prepared_application_id: 'prep-9',
+        status: 'needs_review',
+        gating_reason: 'sensitive_fields_present',
+        fields: [
+          { field_key: 'email', field_type: 'text', value_source: 'profile', confidence: 1, is_sensitive: false, review_gate: false },
+        ],
+      }
+      const invoke = vi.fn().mockResolvedValue({ data: fnResult, error: null })
       mockGetClient.mockReturnValue({ functions: { invoke } } as unknown as Client)
 
       const result = await triggerPrepare({
+        job: { url: 'https://boards.greenhouse.io/acme/jobs/1', title: 'Staff Engineer', externalJobId: '1' },
         jobId: 'job-1',
-        jobRef: { source_board: 'greenhouse', source_url: 'https://boards.greenhouse.io/acme/jobs/1', external_job_id: '1' },
+        mode: 'hybrid',
+        matchScore: 82,
       })
 
+      // The body matches the Edge Function's read contract verbatim: a `job`
+      // descriptor (the function detects the ATS from job.url) + hints.
       expect(invoke).toHaveBeenCalledWith('prepare-application', {
         body: {
           prepared_by: 'on_demand',
-          job_id: 'job-1',
-          job_ref: { source_board: 'greenhouse', source_url: 'https://boards.greenhouse.io/acme/jobs/1', external_job_id: '1' },
+          mode: 'hybrid',
+          match_score: 82,
+          job: {
+            url: 'https://boards.greenhouse.io/acme/jobs/1',
+            title: 'Staff Engineer',
+            external_job_id: '1',
+            job_id: 'job-1',
+          },
         },
       })
       // user_id must never be in the body — the server trusts the JWT (BR-005).
       const body = invoke.mock.calls[0][1].body as Record<string, unknown>
       expect(body).not.toHaveProperty('user_id')
-      expect(result).toEqual({ prepared, fields })
+      expect(result).toEqual(fnResult)
     })
 
-    it('defaults job_id to null when not supplied', async () => {
-      const invoke = vi.fn().mockResolvedValue({ data: { prepared: {}, fields: [] }, error: null })
+    it('omits job_id, mode, and match_score from the payload when not supplied', async () => {
+      const invoke = vi.fn().mockResolvedValue({
+        data: { prepared_application_id: 'p1', status: 'prepared', gating_reason: null, fields: [] },
+        error: null,
+      })
       mockGetClient.mockReturnValue({ functions: { invoke } } as unknown as Client)
 
-      await triggerPrepare({ jobRef: { source_url: 'https://jobs.ashbyhq.com/acme/x' } })
+      await triggerPrepare({ job: { url: 'https://jobs.ashbyhq.com/acme/x' } })
 
       const body = invoke.mock.calls[0][1].body as Record<string, unknown>
-      expect(body.job_id).toBeNull()
+      expect(body.prepared_by).toBe('on_demand')
+      expect(body).not.toHaveProperty('mode')
+      expect(body).not.toHaveProperty('match_score')
+      // No jobId → no job_id key inside the job descriptor (never a wrong FK).
+      expect(body.job).toEqual({ url: 'https://jobs.ashbyhq.com/acme/x' })
     })
 
     it('throws PrepareApplicationError with the resolved message when the Edge Function errors', async () => {
@@ -224,7 +247,7 @@ describe('preparedApplicationService', () => {
       mockGetClient.mockReturnValue({ functions: { invoke } } as unknown as Client)
 
       await expect(
-        triggerPrepare({ jobRef: { source_url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
+        triggerPrepare({ job: { url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
       ).rejects.toBeInstanceOf(PrepareApplicationError)
     })
 
@@ -233,7 +256,16 @@ describe('preparedApplicationService', () => {
       mockGetClient.mockReturnValue({ functions: { invoke } } as unknown as Client)
 
       await expect(
-        triggerPrepare({ jobRef: { source_url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
+        triggerPrepare({ job: { url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
+      ).rejects.toThrow('empty response')
+    })
+
+    it('throws when the response is missing prepared_application_id', async () => {
+      const invoke = vi.fn().mockResolvedValue({ data: { status: 'prepared', fields: [] }, error: null })
+      mockGetClient.mockReturnValue({ functions: { invoke } } as unknown as Client)
+
+      await expect(
+        triggerPrepare({ job: { url: 'https://boards.greenhouse.io/acme/jobs/1' } }),
       ).rejects.toThrow('empty response')
     })
   })

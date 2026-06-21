@@ -125,3 +125,57 @@ On-demand prep is live end-to-end:
 - **Still manual-gated** — a real signed-in LIVE verification (authenticated session + a
   `candidate_profiles` row + a low-anti-bot posting URL) remains the acceptance gate, same as prior
   apply-macro phases.
+
+## Part A rollout — deterministic-field hardening + wiring audit (2026-06-21)
+
+Triggered by a live AshbyQ test: the full name dumped into a first-name box, only name + email
+auto-filled, and the extension Match-Score panel rendered squished. Shipped as five milestone
+commits on `worktree-prepare-application-wiring`.
+
+- **Explicit first/last name, end-to-end.** New `candidate_profiles.first_name` / `last_name`
+  columns (migration `20260621000001`, `text NOT NULL DEFAULT ''`). `full_name` is retained and
+  **recomposed** from first + last on save so single-"Name"-field ATS (Ashby/Lever) still work.
+  Wired through the Preferences UI (First/Last inputs replace the single Full name + a `splitName`
+  fallback seeds existing users), the extension profile fetch + `buildPayload`, the Ashby config
+  (split-name entries beside the combined entry), and the edge function (`toCandidateData` →
+  first/last now authoritative: source `profile` / confidence 1, not split-derived 0.6). first/last
+  are NOT sensitive — BR-156 unaffected.
+- **Root cause of the autofill misses = Ashby selector drift, not persistence.** A read-only DB
+  diagnostic confirmed JB's `candidate_profiles` row was fully populated (phone, location, linkedin,
+  website all set), so the payload carried them — the live Ashby selectors simply didn't match. Fix
+  = selector broadening in `configs/ashby.ts` (autocomplete tokens + case-insensitive attribute
+  matches); still best-effort / LIVE-TUNE pending the real AshbyQ DOM.
+- **Match-Score panel CSS** hardened (`content/index.ts injectStyles`): section-heading weight +
+  spacing, recommendation styling, and `#bkt-apply-root` flex-wrap + max-width so the control bar
+  can't overflow narrow viewports.
+- **Phone field label** shortened "Phone number" → "Phone".
+
+### End-to-end wiring audit (field × hop) — verified by Qa-Uat
+
+| Field | UI→patch | `candidate_profiles` | ext fetch + map | `buildPayload` | Ashby selector | Status |
+| --- | :-: | :-: | :-: | :-: | :-: | --- |
+| first_name / last_name | ✓ (new) | ✓ (new col) | ✓ (new) | ✓ | ✓ (new) | **FIXED (A1)** |
+| full_name | ✓ recomposed | ✓ | ✓ | ✓ | ✓ | OK |
+| email | ✓ | ✓ | ✓ | ✓ | ✓ | OK (was filling) |
+| phone | ✓ | ✓ (set) | ✓ | ✓ | ✓ broadened | **FIXED (selector)** |
+| location | ✓ | ✓ (set) | ✓ | ✓ | ✓ broadened | **FIXED (selector)** |
+| linkedin / website | ✓ | ✓ (set) | ✓ | ✓ | ✓ broadened | **FIXED (selector)** |
+| preferred_name | ✓ | ✓ | ✓ | ✓ | ✓ | OK |
+| state | ✓ | ✓ (set) | ✓ | ✓ | ✗ (Ashby folds into location) | per-board (not an Ashby field) |
+| phone_country | ✓ | ✓ | ✓ | ✓ | ✗ (Ashby react-select) | deferred (Part B) |
+| work_auth / sponsorship / eeo_* | ✓ | ✓ | ✓ | ✓ | ✓ react-select | **SENSITIVE — review-gated (BR-156); in-session human-reviewed only** |
+| security_clearance | ✓ | ✓ (set) | ✗ (not fetched) | ✗ | ✗ | **SENSITIVE — intentionally not auto-filled** |
+| drivers_license | ✓ | ✓ (set) | ✗ | ✗ | ✗ | non-sensitive but unwired → Answer Library (Part B) |
+| resume | ✓ upload | ✓ `master_resume_path` | ✓ | n/a | ✓ file input | manual / assisted attach (browser policy) |
+
+### Deploy + verification status
+- Local validation GREEN: `pnpm validate` (380 tests, 0/0), `pnpm build:ext`, `xvfb-run -a pnpm
+  test:ext` (25/25), `deno check`, and e2e (47 passed — ai-uat smoke needs
+  `AI_UAT_BASE_URL=http://localhost:5173` in a Codespace; 15 live-session ai-uat skipped without
+  `TEST_USER_*`). `get_advisors` after the migration: zero new lints.
+- **Edge-function deploy DEFERRED to JB review** (overnight safety boundary): the
+  `prepare-application` first/last change is committed + `deno check`'d locally but NOT redeployed.
+  Run `supabase functions deploy prepare-application --project-ref rmoyuwesfljuygvpdolf` after review.
+- The manual LIVE verify (signed-in session + AshbyQ form) remains the acceptance gate — especially
+  to confirm the broadened Ashby selectors now fill phone/linkedin/location/website against the real
+  DOM.

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BKT AI-Apply Answer Library",
+  "meta": {
+    "version": "1.0.0",
+    "targetPlatforms": ["greenhouse", "ashby", "lever"],
+    "alignsWith": "prepared_application_fields (field_key, redaction_safe, review_gate)",
+    "notes": "value fields are empty, ready to be populated on the Preferences page. Metadata drives the content-script matcher and the backend prepared_application_fields mapping. atsMappings are OBSERVED PATTERNS to verify against live DOM, not constants."
+  },
+  "reviewRules": {
+    "neverAutoSubmit": [
+      "authorizedToWork", "requiresSponsorshipNow", "requiresSponsorshipFuture",
+      "desiredSalary", "gender", "hispanicLatino", "raceEthnicity",
+      "veteranStatus", "disabilityStatus", "coverLetterText",
+      "whyCompany", "whyRole"
+    ],
+    "stopConditions": [
+      "captcha_detected", "mfa_required", "login_wall",
+      "unknown_required_field", "legal_attestation", "exact_salary_required"
+    ],
+    "redactFromLogs": [
+      "firstName", "lastName", "fullName", "email", "phone",
+      "locationCity", "locationState", "locationCountry",
+      "gender", "hispanicLatino", "raceEthnicity", "veteranStatus", "disabilityStatus",
+      "desiredSalary", "resumeFile", "coverLetterText"
+    ]
+  },
+  "profile": {
+    "coreContact": {
+      "firstName":  { "label": "First name", "type": "text", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "given-name", "greenhouse": "first_name", "lever": "name", "ashby": "_systemfield_name" } },
+      "lastName":   { "label": "Last name", "type": "text", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "family-name", "greenhouse": "last_name", "ashby": "_systemfield_name" } },
+      "fullName":   { "label": "Full name", "type": "text", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "lever": "name" } },
+      "email":      { "label": "Email", "type": "email", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "email", "greenhouse": "email", "lever": "email", "ashby": "_systemfield_email" } },
+      "phone":      { "label": "Phone", "type": "tel", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "tel", "greenhouse": "phone", "lever": "phone" } },
+      "locationCity":    { "label": "City", "type": "text", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "address-level2", "greenhouse": "location", "ashby": "_systemfield_location" } },
+      "locationState":   { "label": "State / Region", "type": "text", "value": "", "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "address-level1" } },
+      "locationCountry": { "label": "Country", "type": "select", "value": "", "options": [], "pii": true, "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "country-name" } }
+    },
+    "professionalPresence": {
+      "resumeFile":      { "label": "Resume / CV", "type": "file", "value": null, "pii": true, "autoFill": true, "assisted": true, "reviewGate": false, "atsMappings": { "greenhouse": "job_application[resume]", "lever": "resume" } },
+      "coverLetterFile": { "label": "Cover letter (file)", "type": "file", "value": null, "autoFill": true, "assisted": true, "reviewGate": false, "atsMappings": { "greenhouse": "job_application[cover_letter]", "lever": "coverLetter" } },
+      "coverLetterText": { "label": "Cover letter (text)", "type": "textarea", "value": "", "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "linkedinUrl":  { "label": "LinkedIn URL", "type": "url", "value": "", "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "url", "lever": "urls[LinkedIn]" } },
+      "githubUrl":    { "label": "GitHub URL", "type": "url", "value": "", "autoFill": true, "reviewGate": false, "atsMappings": { "lever": "urls[GitHub]" } },
+      "portfolioUrl": { "label": "Portfolio URL", "type": "url", "value": "", "autoFill": true, "reviewGate": false, "atsMappings": { "lever": "urls[Portfolio]" } },
+      "upworkUrl":    { "label": "Upwork URL", "type": "url", "value": "", "autoFill": true, "reviewGate": false, "atsMappings": { "autocomplete": "url", "lever": "urls[Other]", "note": "no standard Lever urls[] key for Upwork; often a custom question" } },
+      "otherWebsiteUrl": { "label": "Other website", "type": "url", "value": "", "autoFill": true, "reviewGate": false, "atsMappings": { "lever": "urls[Other]" } }
+    },
+    "workAuthorization": {
+      "authorizedToWork":          { "label": "Authorized to work in target country", "type": "boolean", "value": null, "options": ["Yes", "No"], "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "requiresSponsorshipNow":    { "label": "Requires sponsorship now", "type": "boolean", "value": null, "options": ["Yes", "No"], "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "requiresSponsorshipFuture": { "label": "Requires sponsorship in future", "type": "boolean", "value": null, "options": ["Yes", "No"], "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "noticePeriod":  { "label": "Notice period", "type": "select", "value": "", "options": ["Immediately", "2 weeks", "1 month", "2 months", "3 months", "Other"], "autoFill": true, "reviewGate": false, "atsMappings": {} },
+      "desiredSalary": { "label": "Desired compensation", "type": "text", "value": "", "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "salaryCurrency":{ "label": "Salary currency", "type": "select", "value": "USD", "options": ["USD", "EUR", "GBP", "CAD"], "autoFill": true, "reviewGate": false, "atsMappings": {} }
+    },
+    "demographicsEEO": {
+      "_policy": "All fields reviewGate=true, autoSubmit=false. Store standing answer incl. 'Decline'. These are legal self-identification fields.",
+      "gender":         { "label": "Gender", "type": "select", "value": "Decline to self-identify", "options": ["Male", "Female", "Decline to self-identify"], "pii": true, "autoFill": false, "reviewGate": true, "atsMappings": { "lever": "eeoResponses[gender]" } },
+      "hispanicLatino": { "label": "Hispanic / Latino", "type": "select", "value": "Decline to self-identify", "options": ["Yes", "No", "Decline to self-identify"], "pii": true, "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "raceEthnicity":  { "label": "Race / Ethnicity", "type": "select", "value": "Decline to self-identify", "options": ["Hispanic or Latino", "White", "Black or African American", "Asian", "Native Hawaiian or Other Pacific Islander", "American Indian or Alaska Native", "Two or More Races", "Decline to self-identify"], "pii": true, "autoFill": false, "reviewGate": true, "atsMappings": { "lever": "eeoResponses[race]" } },
+      "veteranStatus":  { "label": "Veteran status", "type": "select", "value": "I prefer not to answer", "options": ["I am not a protected veteran", "I identify as one or more classifications of protected veteran", "I prefer not to answer"], "pii": true, "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "disabilityStatus": { "label": "Disability status", "type": "select", "value": "I do not want to answer", "options": ["Yes, I have a disability (or previously had one)", "No, I do not have a disability", "I do not want to answer"], "pii": true, "autoFill": false, "reviewGate": true, "atsMappings": {} }
+    },
+    "screeners": {
+      "yearsExperience":    { "label": "Years of experience with [X]", "type": "select", "value": "", "options": ["0-1", "1-2", "2-3", "3-5", "5-7", "7-10", "10+"], "dynamicPerRole": true, "autoFill": true, "reviewGate": false, "atsMappings": {} },
+      "highestEducation":   { "label": "Highest education completed", "type": "select", "value": "", "options": ["High School / GED", "Associate's", "Bachelor's", "Master's", "Doctorate / PhD", "Professional (JD/MD)", "Other"], "autoFill": true, "reviewGate": false, "atsMappings": {} },
+      "englishProficiency": { "label": "English proficiency", "type": "select", "value": "", "options": ["Native / Bilingual", "Full Professional", "Professional Working", "Limited Working", "Elementary"], "autoFill": true, "reviewGate": false, "atsMappings": {} },
+      "howDidYouHear":      { "label": "How did you hear about us?", "type": "select", "value": "", "options": ["Company website", "LinkedIn", "Referral", "Job board", "Other"], "autoFill": true, "reviewGate": false, "atsMappings": { "greenhouse": "source", "lever": "source" } },
+      "referralName":       { "label": "Referral name", "type": "text", "value": "", "autoFill": true, "reviewGate": false, "atsMappings": {} }
+    },
+    "roleSpecificFreeText": {
+      "whyCompany":            { "label": "Why this company?", "type": "textarea", "value": "", "aiDrafted": true, "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "whyRole":               { "label": "Why this role?", "type": "textarea", "value": "", "aiDrafted": true, "autoFill": false, "reviewGate": true, "atsMappings": {} },
+      "additionalInformation": { "label": "Additional information", "type": "textarea", "value": "", "autoFill": false, "reviewGate": true, "atsMappings": { "lever": "comments" } }
+    }
+  }
+}

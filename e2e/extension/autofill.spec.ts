@@ -18,6 +18,7 @@ import { installReactSelectMock } from './fixtures/reactSelectMock'
 import { greenhouseFixtureHtml } from './fixtures/greenhouse'
 import { leverFixtureHtml } from './fixtures/lever'
 import { ashbyFixtureHtml } from './fixtures/ashby'
+import { greenhouseQuestionIdsFixtureHtml } from './fixtures/greenhouseQuestionIds'
 
 const payload = buildPayload({
   fullName: 'John Burkhardt',
@@ -131,6 +132,58 @@ test.describe('Apply-macro autofill — Greenhouse @extension', () => {
       })
     })
     await page.evaluate(applyAutofill, { config: greenhouseConfig, payload })
+    expect(await page.getAttribute('body', 'data-submitted')).toBeNull()
+  })
+})
+
+test.describe('Apply-macro autofill — Greenhouse opaque-id template (B5 label matcher) @extension', () => {
+  // Mirrors the live NeuraFlash UAT (Jam 2e14758d): every field is `#question_<id>`,
+  // so greenhouse.ts' semantic selectors all miss and the fields are reachable only
+  // by their visible <label> text — the exact failure the B5 matcher fixes.
+  test('locates LinkedIn (text) + State (react-select) by <label> when #question_<id> selectors miss', async ({
+    page,
+  }) => {
+    await page.setContent(greenhouseQuestionIdsFixtureHtml)
+    await page.evaluate(installReactSelectMock)
+    const report = await page.evaluate(applyAutofill, { config: greenhouseConfig, payload: fullPayload })
+
+    // Contact fields + LinkedIn fill via the label matcher despite opaque ids.
+    expect(report.filled).toEqual(
+      expect.arrayContaining(['first_name', 'last_name', 'email', 'phone', 'linkedin', 'state']),
+    )
+    expect(await page.inputValue('#question_17770736004')).toBe('John')
+    expect(await page.inputValue('#question_17770736005')).toBe('Burkhardt')
+    expect(await page.inputValue('#question_17770736006')).toBe('john@bktadvisory.com')
+    expect(await page.inputValue('#question_17770736007')).toBe('555-0100')
+    expect(await page.inputValue('#question_17770736010')).toBe('https://www.linkedin.com/in/jburkhardt')
+    // State react-select committed the matching option via its label-anchored control.
+    expect(await page.getAttribute('#state_rs', 'data-value')).toBe('Texas')
+  })
+
+  test('NEVER auto-locates sensitive EEO via label match — Gender stays human/review (BR-156)', async ({
+    page,
+  }) => {
+    await page.setContent(greenhouseQuestionIdsFixtureHtml)
+    await page.evaluate(installReactSelectMock)
+    const report = await page.evaluate(applyAutofill, { config: greenhouseConfig, payload: fullPayload })
+
+    // A "Gender" label is present and the payload carries eeo_gender='Male', but
+    // the matcher must refuse it — sensitive fields are never fuzzy-located.
+    expect(await page.getAttribute('#gender_rs', 'data-value')).toBeNull()
+    expect(report.filled).not.toContain('eeo_gender')
+    expect(report.missing).toContain('eeo_gender')
+  })
+
+  test('never auto-submits the opaque-id form (BR-151)', async ({ page }) => {
+    await page.setContent(greenhouseQuestionIdsFixtureHtml)
+    await page.evaluate(installReactSelectMock)
+    await page.evaluate(() => {
+      document.getElementById('application_form')?.addEventListener('submit', (e) => {
+        e.preventDefault()
+        document.body.setAttribute('data-submitted', '1')
+      })
+    })
+    await page.evaluate(applyAutofill, { config: greenhouseConfig, payload: fullPayload })
     expect(await page.getAttribute('body', 'data-submitted')).toBeNull()
   })
 })

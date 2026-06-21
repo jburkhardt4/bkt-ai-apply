@@ -1,4 +1,4 @@
-import type { AutofillInput, AutofillReport } from './types'
+import type { AutofillInput, AutofillReport, FieldConfig } from './types'
 
 /**
  * Config-driven autofill macro (spec §4.3).
@@ -80,8 +80,96 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
     return true
   }
 
+  // ---- B5 label-text fallback matcher (ADR-014 D4) -------------------------
+  // Opaque-id ATS templates (Greenhouse's job-boards form keys every field as
+  // `#question_<id>`) defeat semantic selectors. When a field's CSS selector
+  // misses, locate it by its visible <label> text instead — the only durable
+  // signal. NON-SENSITIVE fields only: EEO/work-auth/etc. are never fuzzy-matched
+  // → they stay human/review (BR-156). UNAMBIGUOUSLY-or-skip: if two fields could
+  // match, we refuse to guess (UAT-4), mirroring pickOption().
+  const normText = (s: string): string => s.replace(/\s+/g, ' ').trim().toLowerCase()
+  const SELECT_CTRL = '[class*="select__control"], .rs-control, [role="combobox"]'
+  const isSelect = (f: FieldConfig): boolean =>
+    f.type === 'react-select' || f.type === 'select' || f.strategy === 'react-select'
+
+  // Resolve the fillable control from a matched <label>: the react-select control
+  // for select fields, the <input>/<textarea> for text fields; null if none fits.
+  const controlFromLabel = (label: Element, field: FieldConfig): HTMLElement | null => {
+    let target: HTMLElement | null = null
+    const forId = label.getAttribute('for')
+    if (forId) target = document.getElementById(forId)
+    if (!target) target = label.querySelector<HTMLElement>(`${SELECT_CTRL}, input, textarea, select`)
+    if (!target && label.parentElement) {
+      target = label.parentElement.querySelector<HTMLElement>(`${SELECT_CTRL}, input, textarea, select`)
+    }
+    if (!target) return null
+    if (isSelect(field)) {
+      if (target.matches(SELECT_CTRL)) return target
+      const within = target.querySelector<HTMLElement>(SELECT_CTRL)
+      if (within) return within
+      const up = target.closest<HTMLElement>(SELECT_CTRL)
+      if (up) return up
+      const container = target.closest<HTMLElement>('[class*="select__"]')
+      return container?.querySelector<HTMLElement>(SELECT_CTRL) ?? null
+    }
+    if (target instanceof HTMLInputElement) {
+      return target.type === 'file' || target.type === 'hidden' ? null : target
+    }
+    return target instanceof HTMLTextAreaElement ? target : null
+  }
+
+  // Tier 2 (text fields only): score inputs by their own signal attributes
+  // (autocomplete → name → id → aria-label → placeholder). Unambiguous-or-null.
+  const locateTextByAttrs = (wants: string[]): HTMLElement | null => {
+    const inputs = Array.from(document.querySelectorAll<HTMLElement>('input, textarea')).filter((el) =>
+      el instanceof HTMLInputElement ? el.type !== 'file' && el.type !== 'hidden' : true,
+    )
+    const hits = inputs.filter((el) => {
+      const hay = normText(
+        [
+          el.getAttribute('autocomplete'),
+          el.getAttribute('name'),
+          el.id,
+          el.getAttribute('aria-label'),
+          el.getAttribute('placeholder'),
+        ]
+          .filter(Boolean)
+          .join(' '),
+      )
+      return hay !== '' && wants.some((w) => hay.includes(w))
+    })
+    return hits.length === 1 ? hits[0] : null
+  }
+
+  // Tier 1: match the field's <label> text, then resolve its control. Falls back
+  // to attribute scoring for text fields; refuses to guess for select fields.
+  const locateByLabel = (field: FieldConfig): HTMLElement | null => {
+    const wants = (field.labels ?? []).map(normText).filter(Boolean)
+    if (!wants.length) return null
+    const labels = Array.from(document.querySelectorAll('label, legend'))
+    let matches = labels.filter((l) => {
+      const t = normText(l.textContent ?? '')
+      return t !== '' && wants.some((w) => t.includes(w))
+    })
+    if (matches.length > 1) {
+      // Ambiguous → tie-break to exact label equality; else refuse to guess.
+      const exact = matches.filter((l) => wants.includes(normText(l.textContent ?? '')))
+      if (exact.length !== 1) return isSelect(field) ? null : locateTextByAttrs(wants)
+      matches = exact
+    }
+    if (matches.length === 1) {
+      const ctrl = controlFromLabel(matches[0], field)
+      if (ctrl) return ctrl
+    }
+    return isSelect(field) ? null : locateTextByAttrs(wants)
+  }
+
   for (const field of config.fields) {
-    const el = document.querySelector<HTMLElement>(field.selector)
+    let el = document.querySelector<HTMLElement>(field.selector)
+    // Selector missed → try the label-text fallback (non-sensitive only, BR-156).
+    if (!el && !field.sensitive && field.labels?.length) {
+      el = locateByLabel(field)
+    }
     if (!el) {
       report.missing.push(field.key)
       continue

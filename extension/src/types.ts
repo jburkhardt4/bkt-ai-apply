@@ -14,6 +14,20 @@ export interface FieldConfig {
   type: 'text' | 'tel' | 'email' | 'url' | 'textarea' | 'select' | 'react-select' | 'file'
   /** Explicit custom-widget strategy (e.g. react-select option clicking). */
   strategy?: 'react-select'
+  /**
+   * Visible-label synonyms for the B5 multi-signal fallback matcher (ADR-014 D4).
+   * Used ONLY when `selector` misses — e.g. Greenhouse's job-boards template keys
+   * every field by an opaque `#question_<id>`, so the only durable locator is the
+   * field's `<label>` text. Lowercase; matched as normalized substrings, and
+   * UNAMBIGUOUSLY-or-skip — it never guesses between two fields (UAT-4).
+   */
+  labels?: string[]
+  /**
+   * Sensitive field (EEO / work-auth / sponsorship / legal / salary / clearance).
+   * The label matcher NEVER auto-locates these (BR-156) — they stay human/review.
+   * A direct, explicit `selector` still applies where a board provides one.
+   */
+  sensitive?: boolean
 }
 
 /** Per-ATS, versioned, remotely-updatable field-mapping config (spec §3.2). */

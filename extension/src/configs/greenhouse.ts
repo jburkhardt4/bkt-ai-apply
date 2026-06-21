@@ -1,4 +1,5 @@
 import type { BoardConfig } from '../types'
+import { applySignals } from './fieldSignals'
 
 /**
  * Greenhouse field-mapping config — Wave 1 (the board in the Jam recording).
@@ -18,7 +19,12 @@ export const greenhouseConfig: BoardConfig = {
   version: '2026-06-19',
   match: { hosts: ['boards.greenhouse.io', 'job-boards.greenhouse.io'] },
   jd: { container: '#content, .job__description', title: 'h1.app-title' },
-  fields: [
+  // applySignals() enriches each field with default <label> synonyms + the
+  // sensitive flag (configs/fieldSignals.ts), powering the B5 label-text fallback
+  // used when Greenhouse's opaque `#question_<id>` selectors miss. EEO / work-auth
+  // / sponsorship are flagged sensitive → never fuzzy-matched (BR-156); only their
+  // direct selectors below ever apply.
+  fields: applySignals([
     { key: 'first_name', selector: '#first_name', type: 'text' },
     { key: 'last_name', selector: '#last_name', type: 'text' },
     // Greenhouse has no dedicated preferred-name input on the standard form; some
@@ -68,6 +74,25 @@ export const greenhouseConfig: BoardConfig = {
       key: 'location',
       selector: '#job_application_location, input[name*="location"], #location',
       type: 'text',
+    },
+    // State of residence — react-select on the job-boards template ("In which
+    // state do you currently reside?"). The control id is opaque (`question_<id>`),
+    // so the direct selector is best-effort; the B5 matcher resolves it by the
+    // `state` label synonyms. Value comes from candidate_profiles.state.
+    {
+      key: 'state',
+      selector: '#state_control, [id*="state"] .select__control',
+      type: 'react-select',
+      strategy: 'react-select',
+    },
+    // Country — react-select ("Country"). Locator-ready via the `country` label;
+    // its value is pending the new candidate_profiles.location_country column
+    // (Part B3), so today it reports no_value rather than filling.
+    {
+      key: 'country',
+      selector: '#country_control, [id*="country"] .select__control',
+      type: 'react-select',
+      strategy: 'react-select',
     },
     { key: 'resume', selector: 'input[type="file"][name*="resume"]', type: 'file' },
     { key: 'cover_letter', selector: 'input[type="file"][name*="cover_letter"]', type: 'file' },
@@ -119,6 +144,6 @@ export const greenhouseConfig: BoardConfig = {
       type: 'react-select',
       strategy: 'react-select',
     },
-  ],
+  ]),
   submit: { selector: 'button[type="submit"], #submit_app', autoClick: false },
 }

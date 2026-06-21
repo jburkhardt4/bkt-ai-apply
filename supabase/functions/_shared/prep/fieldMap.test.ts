@@ -64,6 +64,22 @@ describe('mapFields', () => {
       const out = mapFields(schema([field({ key: 'first_name' })]), candidate)
       expect(byKey(out, 'first_name')).toMatchObject({ mappedValue: 'Augusta', valueSource: 'profile', confidence: 1 })
     })
+
+    it('treats explicit first_name AND last_name as authoritative (profile / confidence 1, not derived 0.6)', () => {
+      const candidate: CandidateData = { firstName: 'John', lastName: 'Burkhardt' }
+      const out = mapFields(schema([field({ key: 'first_name' }), field({ key: 'last_name' })]), candidate)
+
+      const first = byKey(out, 'first_name')
+      expect(first).toMatchObject({ mappedValue: 'John', valueSource: 'profile', confidence: 1 })
+      // Explicitly NOT the derived split path.
+      expect(first?.valueSource).not.toBe('derived')
+      expect(first?.confidence).not.toBe(0.6)
+
+      const last = byKey(out, 'last_name')
+      expect(last).toMatchObject({ mappedValue: 'Burkhardt', valueSource: 'profile', confidence: 1 })
+      expect(last?.valueSource).not.toBe('derived')
+      expect(last?.confidence).not.toBe(0.6)
+    })
   })
 
   describe('default / no value', () => {

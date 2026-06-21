@@ -104,6 +104,8 @@ function toCandidateData(
   }
   return {
     fullName: asStr(p.full_name),
+    firstName: asStr(p.first_name),
+    lastName: asStr(p.last_name),
     preferredName: asStr(p.preferred_name),
     email: asStr(p.email),
     phone: asStr(p.phone),

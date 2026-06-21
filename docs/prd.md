@@ -162,7 +162,7 @@ System shall:
 3. Prepare application packet.
 4. Submit via three autonomy modes controlled by `user_settings.review_mode` (ADR-006):
    * `review` — explicit JB approval required per application
-   * `assist` — scores ≥ threshold auto-queue as approved; JB reviews queue
+   * `hybrid` — scores ≥ threshold auto-queue as approved; JB reviews queue
    * `auto` — scores ≥ threshold submit autonomously within server-enforced guardrails
 5. Log submission metadata and write `application_events` row on every stage transition.
 6. Record timestamp + source confirmation.

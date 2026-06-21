@@ -21,7 +21,7 @@ The system functions as:
 
 ---
 
-# 2. Business Requirements (BABOK – Business Level)
+## 2. Business Requirements (BABOK – Business Level)
 
 ## 2.1 Business Objectives
 
@@ -44,7 +44,7 @@ The system functions as:
 
 ---
 
-# 3. Stakeholder Requirements
+## 3. Stakeholder Requirements
 
 ## Primary Stakeholder
 
@@ -69,7 +69,7 @@ The system functions as:
 
 ---
 
-# 4. User Personas
+## 4. User Personas
 
 ## Persona 1 – Power Applicant (Primary)
 
@@ -89,7 +89,7 @@ The system functions as:
 
 ---
 
-# 5. User Requirements
+## 5. User Requirements
 
 Users must be able to:
 
@@ -106,7 +106,7 @@ Users must be able to:
 
 ---
 
-# 6. Functional Requirements
+## 6. Functional Requirements
 
 ## 6.1 Job Discovery
 
@@ -161,9 +161,9 @@ System shall:
 2. Generate tailored resume and cover letter.
 3. Prepare application packet.
 4. Submit via three autonomy modes controlled by `user_settings.review_mode` (ADR-006):
-   - `review` — explicit JB approval required per application
-   - `assist` — scores ≥ threshold auto-queue as approved; JB reviews queue
-   - `auto` — scores ≥ threshold submit autonomously within server-enforced guardrails
+   * `review` — explicit JB approval required per application
+   * `assist` — scores ≥ threshold auto-queue as approved; JB reviews queue
+   * `auto` — scores ≥ threshold submit autonomously within server-enforced guardrails
 5. Log submission metadata and write `application_events` row on every stage transition.
 6. Record timestamp + source confirmation.
 
@@ -245,7 +245,7 @@ Capabilities:
 
 ---
 
-# 7. Nonfunctional Requirements
+## 7. Nonfunctional Requirements
 
 | Category        | Requirement              |
 | --------------- | ------------------------ |
@@ -258,7 +258,7 @@ Capabilities:
 
 ---
 
-# 8. Technical Requirements
+## 8. Technical Requirements
 
 ## Frontend
 
@@ -278,9 +278,9 @@ Capabilities:
 
 ---
 
-# 9. High-Level Architecture
+## 9. High-Level Architecture
 
-```
+```text
 React Frontend
    ↓ (Supabase client)
 Supabase Postgres (Single Source of Truth)
@@ -296,7 +296,7 @@ External APIs (Gmail, Calendar, Job Boards)
 
 ---
 
-# 10. Database Entity Requirements
+## 10. Database Entity Requirements
 
 Core Entities:
 
@@ -325,7 +325,7 @@ Relationships:
 
 ---
 
-# 11. Realtime Sync Requirements
+## 11. Realtime Sync Requirements
 
 Realtime triggers for:
 
@@ -339,7 +339,7 @@ Frontend auto-refresh without polling.
 
 ---
 
-# 12. Automation Workflow Requirements
+## 12. Automation Workflow Requirements
 
 * Event-based triggers
 * Deterministic state transitions
@@ -349,7 +349,7 @@ Frontend auto-refresh without polling.
 
 ---
 
-# 13. AI Agent Orchestration Requirements
+## 13. AI Agent Orchestration Requirements
 
 ## Model Providers
 
@@ -375,7 +375,7 @@ See `docs/conventions/model-routing.md` for the pinned routing matrix.
 
 ---
 
-# 14. RAG Pipeline Requirements
+## 14. RAG Pipeline Requirements
 
 Data Sources:
 
@@ -394,7 +394,7 @@ Process:
 
 ---
 
-# 15. Security Requirements
+## 15. Security Requirements
 
 * OAuth 2.0 for Gmail/Calendar
 * Supabase RLS enforcement
@@ -406,7 +406,7 @@ Process:
 
 ---
 
-# 16. Privacy & Compliance Requirements
+## 16. Privacy & Compliance Requirements
 
 * GDPR-aligned data deletion
 * User-controlled data purge
@@ -417,7 +417,7 @@ Process:
 
 ---
 
-# 17. Integration Requirements
+## 17. Integration Requirements
 
 * Gmail API
 * Google Calendar API
@@ -432,7 +432,7 @@ Process:
 
 ---
 
-# 18. Operational Requirements
+## 18. Operational Requirements
 
 * CI/CD pipeline
 * Automated testing
@@ -444,7 +444,7 @@ Process:
 
 ---
 
-# 19. Analytics & Reporting Requirements
+## 19. Analytics & Reporting Requirements
 
 Reports:
 
@@ -462,7 +462,7 @@ Export:
 
 ---
 
-# 20. Risk, Limitation & Ethical Requirements
+## 20. Risk, Limitation & Ethical Requirements
 
 Risks:
 
@@ -487,7 +487,7 @@ Ethical Boundaries:
 
 ---
 
-# 21. Permission & Role Requirements
+## 21. Permission & Role Requirements
 
 Roles:
 
@@ -505,7 +505,7 @@ Permissions:
 
 ---
 
-# 22. MVP Scope
+## 22. MVP Scope
 
 Includes:
 
@@ -528,7 +528,7 @@ Excludes:
 
 ---
 
-# 23. Post-MVP Roadmap
+## 23. Post-MVP Roadmap
 
 * Multi-user SaaS version
 * Advanced recruiter intelligence scoring
@@ -539,7 +539,7 @@ Excludes:
 
 ---
 
-# 24. Primary User Journeys
+## 24. Primary User Journeys
 
 ### Journey 1 – Auto-Apply
 
@@ -563,7 +563,7 @@ Excludes:
 
 ---
 
-# 25. Error Handling Requirements
+## 25. Error Handling Requirements
 
 * All failures logged
 * Retry queue
@@ -573,7 +573,7 @@ Excludes:
 
 ---
 
-# 26. Acceptance Criteria (Sample)
+## 26. Acceptance Criteria (Sample)
 
 | Feature     | Acceptance Criteria                     |
 | ----------- | --------------------------------------- |
@@ -585,7 +585,7 @@ Excludes:
 
 ---
 
-# 27. F-017 Epic — Automated Job Prospector
+## 27. F-017 Epic — Automated Job Prospector
 
 > **Status: Implemented.** Migration `20260607000001_add_prospecting_tables.sql` applied.
 > UI implemented in `src/features/jobs/` and `src/pages/ProspectorPage.tsx`.
@@ -596,10 +596,11 @@ Excludes:
 The Automated Job Prospector is an autonomous background pipeline that discovers, scrapes, scores, and queues job openings without requiring manual ingestion. It operates against a saved configuration profile owned by JB, runs on a scheduled cron cadence, and surfaces matched jobs in a "Ready to Apply" queue inside the application pipeline.
 
 Goals:
-- Eliminate manual job search by continuously sourcing leads from approved channels
-- Surface only high-signal matches (score >= 60, per BR-020) to JB's active queue
-- Operate within the existing $75/month AI cost ceiling (BR-050, BR-051, BR-052, BR-053)
-- Maintain full auditability via the `prospecting_runs` log table
+
+* Eliminate manual job search by continuously sourcing leads from approved channels
+* Surface only high-signal matches (score >= 60, per BR-020) to JB's active queue
+* Operate within the existing $75/month AI cost ceiling (BR-050, BR-051, BR-052, BR-053)
+* Maintain full auditability via the `prospecting_runs` log table
 
 ---
 
@@ -627,11 +628,12 @@ The prospector cron runs at most **twice per 24-hour period** per active profile
 AI scoring during prospector runs uses the `match_scoring` task type, routed to Claude Opus 4.6 via `src/lib/ai-router.ts` (per model-routing.md). All scoring calls log to `ai_model_usage` and count against the $75/month cap (BR-050). When the cap is reached, prospector scoring runs are queued rather than cancelled (BR-104); critical pipeline operations are never blocked (BR-053).
 
 Cost ceiling enforcement summary:
-- BR-050: $75/month hard cap across all providers
-- BR-051: At 90% of cap ($67.50), JB notification is sent
-- BR-052: At hard cap, non-critical AI calls are blocked/queued
-- BR-053: Critical pipeline calls are never blocked
-- BR-104: Prospector scoring queued (not cancelled) when cap is reached
+
+* BR-050: $75/month hard cap across all providers
+* BR-051: At 90% of cap ($67.50), JB notification is sent
+* BR-052: At hard cap, non-critical AI calls are blocked/queued
+* BR-053: Critical pipeline calls are never blocked
+* BR-104: Prospector scoring queued (not cancelled) when cap is reached
 
 ---
 
@@ -664,45 +666,48 @@ Prospecting run logged to prospecting_runs (id, profile_id, user_id, run_at, job
 ## Acceptance Criteria
 
 ### US-016 — Prospector Profile Configuration
+
 **As** JB,
 **I want** to save a search configuration profile for the prospector,
 **so that** the system knows what kinds of jobs to search for on my behalf.
 
-- AC-016-01: JB can create or update a single prospecting profile with all configuration parameters
-- AC-016-02: Profile validates that `salary_min` ≤ `salary_max` when both fields are populated
-- AC-016-03: `skills` array is limited to 20 tags; tags exceeding this limit are rejected with an error message
-- AC-016-04: Profile is scoped to `user_id = auth.uid()` and is not visible to or writable by any other user (BR-101, BR-001)
-- AC-016-05: Profile save writes to `prospecting_profiles` via the single Supabase client (BR-004)
+* AC-016-01: JB can create or update a single prospecting profile with all configuration parameters
+* AC-016-02: Profile validates that `salary_min` ≤ `salary_max` when both fields are populated
+* AC-016-03: `skills` array is limited to 20 tags; tags exceeding this limit are rejected with an error message
+* AC-016-04: Profile is scoped to `user_id = auth.uid()` and is not visible to or writable by any other user (BR-101, BR-001)
+* AC-016-05: Profile save writes to `prospecting_profiles` via the single Supabase client (BR-004)
 
 ### US-017 — Prospector Enable/Disable Toggle
+
 **As** JB,
 **I want** to toggle the prospector on and off,
 **so that** I can pause automated discovery without deleting my configuration.
 
-- AC-017-01: Toggling `is_active = true` schedules cron-triggered runs at the configured frequency (BR-100)
-- AC-017-02: Toggling `is_active = false` halts cron-triggered runs immediately; in-flight runs complete but no new runs are triggered (BR-107)
-- AC-017-03: JB can still manually trigger a single prospector run when `is_active = false` (BR-107)
-- AC-017-04: Toggle state change is reflected in the UI without a page refresh
+* AC-017-01: Toggling `is_active = true` schedules cron-triggered runs at the configured frequency (BR-100)
+* AC-017-02: Toggling `is_active = false` halts cron-triggered runs immediately; in-flight runs complete but no new runs are triggered (BR-107)
+* AC-017-03: JB can still manually trigger a single prospector run when `is_active = false` (BR-107)
+* AC-017-04: Toggle state change is reflected in the UI without a page refresh
 
 ### US-018 — Prospector Run and Queue
+
 **As** JB,
 **I want** the prospector to automatically find, score, and queue matching jobs,
 **so that** I have a ready pool of high-fit leads without manual searching.
 
-- AC-018-01: Prospector runs twice daily when `is_active = true` (BR-100)
-- AC-018-02: Duplicate jobs by `source_url` are silently skipped — not inserted twice (BR-102, BR-063)
-- AC-018-03: Empty run results (zero jobs found) are logged with `status = 'empty'` and no error is raised (BR-106)
-- AC-018-04: AI scoring for prospector jobs uses `match_scoring` task type routed via `src/lib/ai-router.ts` (BR-103)
-- AC-018-05: All AI scoring calls are logged to `ai_model_usage` and counted against the monthly cap (BR-050, BR-054)
-- AC-018-06: When the $75/month cap is reached, prospector scoring runs are queued, not cancelled (BR-104)
-- AC-018-07: Jobs with `match_score >= 60` are surfaced in the "Ready to Apply" queue (BR-105, BR-020)
-- AC-018-08: Stage transitions triggered by the prospector pipeline go through the `public.transition_stage` RPC to ensure atomicity (LSN-004)
-- AC-018-09: Each prospector run produces a `prospecting_runs` row with: `profile_id`, `user_id`, `run_at`, `jobs_found`, `jobs_queued`, `status`, and any `error` detail
-- AC-018-10: "Last run" timestamp and "Next scheduled run" are visible on the Prospector dashboard
+* AC-018-01: Prospector runs twice daily when `is_active = true` (BR-100)
+* AC-018-02: Duplicate jobs by `source_url` are silently skipped — not inserted twice (BR-102, BR-063)
+* AC-018-03: Empty run results (zero jobs found) are logged with `status = 'empty'` and no error is raised (BR-106)
+* AC-018-04: AI scoring for prospector jobs uses `match_scoring` task type routed via `src/lib/ai-router.ts` (BR-103)
+* AC-018-05: All AI scoring calls are logged to `ai_model_usage` and counted against the monthly cap (BR-050, BR-054)
+* AC-018-06: When the $75/month cap is reached, prospector scoring runs are queued, not cancelled (BR-104)
+* AC-018-07: Jobs with `match_score >= 60` are surfaced in the "Ready to Apply" queue (BR-105, BR-020)
+* AC-018-08: Stage transitions triggered by the prospector pipeline go through the `public.transition_stage` RPC to ensure atomicity (LSN-004)
+* AC-018-09: Each prospector run produces a `prospecting_runs` row with: `profile_id`, `user_id`, `run_at`, `jobs_found`, `jobs_queued`, `status`, and any `error` detail
+* AC-018-10: "Last run" timestamp and "Next scheduled run" are visible on the Prospector dashboard
 
 ---
 
-# 28. Open Questions
+## 28. Open Questions
 
 1. Which job boards provide official APIs at required scale?
 2. What is acceptable daily submission limit?
@@ -712,7 +717,7 @@ Prospecting run logged to prospecting_runs (id, profile_id, user_id, run_at, job
 
 ---
 
-# 29. Assumptions
+## 29. Assumptions
 
 * JB is sole initial user.
 * All integrations must be compliant.
@@ -721,6 +726,6 @@ Prospecting run logged to prospecting_runs (id, profile_id, user_id, run_at, job
 
 ---
 
-# Conclusion
+## Conclusion
 
 BKT AI-Apply is a compliant, AI-orchestrated, event-driven job application automation platform designed for high-volume, strategic, and measurable application execution. It leverages React + Supabase architecture with AI agent routing, RAG-based job scoring, and full audit transparency to enable 800+ monthly applications while maintaining governance and visibility.

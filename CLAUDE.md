@@ -4,9 +4,7 @@
 
 ## Project Summary
 
-Automated job application pipeline — React/Vite/TS + Supabase. Tracks the full lifecycle from
-discovery through hire. Gmail/Calendar scrapers drive autonomous stage transitions via Supabase
-Edge Functions. Multi-model AI routing assigns the best model per task type.
+Automated job application pipeline — React/Vite/TS + Supabase. Tracks the full lifecycle from discovery through hire. Gmail/Calendar scrapers drive autonomous stage transitions via Supabase Edge Functions. Multi-model AI routing assigns the best model per task type.
 
 ---
 

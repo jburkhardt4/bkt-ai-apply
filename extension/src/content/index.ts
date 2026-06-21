@@ -74,6 +74,11 @@ function injectStyles(): void {
 #bkt-score-btn { background: #2563eb !important; }
 #bkt-autofill-btn { background: #0f172a !important; }
 #bkt-apply-status { font-size: 12px !important; color: #475569 !important; max-width: 220px !important; }
+#bkt-fit-panel [data-bkt="score"] { margin-bottom: 6px !important; line-height: 1.35 !important; }
+#bkt-fit-panel [data-bkt="recommendation"] { margin: 4px 0 8px !important; color: #475569 !important; font-size: 12px !important; }
+#bkt-fit-panel [data-bkt="matched"], #bkt-fit-panel [data-bkt="missing"] { margin-top: 8px !important; }
+#bkt-fit-panel [data-bkt="matched"] > div:first-child, #bkt-fit-panel [data-bkt="missing"] > div:first-child { font-weight: 600 !important; font-size: 12px !important; margin-bottom: 2px !important; }
+#bkt-apply-root { max-width: calc(100vw - 32px) !important; flex-wrap: wrap !important; }
 `
   ;(document.head ?? document.documentElement).appendChild(style)
 }

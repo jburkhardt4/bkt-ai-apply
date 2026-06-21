@@ -13,6 +13,7 @@ import { renderMatchScorePanel } from '../matchScorePanel'
 import type { AutofillPayload, BoardConfig } from '../types'
 import { buildPayload } from '../payload'
 import { detectStopConditions, describeStopReason } from '../stopConditions'
+import { detectNativeApply, renderNativeApplyNote } from '../nativeApply'
 import {
   MSG,
   type AuthStatusResponse,
@@ -79,6 +80,18 @@ function injectStyles(): void {
 #bkt-fit-panel [data-bkt="matched"], #bkt-fit-panel [data-bkt="missing"] { margin-top: 8px !important; }
 #bkt-fit-panel [data-bkt="matched"] > div:first-child, #bkt-fit-panel [data-bkt="missing"] > div:first-child { font-weight: 600 !important; font-size: 12px !important; margin-bottom: 2px !important; }
 #bkt-apply-root { max-width: calc(100vw - 32px) !important; flex-wrap: wrap !important; }
+#bkt-native-apply {
+  position: fixed !important; bottom: 16px !important; right: 16px !important;
+  z-index: 2147483647 !important; box-sizing: border-box !important;
+  width: 320px !important; max-width: calc(100vw - 32px) !important;
+  background: #f0f9ff !important; border: 1px solid #bae6fd !important; border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(15,23,42,.18) !important; color: #0f172a !important;
+  padding: 10px 12px !important; font-size: 12px !important; line-height: 1.45 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+#bkt-native-apply [data-bkt="native-title"] { font-weight: 700 !important; font-size: 13px !important; margin-bottom: 4px !important; }
+#bkt-native-apply ul { margin: 4px 0 6px !important; padding-left: 16px !important; }
+#bkt-native-apply [data-bkt="native-hint"] { color: #475569 !important; }
 `
   ;(document.head ?? document.documentElement).appendChild(style)
 }
@@ -228,6 +241,12 @@ async function init(): Promise<void> {
   injectStyles()
   renderInitialPanel()
   buildControls(config)
+
+  // B7: surface any native account-based quick-apply on the page ("Apply with
+  // MyGreenhouse", Easy Apply, …) as a recommended accelerator — it fills fields
+  // ours can't (opaque/review-gated). We only point the user at it; clicking it
+  // (an OAuth/sign-in popup) is theirs to do — we never auto-click (BR-151).
+  renderNativeApplyNote(detectNativeApply(document))
 
   // Reflect auth status — also proves the content↔background handoff is live.
   const status = await send<AuthStatusResponse>({ type: MSG.AUTH_STATUS })

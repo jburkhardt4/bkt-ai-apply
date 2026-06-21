@@ -1253,8 +1253,12 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             <PrefSection title="Personal Information" idx={5}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <PrefLabel>Full name</PrefLabel>
-                  <PrefInput value={profile.full_name} onChange={(v) => setProfileField('full_name', v)} placeholder="John Burkhardt" />
+                  <PrefLabel>First name</PrefLabel>
+                  <PrefInput value={profile.first_name} onChange={(v) => setProfileField('first_name', v)} placeholder="John" />
+                </div>
+                <div>
+                  <PrefLabel>Last name</PrefLabel>
+                  <PrefInput value={profile.last_name} onChange={(v) => setProfileField('last_name', v)} placeholder="Burkhardt" />
                 </div>
                 <div>
                   <PrefLabel note="Goes on applications that ask for a preferred / first name">Preferred name</PrefLabel>
@@ -1265,7 +1269,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                   <PrefInput value={profile.email} onChange={(v) => setProfileField('email', v)} type="email" placeholder="you@company.com" />
                 </div>
                 <div>
-                  <PrefLabel>Phone number</PrefLabel>
+                  <PrefLabel>Phone</PrefLabel>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <div
                       style={{

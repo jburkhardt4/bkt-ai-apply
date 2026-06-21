@@ -5,6 +5,13 @@
 
 import type { Json, Tables, TablesInsert } from '@/types/db.types'
 
+/** Splits a full name into first / last (last = the remainder). Empty-safe. */
+function splitName(full: string): { first: string; last: string } {
+  const parts = (full ?? '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { first: '', last: '' }
+  return { first: parts[0], last: parts.slice(1).join(' ') }
+}
+
 /* ───────────────────────── EEO / Demographics ───────────────────────── */
 
 /** Sentinel choice every EEO question offers — never inferred, always opt-in. */
@@ -109,6 +116,8 @@ export function slugifyQuestionKey(label: string): string {
  *  sections bind to. Strings only (the UI inputs are text/choice); the
  *  Yes/No sponsorship control maps to/from the boolean column at the edges. */
 export interface ProfileForm {
+  first_name: string
+  last_name: string
   full_name: string
   preferred_name: string
   email: string
@@ -128,6 +137,8 @@ export interface ProfileForm {
  *  the same identity placeholders the screen previously hardcoded as useState
  *  defaults, now centralized so load/reset reuse them. */
 export const PROFILE_FORM_DEFAULT: ProfileForm = {
+  first_name: 'John',
+  last_name: 'Burkhardt',
   full_name: 'John Burkhardt',
   preferred_name: '',
   email: 'john@bktadvisory.com',
@@ -147,6 +158,8 @@ export const PROFILE_FORM_DEFAULT: ProfileForm = {
  *  the UI defaults for any empty column so the inputs are never blank-by-error. */
 export function profileRowToForm(row: Tables<'candidate_profiles'>): ProfileForm {
   return {
+    first_name: row.first_name || splitName(row.full_name).first,
+    last_name: row.last_name || splitName(row.full_name).last,
     full_name: row.full_name || PROFILE_FORM_DEFAULT.full_name,
     preferred_name: row.preferred_name ?? '',
     email: row.email || PROFILE_FORM_DEFAULT.email,
@@ -170,8 +183,11 @@ export function formToProfilePatch(
   form: ProfileForm,
   eeo: EeoDisclosures,
 ): Partial<TablesInsert<'candidate_profiles'>> {
+  const recomposed = [form.first_name, form.last_name].map((s) => s.trim()).filter(Boolean).join(' ')
   return {
-    full_name: form.full_name,
+    first_name: form.first_name,
+    last_name: form.last_name,
+    full_name: recomposed || form.full_name,
     preferred_name: form.preferred_name,
     email: form.email,
     phone: form.phone,

@@ -2,32 +2,18 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-20
-- **Relates:** ADR-006 (server-side submission worker), ADR-009 (apply-macro extension),
-  ADR-011 (extension session handoff), ADR-012 (candidate profile + answer library),
-  migration `20260620000001_prepared_applications`
+- **Relates:** ADR-006 (server-side submission worker), ADR-009 (apply-macro extension), ADR-011 (extension session handoff), ADR-012 (candidate profile + answer library), migration `20260620000001_prepared_applications`
 - **Research:** *BKT AI-Apply: Job-Board Research & Revised Headless-Prep Architecture (2026-06-20)*
 
 ## Context
 
-The apply-macro (ADR-009/011/012) lets the user's own browser session autofill an ATS form
-from `candidate_profiles`, with the human submitting. To scale this beyond hand-written
-per-board selector configs we need: (a) to **read the actual application-form schema** of a
-posting from the ATS's public read API, (b) a place to persist the **per-field mapping** of the
-user's profile onto that schema (with confidence + sensitivity), and (c) a **mode-gating policy**
-that decides what may be prepared unattended vs. what must wait for human review.
+The apply-macro (ADR-009/011/012) lets the user's own browser session autofill an ATS form from `candidate_profiles`, with the human submitting. To scale this beyond hand-written per-board selector configs we need: (a) to **read the actual application-form schema** of a posting from the ATS's public read API, (b) a place to persist the **per-field mapping** of the user's profile onto that schema (with confidence + sensitivity), and (c) a **mode-gating policy** that decides what may be prepared unattended vs. what must wait for human review.
 
-The job-board research established the routing reality: **Greenhouse, Lever, Ashby, and
-SmartRecruiters expose auth-free JSON read APIs (jobs + the application-form question schema) and
-host the apply form themselves** — near-zero anti-bot risk for *reading*. **Workday, LinkedIn,
-Indeed** are scraping-hostile (Akamai / ToS bans / behavioral detection) and must never be read
-headlessly. Reading is the gating input; submitting is never done headlessly here.
+The job-board research established the routing reality: **Greenhouse, Lever, Ashby, and SmartRecruiters expose auth-free JSON read APIs (jobs + the application-form question schema) and host the apply form themselves** — near-zero anti-bot risk for *reading*. **Workday, LinkedIn, Indeed** are scraping-hostile (Akamai / ToS bans / behavioral detection) and must never be read headlessly. Reading is the gating input; submitting is never done headlessly here.
 
 ## Decision
 
-**1. Two new tables — `prepared_applications` + `prepared_application_fields`** (separate from
-ADR-006's `submission_previews`). `submission_previews` is a 1:1-per-application snapshot of a
-would-be **POST** for the headless-submit path; the prep model is a richer **per-field** record
-for the read-prep + human-submit path. They serve different paths, so they are separate tables.
+**1. Two new tables — `prepared_applications` + `prepared_application_fields`** (separate from ADR-006's `submission_previews`). `submission_previews` is a 1:1-per-application snapshot of a would-be **POST** for the headless-submit path; the prep model is a richer **per-field** record for the read-prep + human-submit path. They serve different paths, so they are separate tables.
 
 - `prepared_applications` — one row per job-prep attempt: `job_ref`, `ats_family`, `antibot_tier`,
   `form_schema_snapshot` (immutable), `match_score`, `mode` (`auto|hybrid`), `status`

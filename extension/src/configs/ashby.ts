@@ -19,6 +19,11 @@ export const ashbyConfig: BoardConfig = {
   jd: { container: '[class*="description"], ._description', title: 'h1' },
   fields: [
     { key: 'full_name', selector: 'input[name="_systemfield_name"], input[aria-label="Name"]', type: 'text' },
+    // Split-name fields — some AshbyQ forms render separate first/last inputs
+    // instead of the combined "Name" field above. Non-sensitive identity (not
+    // EEO/eligibility), so safe to fill. Best-effort selectors. LIVE-TUNE.
+    { key: 'first_name', selector: 'input[autocomplete="given-name"], input[name*="first" i], input[aria-label*="First" i]', type: 'text' },
+    { key: 'last_name', selector: 'input[autocomplete="family-name"], input[name*="last" i], input[aria-label*="Last" i]', type: 'text' },
     // Preferred name — custom question on many Ashby forms. LIVE-TUNE.
     {
       key: 'preferred_name',
@@ -27,18 +32,18 @@ export const ashbyConfig: BoardConfig = {
     },
     { key: 'email', selector: 'input[name="_systemfield_email"], input[type="email"]', type: 'email' },
     // Ashby phone is a native input plus a country react-select on some forms.
-    { key: 'phone', selector: 'input[name="_systemfield_phone"], input[type="tel"]', type: 'tel' },
-    { key: 'linkedin', selector: 'input[aria-label*="LinkedIn"], input[name*="linkedin"]', type: 'url' },
+    { key: 'phone', selector: 'input[name="_systemfield_phone"], input[autocomplete="tel"], input[type="tel"]', type: 'tel' },
+    { key: 'linkedin', selector: 'input[aria-label*="LinkedIn" i], input[name*="linkedin" i], input[placeholder*="linkedin" i]', type: 'url' },
     // Website / portfolio — custom URL question. LIVE-TUNE.
     {
       key: 'website',
-      selector: 'input[aria-label*="Website"], input[aria-label*="Portfolio"], input[name*="website"]',
+      selector: 'input[aria-label*="Website" i], input[aria-label*="Portfolio" i], input[name*="website" i], input[autocomplete="url"]',
       type: 'url',
     },
     // Location — Ashby uses a location autocomplete; plain text on simpler forms. LIVE-TUNE.
     {
       key: 'location',
-      selector: 'input[aria-label*="Location"], input[name*="_systemfield_location"], input[name*="location"]',
+      selector: 'input[aria-label*="Location" i], input[name*="_systemfield_location" i], input[name*="location" i], input[autocomplete="address-level2"]',
       type: 'text',
     },
     {

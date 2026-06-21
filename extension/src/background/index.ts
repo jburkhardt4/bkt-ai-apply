@@ -91,6 +91,8 @@ interface EeoDisclosures {
 
 interface CandidateProfileRow {
   full_name: string | null
+  first_name: string | null
+  last_name: string | null
   preferred_name: string | null
   email: string | null
   phone: string | null
@@ -109,7 +111,7 @@ interface CandidateProfileRow {
 // can never drift. Adds the expanded ATS field set (preferred name, phone
 // country, state, website, sponsorship, EEO) to the original 5 contact fields.
 const PROFILE_COLUMNS =
-  'full_name,preferred_name,email,phone,phone_country,linkedin_url,website_url,location,state,work_authorization,requires_sponsorship,eeo_disclosures,master_resume_path'
+  'full_name,first_name,last_name,preferred_name,email,phone,phone_country,linkedin_url,website_url,location,state,work_authorization,requires_sponsorship,eeo_disclosures,master_resume_path'
 
 async function fetchProfileRow(
   supabase: SupabaseClient,
@@ -287,6 +289,8 @@ async function handleProfile(): Promise<ProfileResponse> {
     const eeo = toEeoMap(row.eeo_disclosures)
     const profile: ContactProfile = {
       fullName: row.full_name ?? undefined,
+      firstName: row.first_name ?? undefined,
+      lastName: row.last_name ?? undefined,
       preferredName: row.preferred_name ?? undefined,
       email: row.email ?? undefined,
       phone: row.phone ?? undefined,

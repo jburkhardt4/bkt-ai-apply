@@ -188,6 +188,46 @@ test.describe('Apply-macro autofill — Greenhouse opaque-id template (B5 label 
   })
 })
 
+test.describe('Apply-macro autofill — Ashby applySignals cross-board (B5) @extension', () => {
+  // Proves wrapping ashby.ts in applySignals() lets the B5 label matcher recover
+  // a field whose (hashed/aria) selector misses — Ashby's real-world pain — while
+  // sensitive EEO stays gated. Same mechanism as Greenhouse, a different board.
+  test('label fallback fills a non-sensitive miss (LinkedIn) but still gates sensitive EEO (BR-156)', async ({
+    page,
+  }) => {
+    await page.setContent(`<!doctype html><html><body>
+      <form id="ashby_form">
+        <div><label for="nm">Name</label><input id="nm" name="_systemfield_name" /></div>
+        <!-- LinkedIn input carries NO aria-label/name/placeholder → ashby.ts'
+             selector misses; only the visible "LinkedIn URL" label identifies it. -->
+        <div><label for="li">LinkedIn URL</label><input id="li" type="text" /></div>
+        <!-- Gender react-select with a hashed id (ashby selector misses) — sensitive,
+             so the matcher must refuse it even though a "Gender" label is present. -->
+        <div>
+          <label for="gen-input">Gender</label>
+          <div id="hashed_gender_xyz" class="select__control rs-control" tabindex="0"
+               data-options="Female|Male|Non-binary">
+            <div class="select__input-container"><input id="gen-input" class="select__input" /></div>
+            <span class="select__placeholder">Select...</span>
+          </div>
+          <div class="rs-menu" hidden></div>
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+    </body></html>`)
+    await page.evaluate(installReactSelectMock)
+    const report = await page.evaluate(applyAutofill, { config: ashbyConfig, payload: fullPayload })
+
+    // full_name hits its direct selector; LinkedIn is recovered by its <label>.
+    expect(report.filled).toEqual(expect.arrayContaining(['full_name', 'linkedin']))
+    expect(await page.inputValue('#li')).toBe('https://www.linkedin.com/in/jburkhardt')
+    // Sensitive eeo_gender: label present, but never fuzzy-located → stays missing.
+    expect(await page.getAttribute('#hashed_gender_xyz', 'data-value')).toBeNull()
+    expect(report.filled).not.toContain('eeo_gender')
+    expect(report.missing).toContain('eeo_gender')
+  })
+})
+
 test.describe('Apply-macro autofill — Lever @extension', () => {
   test('fills the single combined name field + contact fields', async ({ page }) => {
     await page.setContent(leverFixtureHtml)

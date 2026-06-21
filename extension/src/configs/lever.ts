@@ -1,4 +1,5 @@
 import type { BoardConfig } from '../types'
+import { applySignals } from './fieldSignals'
 
 /**
  * Lever field-mapping config — Wave 1. Lever uses a single combined name field
@@ -19,7 +20,11 @@ export const leverConfig: BoardConfig = {
   version: '2026-06-19',
   match: { hosts: ['jobs.lever.co'] },
   jd: { container: '.posting-description, .content', title: '.posting-headline h2' },
-  fields: [
+  // applySignals() adds default <label> synonyms + the sensitive flag
+  // (configs/fieldSignals.ts) so the B5 label-text fallback fires when Lever's
+  // posting-specific `cards[...]`/`urls[...]` names miss; EEO fields stay
+  // sensitive → never fuzzy-matched (BR-156).
+  fields: applySignals([
     { key: 'full_name', selector: 'input[name="name"]', type: 'text' },
     { key: 'email', selector: 'input[name="email"]', type: 'email' },
     { key: 'phone', selector: 'input[name="phone"]', type: 'tel' },
@@ -55,6 +60,6 @@ export const leverConfig: BoardConfig = {
       selector: 'select[name="eeo[disability]"], select[name*="disability"]',
       type: 'select',
     },
-  ],
+  ]),
   submit: { selector: 'button[type="submit"], .template-btn-submit', autoClick: false },
 }

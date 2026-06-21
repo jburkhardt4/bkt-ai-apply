@@ -1,4 +1,5 @@
 import type { BoardConfig } from '../types'
+import { applySignals } from './fieldSignals'
 
 /**
  * Ashby field-mapping config — Wave 1. Ashby's apply form is React-heavy: a
@@ -17,7 +18,11 @@ export const ashbyConfig: BoardConfig = {
   version: '2026-06-19',
   match: { hosts: ['jobs.ashbyhq.com', 'ashbyhq.com'] },
   jd: { container: '[class*="description"], ._description', title: 'h1' },
-  fields: [
+  // applySignals() enriches each field with default <label> synonyms + the
+  // sensitive flag (configs/fieldSignals.ts) so the B5 label-text fallback fires
+  // when Ashby's hashed react-select / custom-question selectors miss. Sensitive
+  // fields (work-auth / sponsorship / EEO) are never fuzzy-matched (BR-156).
+  fields: applySignals([
     { key: 'full_name', selector: 'input[name="_systemfield_name"], input[aria-label="Name"]', type: 'text' },
     // Split-name fields — some AshbyQ forms render separate first/last inputs
     // instead of the combined "Name" field above. Non-sensitive identity (not
@@ -85,6 +90,6 @@ export const ashbyConfig: BoardConfig = {
       strategy: 'react-select',
     },
     { key: 'resume', selector: 'input[type="file"]', type: 'file' },
-  ],
+  ]),
   submit: { selector: 'button[type="submit"]', autoClick: false },
 }

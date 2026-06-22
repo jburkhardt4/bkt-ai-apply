@@ -71,13 +71,24 @@ async function fetchList(url: string, method: 'GET' | 'POST', headers: Record<st
 async function finalizeJob(supabase: SupabaseClient, id: string, fields: Record<string, unknown>) {
   await supabase.from('crawl_jobs').update(fields).eq('id', id)
 }
-async function rescheduleJob(supabase: SupabaseClient, jobId: string, delaySec: number, error: string) {
-  await supabase.from('crawl_jobs').update({
+async function rescheduleJob(
+  supabase: SupabaseClient,
+  jobId: string,
+  delaySec: number,
+  error: string,
+  payload?: Record<string, unknown>,
+) {
+  const fields: Record<string, unknown> = {
     status: 'pending',
     locked_until: null,
     run_after: new Date(Date.now() + delaySec * 1000).toISOString(),
     last_error: error,
-  }).eq('id', jobId)
+  }
+  // Persist progress (cursor + accumulated seen) so a rate-limited reschedule
+  // resumes mid-enumeration instead of restarting at page 0 and reprocessing the
+  // first burst forever (never reaching later pages or the close-missing pass).
+  if (payload) fields.payload = payload
+  await supabase.from('crawl_jobs').update(fields).eq('id', jobId)
 }
 async function updateBoard(supabase: SupabaseClient, id: string, fields: Record<string, unknown>) {
   await supabase.from('ats_boards').update(fields).eq('id', id)
@@ -93,6 +104,7 @@ interface CrawlJob {
   id: string
   board_id: string
   attempts?: number
+  payload?: { cursor?: Cursor | null; seen?: string[] } | null
 }
 
 async function processJob(supabase: SupabaseClient, job: CrawlJob): Promise<Record<string, unknown>> {
@@ -122,25 +134,28 @@ async function crawlBoard(
   if (!first) throw new TerminalError('no list endpoint for family')
   const host = new URL(first.url).host
 
-  let cursor: Cursor | null = null
+  // Resume from a persisted cursor/seen set (a prior run rescheduled mid-board on
+  // a rate-limit). Accumulating `seen` across runs keeps close-missing correct.
+  let cursor: Cursor | null = job.payload?.cursor ?? null
   let pages = 0
   let enumerated = true
   let unchanged304 = false
   let etag = board.last_etag ?? null
-  const seen: string[] = []
+  const seen: string[] = [...(job.payload?.seen ?? [])]
   const counts = { inserted: 0, updated: 0, unchanged: 0, skipped: 0 }
 
   while (true) {
     if (pages >= MAX_PAGES) { enumerated = false; break }
 
-    // Politeness gate (token bucket). Out of tokens → reschedule the whole job;
-    // upserts already committed persist and re-run idempotently.
+    // Politeness gate (token bucket). Out of tokens → reschedule the whole job,
+    // persisting cursor + seen so it resumes here; upserts already committed
+    // persist and re-run idempotently.
     const { data: tokenOk, error: tErr } = await supabase.rpc('consume_crawl_token', {
       p_host: host, p_rps: DEFAULT_RPS, p_burst: DEFAULT_BURST,
     })
     if (tErr) throw new RetryableError(`token: ${tErr.message}`)
     if (tokenOk !== true) {
-      await rescheduleJob(supabase, job.id, RATE_WAIT_SEC, 'rate_limited')
+      await rescheduleJob(supabase, job.id, RATE_WAIT_SEC, 'rate_limited', { cursor, seen })
       return { status: 'rescheduled', reason: 'rate_limited', ...counts }
     }
 
@@ -175,10 +190,12 @@ async function crawlBoard(
     cursor = next
   }
 
-  // Close vanished postings ONLY on a full, successful enumeration (never on a
-  // 304/partial/capped run) so a truncated fetch can't false-close (ADR-015 #6).
+  // Close vanished postings ONLY on a full, successful enumeration that actually
+  // returned at least one posting (never on a 304/partial/capped run, nor on an
+  // empty enumeration) so neither a truncated fetch nor a transient HTTP-200
+  // empty `jobs` array can mass-close a board's postings (ADR-015 #6).
   let closed = 0
-  if (enumerated && !unchanged304) {
+  if (enumerated && !unchanged304 && seen.length > 0) {
     const { data: c, error: cErr } = await supabase.rpc('close_missing_job_postings', {
       p_board_id: board.id, p_seen: seen,
     })

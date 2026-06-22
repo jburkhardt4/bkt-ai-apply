@@ -63,9 +63,10 @@ FROM EXCLUDED.content_hash`). Closed-posting detection is a per-board set differ
 ## Components
 
 - `supabase/functions/_shared/crawl/` — `listEndpoint.ts` (board-level twin of
-  `buildReadEndpoint.ts`), `normalize.ts` (unified mapping, remote-type heuristic, salary parse,
-  hashing), `rateLimit.ts`, `adapters/{greenhouse,lever,ashby,workday}.ts`. Pure, vitest-tested like
-  `_shared/prep`.
+  `buildReadEndpoint.ts`), `normalize.ts` (unified mapping, remote-type heuristic, salary parse —
+  `content_hash` is computed in SQL by `upsert_job_postings`, not here),
+  `adapters/{greenhouse,lever,ashby}.ts` (Workday deferred). Pure, vitest-tested like `_shared/prep`.
+  Per-host politeness is the SQL `consume_crawl_token` RPC, not a TS module.
 - `supabase/functions/crawler-discover/`, `supabase/functions/crawler-worker/` — Deno Edge
   Functions, pg_cron-driven, service-role writes.
 - Migrations `20260622000001_create_job_corpus` (corpus + FTS/trgm indexes) and

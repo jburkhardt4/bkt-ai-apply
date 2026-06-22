@@ -1779,6 +1779,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      project_corpus_all: {
+        Args: { p_limit_per_profile?: number }
+        Returns: Json
+      }
+      project_corpus_for_profile: {
+        Args: { p_limit?: number; p_profile_id: string }
+        Returns: number
+      }
       requeue_stale_crawl_jobs: { Args: { p_grace?: string }; Returns: number }
       transition_stage: {
         Args: {

@@ -446,8 +446,10 @@ export type Database = {
           eeo_disclosures: Json
           email: string
           employment_history: Json
+          first_name: string
           full_name: string
           id: string
+          last_name: string
           linkedin_url: string | null
           location: string
           master_resume_path: string | null
@@ -468,8 +470,10 @@ export type Database = {
           eeo_disclosures?: Json
           email?: string
           employment_history?: Json
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
           linkedin_url?: string | null
           location?: string
           master_resume_path?: string | null
@@ -490,8 +494,10 @@ export type Database = {
           eeo_disclosures?: Json
           email?: string
           employment_history?: Json
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
           linkedin_url?: string | null
           location?: string
           master_resume_path?: string | null

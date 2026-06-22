@@ -17,12 +17,14 @@
 | `b96aa94` | A3 + A5 docs | Landed the 3 research docs in `docs/research/`; ADR-013 Part A rollout + **field×hop audit matrix**; new **ADR-014** (master-schema adoption + vocab map). |
 
 ### Key diagnostic finding
+
 A read-only DB query proved JB's `candidate_profiles` row is **fully populated** (phone, location,
 linkedin, website all set). So "only name+email filled" on Ashby was **selector drift, NOT a
 persistence bug** — the fix was broadening the Ashby selectors, which are still best-effort/LIVE-TUNE
 until verified against the real AshbyQ DOM.
 
 ### Validation — all GREEN (local)
+
 - `pnpm validate` → 380 tests, 0 type errors, 0 lint warnings
 - `pnpm build:ext` → clean · `xvfb-run -a pnpm test:ext` → 25/25
 - `deno check` (prepare-application + _shared/prep) → clean
@@ -35,9 +37,11 @@ until verified against the real AshbyQ DOM.
 
 1. **Edge-function deploy is DEFERRED to your review** (overnight safety boundary — no hosted deploy).
    The `prepare-application` first/last change is committed + `deno check`'d but **not live**. To deploy:
+
    ```bash
    supabase functions deploy prepare-application --project-ref rmoyuwesfljuygvpdolf
    ```
+
 2. **Manual LIVE verify (the real acceptance gate)** — sign in, open an AshbyQ posting, hit Autofill, and
    confirm First/Last land in the right boxes and phone/LinkedIn/location/website now fill. If any still
    miss, paste that form's field HTML so the Ashby selectors can be tuned to the real DOM.
@@ -78,6 +82,7 @@ snake_case field_key contract (D1 — no stack-wide rename). Commit per mileston
 ---
 
 ## Notes for review
+
 - 6 commits are granular and independently revertable. The hosted migration (first/last columns) is the only
   applied DB change; everything else is worktree-local.
 - ADR-013 (Part A rollout + audit matrix) and ADR-014 (master-schema adoption + vocab map) are the design record.

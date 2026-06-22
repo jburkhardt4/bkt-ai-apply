@@ -380,6 +380,65 @@ export type Database = {
           },
         ]
       }
+      ats_boards: {
+        Row: {
+          antibot_tier: string
+          ats_family: string
+          board_token: string
+          company_id: string | null
+          consecutive_failures: number
+          created_at: string
+          discovered_via: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          last_etag: string | null
+          last_status: string
+          last_synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          antibot_tier?: string
+          ats_family: string
+          board_token: string
+          company_id?: string | null
+          consecutive_failures?: number
+          created_at?: string
+          discovered_via?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_etag?: string | null
+          last_status?: string
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          antibot_tier?: string
+          ats_family?: string
+          board_token?: string
+          company_id?: string | null
+          consecutive_failures?: number
+          created_at?: string
+          discovered_via?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_etag?: string | null
+          last_status?: string
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ats_boards_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_profiles: {
         Row: {
           created_at: string
@@ -387,8 +446,10 @@ export type Database = {
           eeo_disclosures: Json
           email: string
           employment_history: Json
+          first_name: string
           full_name: string
           id: string
+          last_name: string
           linkedin_url: string | null
           location: string
           master_resume_path: string | null
@@ -409,8 +470,10 @@ export type Database = {
           eeo_disclosures?: Json
           email?: string
           employment_history?: Json
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
           linkedin_url?: string | null
           location?: string
           master_resume_path?: string | null
@@ -431,8 +494,10 @@ export type Database = {
           eeo_disclosures?: Json
           email?: string
           employment_history?: Json
+          first_name?: string
           full_name?: string
           id?: string
+          last_name?: string
           linkedin_url?: string | null
           location?: string
           master_resume_path?: string | null
@@ -603,6 +668,77 @@ export type Database = {
           size_range?: string | null
         }
         Relationships: []
+      }
+      crawl_host_buckets: {
+        Row: {
+          host: string
+          last_refill: string
+          rps: number
+          tokens: number
+        }
+        Insert: {
+          host: string
+          last_refill?: string
+          rps?: number
+          tokens?: number
+        }
+        Update: {
+          host?: string
+          last_refill?: string
+          rps?: number
+          tokens?: number
+        }
+        Relationships: []
+      }
+      crawl_jobs: {
+        Row: {
+          attempts: number
+          board_id: string
+          created_at: string
+          id: string
+          job_type: string
+          last_error: string | null
+          locked_until: string | null
+          payload: Json
+          run_after: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          board_id: string
+          created_at?: string
+          id?: string
+          job_type?: string
+          last_error?: string | null
+          locked_until?: string | null
+          payload?: Json
+          run_after?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          board_id?: string
+          created_at?: string
+          id?: string
+          job_type?: string
+          last_error?: string | null
+          locked_until?: string | null
+          payload?: Json
+          run_after?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crawl_jobs_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "ats_boards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -843,6 +979,149 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_posting_snapshots: {
+        Row: {
+          board_id: string
+          content_hash: string
+          external_job_id: string
+          fetched_at: string
+          id: string
+          raw_payload: Json
+        }
+        Insert: {
+          board_id: string
+          content_hash: string
+          external_job_id: string
+          fetched_at?: string
+          id?: string
+          raw_payload: Json
+        }
+        Update: {
+          board_id?: string
+          content_hash?: string
+          external_job_id?: string
+          fetched_at?: string
+          id?: string
+          raw_payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_posting_snapshots_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "ats_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_postings: {
+        Row: {
+          application_url: string
+          ats_family: string
+          board_id: string
+          closed_at: string | null
+          company_id: string | null
+          company_name: string | null
+          content_hash: string
+          created_at: string
+          department: string | null
+          description_html: string | null
+          description_text: string | null
+          employment_type: string | null
+          external_job_id: string
+          external_url: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          location_raw: string | null
+          posted_at: string | null
+          remote_type: string | null
+          salary_currency: string | null
+          salary_interval: string | null
+          salary_max: number | null
+          salary_min: number | null
+          search_tsv: unknown
+          team: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          application_url: string
+          ats_family: string
+          board_id: string
+          closed_at?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          content_hash: string
+          created_at?: string
+          department?: string | null
+          description_html?: string | null
+          description_text?: string | null
+          employment_type?: string | null
+          external_job_id: string
+          external_url?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          location_raw?: string | null
+          posted_at?: string | null
+          remote_type?: string | null
+          salary_currency?: string | null
+          salary_interval?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          search_tsv?: unknown
+          team?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          application_url?: string
+          ats_family?: string
+          board_id?: string
+          closed_at?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          content_hash?: string
+          created_at?: string
+          department?: string | null
+          description_html?: string | null
+          description_text?: string | null
+          employment_type?: string | null
+          external_job_id?: string
+          external_url?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          location_raw?: string | null
+          posted_at?: string | null
+          remote_type?: string | null
+          salary_currency?: string | null
+          salary_interval?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          search_tsv?: unknown
+          team?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_postings_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "ats_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_postings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1451,7 +1730,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_crawl_jobs: {
+        Args: { p_batch?: number; p_lease?: string }
+        Returns: {
+          attempts: number
+          board_id: string
+          created_at: string
+          id: string
+          job_type: string
+          last_error: string | null
+          locked_until: string | null
+          payload: Json
+          run_after: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "crawl_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_submission: { Args: { p_queue_id: string }; Returns: Json }
+      close_missing_job_postings: {
+        Args: { p_board_id: string; p_seen: string[] }
+        Returns: number
+      }
+      consume_crawl_token: {
+        Args: { p_burst?: number; p_host: string; p_rps?: number }
+        Returns: boolean
+      }
+      enqueue_due_crawl_jobs: {
+        Args: { p_max?: number; p_stale_after?: string }
+        Returns: number
+      }
       expire_stuck_submitting: {
         Args: { p_older_than?: string }
         Returns: number
@@ -1466,6 +1779,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      requeue_stale_crawl_jobs: { Args: { p_grace?: string }; Returns: number }
       transition_stage: {
         Args: {
           p_actor?: string
@@ -1476,6 +1790,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      upsert_job_postings: {
+        Args: { p_board_id: string; p_rows: Json }
+        Returns: Json
       }
       write_approval_event: {
         Args: { p_application_id: string; p_metadata?: Json }

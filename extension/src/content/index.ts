@@ -14,6 +14,7 @@ import type { AnswerEntry, AutofillPayload, BoardConfig } from '../types'
 import { buildPayload } from '../payload'
 import { detectStopConditions, describeStopReason } from '../stopConditions'
 import { detectNativeApply, renderNativeApplyNote } from '../nativeApply'
+import { loadPanelPosition, makeDraggable, type DraggableHandle } from '../dragPanel'
 import {
   MSG,
   type AuthStatusResponse,
@@ -25,6 +26,10 @@ import {
 } from '../messages'
 
 const SIGN_IN_HINT = 'Sign in at the BKT web app to score & autofill.'
+
+// The draggable controller for the control-bar + score-panel unit. Held so the
+// score panel can be re-docked after it is replaced with a fresh score.
+let dragHandle: DraggableHandle | null = null
 
 /** Round-trips a request to the background worker; null on any failure. */
 function send<T>(msg: BackgroundRequest): Promise<T | null> {
@@ -67,7 +72,8 @@ function injectStyles(): void {
   box-shadow: 0 8px 24px rgba(15,23,42,.18) !important; color: #0f172a !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
-#bkt-apply-root { top: 16px !important; display: flex !important; align-items: center !important; gap: 8px !important; padding: 10px 12px !important; }
+#bkt-apply-root { top: 16px !important; display: flex !important; align-items: center !important; gap: 8px !important; padding: 10px 12px !important; cursor: grab !important; touch-action: none !important; user-select: none !important; }
+#bkt-apply-root:active { cursor: grabbing !important; }
 #bkt-fit-panel { top: 74px !important; width: 320px !important; max-height: 70vh !important; overflow: auto !important; padding: 12px 14px !important; font-size: 13px !important; line-height: 1.45 !important; }
 #bkt-fit-panel ul { margin: 4px 0 8px !important; padding-left: 18px !important; }
 #bkt-fit-panel [data-bkt="score"] { font-weight: 700 !important; font-size: 15px !important; }
@@ -120,6 +126,8 @@ async function onScore(config: BoardConfig): Promise<void> {
   }
   if (res.ok) {
     renderMatchScorePanel(res.score)
+    // renderMatchScorePanel replaces #bkt-fit-panel — re-dock it under the bar.
+    dragHandle?.relayout()
     setStatus('Match score updated.')
   } else if (res.reason === 'needs_login') {
     setStatus(SIGN_IN_HINT)
@@ -249,6 +257,19 @@ async function init(): Promise<void> {
   injectStyles()
   renderInitialPanel()
   buildControls(config)
+
+  // Make the control bar draggable, carrying the score panel with it; restore the
+  // position the user last dropped it at on this host (right-side constrained).
+  const root = document.getElementById('bkt-apply-root')
+  if (root) {
+    const initial = await loadPanelPosition(location.host)
+    dragHandle = makeDraggable({
+      handle: root,
+      getPanel: () => document.getElementById('bkt-fit-panel'),
+      host: location.host,
+      initial,
+    })
+  }
 
   // B7: surface any native account-based quick-apply on the page ("Apply with
   // MyGreenhouse", Easy Apply, …) as a recommended accelerator — it fills fields

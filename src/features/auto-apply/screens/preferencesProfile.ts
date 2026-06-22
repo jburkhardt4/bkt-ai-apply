@@ -110,6 +110,40 @@ export function slugifyQuestionKey(label: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/** The typed shapes a screener answer can take — mirrors the extension's
+ *  AnswerEntry.answerType + the application_answers.answer_type column. */
+export type AnswerType = 'text' | 'textarea' | 'boolean' | 'select'
+
+/** Answer types offered in the editor, with their UI copy. */
+export const ANSWER_TYPES: { value: AnswerType; label: string }[] = [
+  { value: 'text', label: 'Short text' },
+  { value: 'boolean', label: 'Yes / No' },
+  { value: 'select', label: 'Choice' },
+  { value: 'textarea', label: 'Long text' },
+]
+
+/** Coerces a stored/free answer_type string to the typed union (default text). */
+export function toAnswerType(raw: string | null | undefined): AnswerType {
+  return raw === 'textarea' || raw === 'boolean' || raw === 'select' ? raw : 'text'
+}
+
+/** The four editable columns of an application_answers row (id/timestamps are
+ *  DB-managed; user_id is supplied separately, never trusted from input). */
+export type AnswerInput = Pick<
+  TablesInsert<'application_answers'>,
+  'question_key' | 'question_label' | 'answer' | 'answer_type'
+>
+
+/** Builds the application_answers upsert input from the editor fields, deriving
+ *  the stable question_key slug. Returns null when the label yields no slug, so
+ *  the caller can surface "add a question" rather than writing an unkeyed row. */
+export function toAnswerInput(label: string, answer: string, type: AnswerType): AnswerInput | null {
+  const question_label = label.trim()
+  const question_key = slugifyQuestionKey(question_label)
+  if (!question_key) return null
+  return { question_key, question_label, answer, answer_type: type }
+}
+
 /* ──────────────────── Identity / eligibility view-model ─────────────── */
 
 /** Editable identity + eligibility fields the Personal Info / Eligibility

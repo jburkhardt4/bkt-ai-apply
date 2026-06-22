@@ -19,12 +19,15 @@ import { REVIEW_MODES } from '../reviewModes'
 import { useReviewMode } from '../state'
 import type { ReviewModeId } from '../types'
 import {
+  ANSWER_TYPES,
   EEO_QUESTIONS,
   PROFILE_FORM_DEFAULT,
   formToProfilePatch,
   parseEeoDisclosures,
   profileRowToForm,
-  slugifyQuestionKey,
+  toAnswerInput,
+  toAnswerType,
+  type AnswerType,
   type EeoDisclosures,
   type ProfileForm,
 } from './preferencesProfile'
@@ -526,22 +529,59 @@ function PrefTextArea({ value, onChange, placeholder }: { value: string; onChang
   )
 }
 
-/** One saved custom screener answer — edit the answer text in place, or remove
- *  the row. The label is the stable identity (its slug is the storage key), so
- *  it is shown read-only here; re-add with a new label to create a new row. */
+/** Segmented picker for an answer's type (Short text / Yes-No / Choice / Long
+ *  text) — reuses the EEO chip so it matches the rest of the tab. */
+function AnswerTypePicker({ value, onChange }: { value: AnswerType; onChange: (v: AnswerType) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {ANSWER_TYPES.map((t) => (
+        <PrefToggleChip key={t.value} label={t.label} active={value === t.value} onClick={() => onChange(t.value)} />
+      ))}
+    </div>
+  )
+}
+
+/** The answer-value control, shaped by the chosen type: Yes/No chips for boolean,
+ *  a textarea for long text, a single-line input otherwise. */
+function AnswerValueField({ type, value, onChange }: { type: AnswerType; value: string; onChange: (v: string) => void }) {
+  if (type === 'boolean') {
+    return (
+      <div style={{ display: 'flex', gap: 10 }}>
+        {['Yes', 'No'].map((o) => (
+          <PrefToggleChip key={o} label={o} active={value === o} onClick={() => onChange(o)} />
+        ))}
+      </div>
+    )
+  }
+  if (type === 'textarea') return <PrefTextArea value={value} onChange={onChange} placeholder="Your answer…" />
+  return (
+    <PrefInput
+      value={value}
+      onChange={onChange}
+      placeholder={type === 'select' ? 'The option to choose — e.g. "Yes"' : 'Your answer…'}
+    />
+  )
+}
+
+/** One saved custom screener answer — edit its type + answer in place, or remove
+ *  the row. The label is the stable identity (its slug is the storage key), so it
+ *  is shown read-only here; re-add with a new label to create a new row. */
 function AnswerRow({
   label,
   answer,
+  type,
   onSave,
   onRemove,
 }: {
   label: string
   answer: string
-  onSave: (label: string, answer: string) => void
+  type: AnswerType
+  onSave: (label: string, answer: string, type: AnswerType) => void
   onRemove: () => void
 }) {
-  const [draft, setDraft] = useState(answer)
-  const dirty = draft !== answer
+  const [draftAnswer, setDraftAnswer] = useState(answer)
+  const [draftType, setDraftType] = useState<AnswerType>(type)
+  const dirty = draftAnswer !== answer || draftType !== type
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, background: 'var(--bkt-zinc-50)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -576,10 +616,11 @@ function AnswerRow({
           <Icon name="trash-2" size={14} />
         </button>
       </div>
-      <PrefTextArea value={draft} onChange={setDraft} placeholder="Your answer…" />
+      <AnswerTypePicker value={draftType} onChange={setDraftType} />
+      <AnswerValueField type={draftType} value={draftAnswer} onChange={setDraftAnswer} />
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button
-          onClick={() => onSave(label, draft)}
+          onClick={() => onSave(label, draftAnswer, draftType)}
           disabled={!dirty}
           className="bkt-press"
           style={{
@@ -607,15 +648,17 @@ function AnswerRow({
 
 /** Composer for a brand-new screener answer (label + answer). Clears itself on
  *  add so multiple answers can be entered in a row. */
-function AnswerComposer({ onAdd }: { onAdd: (label: string, answer: string) => void }) {
+function AnswerComposer({ onAdd }: { onAdd: (label: string, answer: string, type: AnswerType) => void }) {
   const [label, setLabel] = useState('')
   const [answer, setAnswer] = useState('')
+  const [type, setType] = useState<AnswerType>('text')
   const ready = label.trim().length > 0
   const add = () => {
     if (!ready) return
-    onAdd(label, answer)
+    onAdd(label, answer, type)
     setLabel('')
     setAnswer('')
+    setType('text')
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 18, background: 'var(--surface)', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-lg)' }}>
@@ -624,8 +667,12 @@ function AnswerComposer({ onAdd }: { onAdd: (label: string, answer: string) => v
         <PrefInput value={label} onChange={setLabel} placeholder="e.g. Why do you want to work here?" />
       </div>
       <div>
+        <PrefLabel note="How the form asks it — so the macro fills it the right way">Answer type</PrefLabel>
+        <AnswerTypePicker value={type} onChange={setType} />
+      </div>
+      <div>
         <PrefLabel>Answer</PrefLabel>
-        <PrefTextArea value={answer} onChange={setAnswer} placeholder="The reusable answer the macro should fill in…" />
+        <AnswerValueField type={type} value={answer} onChange={setAnswer} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button
@@ -663,9 +710,9 @@ function AnswerLibraryTab({
   onRemoveAnswer,
 }: {
   eeo: EeoDisclosures
-  answers: { key: string; label: string; answer: string }[]
+  answers: { key: string; label: string; answer: string; type: AnswerType }[]
   onSetEeo: (key: (typeof EEO_QUESTIONS)[number]['key'], value: string) => void
-  onSaveAnswer: (label: string, answer: string) => void
+  onSaveAnswer: (label: string, answer: string, type: AnswerType) => void
   onRemoveAnswer: (key: string) => void
 }) {
   return (
@@ -694,7 +741,7 @@ function AnswerLibraryTab({
         {answers.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {answers.map((a) => (
-              <AnswerRow key={a.key} label={a.label} answer={a.answer} onSave={onSaveAnswer} onRemove={() => onRemoveAnswer(a.key)} />
+              <AnswerRow key={a.key} label={a.label} answer={a.answer} type={a.type} onSave={onSaveAnswer} onRemove={() => onRemoveAnswer(a.key)} />
             ))}
           </div>
         )}
@@ -767,7 +814,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   // load can replace the whole identity/eligibility block in a single setState.
   const [profile, setProfile] = useState<ProfileForm>(PROFILE_FORM_DEFAULT)
   const [eeo, setEeo] = useState<EeoDisclosures>({})
-  const [answers, setAnswers] = useState<{ key: string; label: string; answer: string }[]>([])
+  const [answers, setAnswers] = useState<{ key: string; label: string; answer: string; type: AnswerType }[]>([])
   const [saving, setSaving] = useState(false)
 
   // Update a single identity/eligibility field on the consolidated form.
@@ -794,7 +841,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
     )
     fetchApplicationAnswers(userId).then(
       (rows) => {
-        if (alive) setAnswers(rows.map((r) => ({ key: r.question_key, label: r.question_label, answer: r.answer })))
+        if (alive) setAnswers(rows.map((r) => ({ key: r.question_key, label: r.question_label, answer: r.answer, type: toAnswerType(r.answer_type) })))
       },
       () => undefined,
     )
@@ -950,25 +997,22 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
 
   // Add or update a custom screener answer. The slug is the stable storage key,
   // so re-saving the same label edits the row in place (upsert on user+key).
-  const saveAnswer = (label: string, answer: string) => {
-    const trimmedLabel = label.trim()
-    const key = slugifyQuestionKey(trimmedLabel)
-    if (!key) {
+  const saveAnswer = (label: string, answer: string, type: AnswerType) => {
+    const input = toAnswerInput(label, answer, type)
+    if (!input) {
       onToast('Add a question before saving', 'circle-alert', 'var(--bkt-blue-300)')
       return
     }
+    const key = input.question_key
     setAnswers((list) => {
+      const next = { key, label: label.trim(), answer, type }
       const existing = list.find((a) => a.key === key)
-      if (existing) return list.map((a) => (a.key === key ? { key, label: trimmedLabel, answer } : a))
-      return [...list, { key, label: trimmedLabel, answer }]
+      return existing ? list.map((a) => (a.key === key ? next : a)) : [...list, next]
     })
     if (!userId) return
-    upsertApplicationAnswer(userId, {
-      question_key: key,
-      question_label: trimmedLabel,
-      answer,
-      answer_type: 'text',
-    }).catch((err: unknown) => onToast(`Could not save answer — ${String(err)}`, 'circle-x', 'var(--bkt-danger)'))
+    upsertApplicationAnswer(userId, input).catch((err: unknown) =>
+      onToast(`Could not save answer — ${String(err)}`, 'circle-x', 'var(--bkt-danger)'),
+    )
   }
 
   const removeAnswer = (key: string) => {

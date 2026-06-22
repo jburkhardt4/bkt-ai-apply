@@ -36,6 +36,7 @@ three, confirming the changes are additive (broke no existing test) and the inva
 ## What shipped
 
 ### Database — migration `20260620000001_prepared_applications` (applied to hosted `rmoyuwesfljuygvpdolf` via MCP)
+
 - **`prepared_applications`** — one row per prep attempt: `job_ref`, `ats_family`, `antibot_tier`,
   `form_schema_snapshot`, `match_score`, `mode`, `status`, `gating_reason`, `document_versions`,
   `prepared_by`. RLS own-row; `(user_id, job_id)` upsert index.
@@ -46,6 +47,7 @@ three, confirming the changes are additive (broke no existing test) and the inva
   (`search_path=''`).
 
 ### Server prep layer (`@ai-integrations`) — `supabase/functions/`
+
 - Pure, Deno-free, **vitest-tested (63 tests)** modules in `_shared/prep/`: `atsFamily`,
   `buildReadEndpoint`, `schemaParse` (Greenhouse/Lever/Ashby/SmartRecruiters), `canonicalKey`,
   `sensitivity`, `fieldMap`, `gating`, `draftFreeText` (Phase-5 scaffold).
@@ -54,29 +56,34 @@ three, confirming the changes are additive (broke no existing test) and the inva
   rows. `deno check` green via the import-map bare specifier.
 
 ### Extension (`@ai-integrations`) — `extension/src/`
+
 - `preparedFill.ts` (excludes review-gated fields), `stopConditions.ts` (CAPTCHA/MFA/login-wall),
   `BKT_PREPARED` message + `handlePrepared`. Content script **prefers** prepared data, surfaces gated
   fields + stop-conditions, **never auto-submits** (`autoClick:false`). Greenhouse config +
   `phone_country`. New `preparedFill.spec.ts` (Playwright).
 
 ### Frontend (`@feature-dev`) — `src/features/`
+
 - `preparedApplicationService.ts` (+17 tests), `usePreparedApplications` hook, `PreparedApplicationReview.tsx`
   (flags review-gated fields "Needs your review", hides their values). Verified the existing
   Preferences→`candidate_profiles` wiring is intact (no redo).
 
 ## Mode-gating policy (BR-157)
+
 Auto-mode unattended prep is allowed only when **all** hold: family in the low anti-bot tier
 {greenhouse, lever, ashby, smartrecruiters} · no sensitive field in the schema · `match_score ≥ 75` ·
 source is a read-API surface. Otherwise → `needs_review` with a `gating_reason`.
 **Workday / LinkedIn / Indeed are never Auto-eligible and are never headless-read.**
 
 ## Docs updated
+
 - `docs/adr/013-headless-prep-and-prepared-applications.md` (new)
 - `docs/requirements/03-data-entities.md` → E-017/E-018, count 16→18
 - `docs/domain/business-rules.md` → BR-156–160
 - Project memory: `headless-prep-pipeline.md` (+ index)
 
 ## Remaining (live-tune / follow-ups — NOT blockers; build is green)
+
 1. **ATS read-endpoint shapes are live-tune**: Ashby + SmartRecruiters response envelopes and the Lever
    custom-question key are UNVERIFIED against real postings. Parsers fail safe (a misparse downgrades to
    `needs_review`, never a silent auto-prep). Verify each against one live posting before production prep.
@@ -90,6 +97,7 @@ source is a read-API surface. Otherwise → `needs_review` with a `gating_reason
    `deploy_edge_function` step when you're ready to exercise on-demand prep live).
 
 ## Notes
+
 - **Not committed** — you said "commit" only last time after the run; this run's exit condition was the
   green suite + this summary. Everything is staged-ready. Say the word and I'll commit (and/or push).
 - A stray **`BKT-Autofill-Bug-Screenshot.webp`** (prior session) and a **`supabase/functions/deno.lock`**

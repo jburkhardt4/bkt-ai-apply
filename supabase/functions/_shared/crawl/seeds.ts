@@ -2,11 +2,11 @@
  * Curated crawl seed boards. crawler-discover upserts these into ats_boards on
  * each run, in addition to harvesting boards from existing jobs.source_url rows.
  *
- * This list is intentionally EMPTY by default: we do not fabricate company board
- * tokens. Populate it with JB's verified targets (the board_token is the path
- * segment after the host — e.g. boards.greenhouse.io/{token}, jobs.lever.co/{token},
- * jobs.ashbyhq.com/{token}). Until then, the harvest step bootstraps the registry
- * from real URLs the prospector has already ingested.
+ * Policy: NEVER add an unverified board_token. Every token below was confirmed
+ * live against its ATS API on 2026-06-22 (returned real postings). The board_token
+ * is the path segment after the host — boards.greenhouse.io/{token},
+ * jobs.lever.co/{token}, jobs.ashbyhq.com/{token}. The harvest step additionally
+ * bootstraps boards from real URLs the prospector has already ingested.
  */
 
 import type { CrawlFamily } from './types.ts'
@@ -17,9 +17,11 @@ export interface SeedBoard {
   display_name?: string
 }
 
+// JB's verified targets (jb-answer-library-seed). Live-verified job counts at
+// seed time: techholding=19, monsterenergy=185, directive=78, swans=6.
 export const SEED_BOARDS: readonly SeedBoard[] = [
-  // Example shape (commented — replace with verified targets):
-  // { ats_family: 'greenhouse', board_token: 'acme', display_name: 'Acme' },
-  // { ats_family: 'lever',      board_token: 'acme', display_name: 'Acme' },
-  // { ats_family: 'ashby',      board_token: 'acme', display_name: 'Acme' },
+  { ats_family: 'greenhouse', board_token: 'techholding', display_name: 'Tech Holding' },
+  { ats_family: 'greenhouse', board_token: 'monsterenergy', display_name: 'Monster Energy' },
+  { ats_family: 'ashby', board_token: 'directive', display_name: 'Directive' },
+  { ats_family: 'ashby', board_token: 'swans', display_name: 'Swans' },
 ]

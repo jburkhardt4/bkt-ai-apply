@@ -8,7 +8,7 @@
 // committed to source (extension/src/config.ts ships empty fallbacks). NEVER
 // inject an LLM/provider key or the service-role key (BR-122).
 import { build } from 'esbuild'
-import { copyFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
+import { copyFileSync, cpSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -59,6 +59,10 @@ for (const [entry, outfile] of entries) {
   await build({ ...common, entryPoints: [resolve(root, entry)], outfile: resolve(outdir, outfile) })
 }
 copyFileSync(resolve(root, 'extension/manifest.json'), resolve(outdir, 'manifest.json'))
+// Brand icons (the BKT favicon, referenced by manifest "icons"). Copied verbatim
+// into dist/icons/ so the extension shows JB's logo instead of the default puzzle.
+const iconsSrc = resolve(root, 'extension/icons')
+if (existsSync(iconsSrc)) cpSync(iconsSrc, resolve(outdir, 'icons'), { recursive: true })
 console.info(
-  '[build-extension] extension/dist ready (content.js, background.js, spa-session.js, manifest.json)',
+  '[build-extension] extension/dist ready (content.js, background.js, spa-session.js, manifest.json, icons/)',
 )

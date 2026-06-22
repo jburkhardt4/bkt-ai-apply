@@ -300,6 +300,54 @@ test.describe('Apply-macro autofill — B4 Master Answers Library @extension', (
     expect(report.filled).not.toContain('answer:notice_text')
     expect(report.filled).toContain('answer:notice_pick')
   })
+
+  test('select accept-list: picks "Immediately", else the best available ≤30-day option', async ({
+    page,
+  }) => {
+    // JB's notice-period rule on a picklist: "Immediately, or any option ≤30 days."
+    // The accept-list lets the matcher fall back when the exact answer isn't offered.
+    const notice = [
+      {
+        questionKey: 'notice_select',
+        questionLabel: 'Notice period',
+        answer: 'Immediately',
+        answerType: 'select' as const,
+        accept: ['2 weeks', 'Within 30 days', '1 month'],
+      },
+    ]
+    const fixture = (options: string) =>
+      `<!doctype html><html><body><form>
+        <label for="nt-in">Notice period</label>
+        <div id="notice_rs" class="select__control rs-control" tabindex="0" data-options="${options}">
+          <div class="select__input-container"><input id="nt-in" class="select__input" /></div>
+          <span class="select__placeholder">Select...</span>
+        </div>
+        <div class="rs-menu" hidden></div>
+      </form></body></html>`
+
+    // (a) "Immediately" offered → the stored answer (first preference) wins.
+    await page.setContent(fixture('Immediately|2 weeks|2 months'))
+    await page.evaluate(installReactSelectMock)
+    let report = await page.evaluate(applyAutofill, {
+      config: { ...greenhouseConfig, fields: [] },
+      payload: {},
+      answers: notice,
+    })
+    expect(await page.getAttribute('#notice_rs', 'data-value')).toBe('Immediately')
+    expect(report.filled).toContain('answer:notice_select')
+
+    // (b) "Immediately" absent → falls through the accept-list to "Within 30 days"
+    // (and never picks the >30-day "2 months").
+    await page.setContent(fixture('Within 30 days|1 month|2 months'))
+    await page.evaluate(installReactSelectMock)
+    report = await page.evaluate(applyAutofill, {
+      config: { ...greenhouseConfig, fields: [] },
+      payload: {},
+      answers: notice,
+    })
+    expect(await page.getAttribute('#notice_rs', 'data-value')).toBe('Within 30 days')
+    expect(report.filled).toContain('answer:notice_select')
+  })
 })
 
 test.describe('Apply-macro autofill — Ashby applySignals cross-board (B5) @extension', () => {

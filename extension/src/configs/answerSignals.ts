@@ -48,6 +48,27 @@ export const ANSWER_ALIASES: Record<string, string[]> = {
   certifications: ['certifications', 'certification', 'professional certifications'],
 }
 
+/**
+ * Ordered fallback option labels per answer key, for CHOICE answers only. When the
+ * form's picklist doesn't offer the stored answer's exact text, the matcher tries
+ * these in order (after the answer itself). Notice-period encodes JB's rule —
+ * "Immediately, or any option that's 30 days or less" — only ≤30-day phrasings,
+ * shortest first.
+ */
+export const ANSWER_ACCEPT: Record<string, string[]> = {
+  notice_select: [
+    'Less than 1 week',
+    '1 week',
+    'Less than 2 weeks',
+    '2 weeks',
+    'Less than 30 days',
+    'Within 30 days',
+    '30 days',
+    'Less than 1 month',
+    '1 month',
+  ],
+}
+
 /** Coerce the free-string answer_type column to the typed union (default text). */
 function normalizeAnswerType(t: string | null): AnswerEntry['answerType'] {
   const v = (t ?? '').trim().toLowerCase()
@@ -70,6 +91,7 @@ export function toAnswerEntries(rows: ApplicationAnswerRow[]): AnswerEntry[] {
       questionKey,
       questionLabel: (r.question_label ?? '').trim(),
       aliases: ANSWER_ALIASES[questionKey],
+      accept: ANSWER_ACCEPT[questionKey],
       answer,
       answerType: normalizeAnswerType(r.answer_type),
       sensitive: SENSITIVE_KEYS.has(questionKey),

@@ -66,13 +66,21 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
 
   // react-select strategy: click the control to open the menu, poll briefly for
   // its options to render, then commit the anti-collision match (pickOption).
-  const fillReactSelect = async (control: HTMLElement, value: string): Promise<boolean> => {
+  const fillReactSelect = async (control: HTMLElement, values: string[]): Promise<boolean> => {
+    const wanted = values.map((v) => v.trim().toLowerCase()).filter(Boolean)
+    if (!wanted.length) return false
     control.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     control.click()
-    const wanted = value.trim().toLowerCase()
+    // Poll for the menu, then commit the FIRST candidate (preference order) that
+    // matches an option — lets an answer carry ≤30-day notice-period fallbacks.
     const option = await waitFor<HTMLElement>(() => {
       const opts = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'))
-      return opts.length ? pickOption(opts, wanted) : null
+      if (!opts.length) return null
+      for (const w of wanted) {
+        const hit = pickOption(opts, w)
+        if (hit) return hit
+      }
+      return null
     })
     if (!option) return false
     option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
@@ -197,7 +205,7 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
         report.skipped.push({ key: field.key, reason: 'no_value' })
         continue
       }
-      const ok = await fillReactSelect(el, value)
+      const ok = await fillReactSelect(el, [value])
       if (ok) report.filled.push(field.key)
       else report.skipped.push({ key: field.key, reason: 'needs_strategy' })
       continue
@@ -245,9 +253,17 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
       continue
     }
     if (choice) {
+      // Try the stored answer first, then any accept-list fallbacks, in order.
+      const candidates = [entry.answer, ...(entry.accept ?? [])]
+        .map((v) => v.trim().toLowerCase())
+        .filter(Boolean)
       if (el instanceof HTMLSelectElement) {
-        // Native <select>: commit the anti-collision option match (pickOption).
-        const opt = pickOption(Array.from(el.options), entry.answer.trim().toLowerCase())
+        // Native <select>: commit the first candidate that matches (pickOption).
+        let opt: HTMLElement | null = null
+        for (const c of candidates) {
+          opt = pickOption(Array.from(el.options), c)
+          if (opt) break
+        }
         if (opt instanceof HTMLOptionElement) {
           el.value = opt.value
           el.dispatchEvent(new Event('change', { bubbles: true }))
@@ -256,7 +272,7 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
         } else {
           report.skipped.push({ key, reason: 'needs_strategy' })
         }
-      } else if (await fillReactSelect(el, entry.answer)) {
+      } else if (await fillReactSelect(el, candidates)) {
         report.filled.push(key)
       } else {
         report.skipped.push({ key, reason: 'needs_strategy' })

@@ -73,6 +73,10 @@ export interface AnswerEntry {
   answer: string
   /** Shapes how the field is located + filled. */
   answerType: 'text' | 'textarea' | 'select' | 'boolean'
+  /** For choice answers: ordered fallback option labels to try when `answer`'s
+   *  exact text isn't offered on the form — e.g. a notice-period picklist that
+   *  lists "Within 30 days" but not "Immediately". Tried after `answer`, in order. */
+  accept?: string[]
   /** Review-gated → never auto-filled, surfaced for the human (BR-156). */
   sensitive?: boolean
 }

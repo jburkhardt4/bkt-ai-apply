@@ -22,6 +22,19 @@ describe('toAnswerEntries (B4 Answer Library enrichment)', () => {
     expect(entries.find((e) => e.questionKey === 'work_auth')?.sensitive).toBe(true)
   })
 
+  it('attaches the ≤30-day accept-list to notice_select (answer not duplicated)', () => {
+    const [e] = toAnswerEntries([
+      { question_key: 'notice_select', question_label: 'Notice period', answer: 'Immediately', answer_type: 'select' },
+    ])
+    expect(e.accept).toContain('Within 30 days')
+    expect(e.accept).not.toContain('Immediately')
+    // Non-mapped keys get no accept-list.
+    const [t] = toAnswerEntries([
+      { question_key: 'sf_years', question_label: 'Years', answer: '8', answer_type: 'text' },
+    ])
+    expect(t.accept).toBeUndefined()
+  })
+
   it('normalizes answer_type to the typed union (unknown → text)', () => {
     const out = toAnswerEntries([
       { question_key: 'a', question_label: 'a', answer: 'Yes', answer_type: 'boolean' },

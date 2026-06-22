@@ -1,6 +1,6 @@
 ---
 name: project-job-corpus-indexing
-description: Shared ATS job-posting search & indexing engine (corpus + crawler) — ADR-014/015, 3 migrations + crawl layer + 2 edge fns shipped & validated 2026-06-22 (PR #29); edge deploy JB-gated.
+description: Shared ATS job-posting search & indexing engine (corpus + crawler) — ADR-014/015; SHIPPED to main 2026-06-22 (PR #29 / c9d9213), deployed + on pg_cron, CRON_SECRET active, projector live. Structural lessons LSN-005..007.
 metadata:
   type: project
 ---
@@ -16,6 +16,8 @@ A first-party crawler + searchable index that ingests job postings DIRECTLY from
 - **HARD INVARIANT (ADR-014 Decision 4): the corpus tables carry NO `user_id`/PII, ever.** Authenticated read-all + service-role writes is the APPROVED posture — Supabase-Security must NOT flag it as a BR-005 / data-isolation violation (cite ADR-014).
 - Locked JB decisions: Postgres FTS + `pg_trgm` only, **NO pgvector** (no embedding model in ai-router; $75/mo AI cap). The user-scoped `jobs` table is **UNTOUCHED** (projector copies matches in with `source='corpus'`, `ON CONFLICT (source_url) DO NOTHING`; true multi-tenant projection would later need `jobs UNIQUE(user_id, source_url)`). Workday deferred to Phase 4 (HTTP CXS feed only, no headless; blocked→skip per BR-032/033/034).
 
-**Status 2026-06-22:** Phases 1-3 shipped/validated; live RPC chain proven on the hosted DB then cleaned to zero residue. PENDING (all JB-gated): (1) edge deploy of `crawler-worker`/`crawler-discover` + pg_cron wiring; (2) real board seeds in `seeds.ts`; (3) Phase 5 projector (corpus→`jobs`) + search UI; (4) Phase 4 Workday.
+**Status 2026-06-22 — SHIPPED TO MAIN & LIVE:** Merged via PR #29 (rebase, commit `c9d9213`). Deployed to `rmoyuwesfljuygvpdolf`: `crawler-worker` + `crawler-discover` on pg_cron (`*/10 * * * *` / `0 */6 * * *`); `corpus-projector` deployed but UNSCHEDULED (writes users' `jobs` — cron flip JB-gated). 4 boards seeded + crawling (~287 live postings, 3 auto-closed → close-missing proven); FTS + projector verified (15 `source='corpus'` jobs, idempotent). **`CRON_SECRET` activated project-wide** across all 5 crons (crawler×2 + gmail-sync + prospector×2) via the update-all-headers-then-set-env order, verified 200/401 — see LSN-005. Structural lessons recorded: **LSN-005** (CRON_SECRET project-wide + fail-open activation order), **LSN-006** (pgcrypto/extension must be declared in migrations), **LSN-007** (edge fns escape `pnpm validate` → use `deno check`). REMAINING: Phase 4 Workday; projector cron flip + a search UI; `job_posting_snapshots` retention; `jobs UNIQUE(user_id,source_url)` for multi-tenant.
+
+> ⚠️ Context-Keeper note: invoked to record these lessons it HALLUCINATED a full summary (claimed it appended LSN-012/013/014 + business-rule edits) while making `tool_uses: 0` — it wrote nothing. LSN-005..007 were appended directly instead. Always verify Context-Keeper's actual file edits; never trust its summary alone.
 
 Related: [[project-serpapi-integration]], [[project-edge-function-conventions]], [[reference-crawl-layer]], [[reference-validate-gate]].

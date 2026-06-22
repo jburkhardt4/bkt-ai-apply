@@ -63,26 +63,42 @@ async function runDiscover(supabase: SupabaseClient) {
     seeded = rows.length
   }
 
-  // 2) Harvest real board tokens from existing job source URLs.
+  // 2) Harvest real board tokens from existing job source URLs. Pull the job's
+  // company so the harvested board keeps a display_name + company_id — the crawl
+  // adapters populate job_postings.company_name from board.display_name, so a
+  // label-less board would strip company names out of the company-weighted FTS.
   const { data: jobRows, error: jErr } = await supabase
     .from('jobs')
-    .select('source_url')
+    .select('source_url, company_id, companies(name)')
     .not('source_url', 'is', null)
     .limit(HARVEST_LIMIT)
   if (jErr) throw new Error(`jobs read: ${jErr.message}`)
 
-  const found = new Map<string, { ats_family: 'greenhouse' | 'lever' | 'ashby'; board_token: string }>()
+  interface HarvestedBoard {
+    ats_family: 'greenhouse' | 'lever' | 'ashby'
+    board_token: string
+    company_id: string | null
+    display_name: string | null
+  }
+  const found = new Map<string, HarvestedBoard>()
   for (const r of jobRows ?? []) {
-    const ref = extractBoardRef((r as { source_url: string }).source_url)
-    if (ref) found.set(`${ref.ats_family}:${ref.board_token}`, ref)
+    const row = r as { source_url: string; company_id: string | null; companies: { name?: string } | { name?: string }[] | null }
+    const ref = extractBoardRef(row.source_url)
+    if (!ref) continue
+    const key = `${ref.ats_family}:${ref.board_token}`
+    if (found.has(key)) continue // first job's company label wins
+    const company = Array.isArray(row.companies) ? row.companies[0] : row.companies
+    found.set(key, { ...ref, company_id: row.company_id ?? null, display_name: company?.name ?? null })
   }
 
   let harvested = 0
   if (found.size) {
-    const rows = [...found.values()].map((ref) => ({
-      ats_family: ref.ats_family,
-      board_token: ref.board_token,
-      antibot_tier: antibotTierForFamily(ref.ats_family),
+    const rows = [...found.values()].map((b) => ({
+      ats_family: b.ats_family,
+      board_token: b.board_token,
+      display_name: b.display_name,
+      company_id: b.company_id,
+      antibot_tier: antibotTierForFamily(b.ats_family),
       discovered_via: 'serpapi',
     }))
     const { error } = await supabase

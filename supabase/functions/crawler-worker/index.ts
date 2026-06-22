@@ -201,6 +201,17 @@ async function crawlBoard(
     })
     if (cErr) throw new RetryableError(`close: ${cErr.message}`)
     closed = c ?? 0
+  } else if (enumerated && !unchanged304 && seen.length === 0) {
+    // A full, successful crawl that returned ZERO postings. We deliberately do
+    // NOT run close-missing here (Codex #1 / JB v1 decision): a transient HTTP-200
+    // empty `jobs` array would otherwise mass-close every posting on the board.
+    // Trade-off: a board that is genuinely empty keeps its old postings active
+    // until a non-empty crawl re-confirms them or a human reviews it. Logged so
+    // the skipped close is visible/auditable.
+    console.warn(
+      `crawler-worker: ${board.ats_family}/${board.board_token} — full crawl returned 0 postings; ` +
+        `skipping close-missing to avoid mass-closure on a transient empty response.`,
+    )
   }
 
   await updateBoard(supabase, board.id, {

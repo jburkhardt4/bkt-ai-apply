@@ -16,6 +16,11 @@
 -- Additive only. Applied via MCP apply_migration; repo record (no `db push`).
 -- ============================================================
 
+-- pgcrypto provides extensions.digest() used for content_hash below. It is a
+-- Supabase-default extension (already installed); declared here so a fresh DB
+-- rebuild has it available before these functions run.
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 -- ── consume_crawl_token ─────────────────────────────────────
 -- Atomic token-bucket politeness gate (ADR-015 Decision 4). Refills by elapsed
 -- time * rps (capped at burst), then consumes one token. Returns true if a

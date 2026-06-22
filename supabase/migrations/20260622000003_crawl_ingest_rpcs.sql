@@ -272,6 +272,16 @@ BEGIN
          SELECT 1 FROM public.crawl_jobs q
           WHERE q.board_id = b.id AND q.status IN ('pending','running')
        )
+       -- Circuit breaker (ADR-015 Decision 3): never auto-re-enqueue a board the
+       -- crawler already gave up on. 'blocked' (a 403 / anti-bot signal) requires
+       -- manual reactivation. A failing board backs off — 15 min per consecutive
+       -- failure (capped at 8 → 2 h) measured from its last attempt (updated_at,
+       -- bumped on every success/failure) — instead of being hammered each run.
+       AND b.last_status IS DISTINCT FROM 'blocked'
+       AND (
+         b.consecutive_failures = 0
+         OR b.updated_at < now() - (interval '15 minutes' * least(b.consecutive_failures, 8))
+       )
      ORDER BY b.last_synced_at NULLS FIRST
      LIMIT GREATEST(p_max, 0)
   ),

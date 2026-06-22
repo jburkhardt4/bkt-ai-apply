@@ -19,6 +19,7 @@ import { greenhouseFixtureHtml } from './fixtures/greenhouse'
 import { leverFixtureHtml } from './fixtures/lever'
 import { ashbyFixtureHtml } from './fixtures/ashby'
 import { greenhouseQuestionIdsFixtureHtml } from './fixtures/greenhouseQuestionIds'
+import { greenhouseScreenersFixtureHtml } from './fixtures/greenhouseScreeners'
 
 const payload = buildPayload({
   fullName: 'John Burkhardt',
@@ -184,6 +185,70 @@ test.describe('Apply-macro autofill — Greenhouse opaque-id template (B5 label 
       })
     })
     await page.evaluate(applyAutofill, { config: greenhouseConfig, payload: fullPayload })
+    expect(await page.getAttribute('body', 'data-submitted')).toBeNull()
+  })
+})
+
+test.describe('Apply-macro autofill — B4 Master Answers Library @extension', () => {
+  // The user's pre-stored standing answers fill opaque #question_<id> custom
+  // screeners by matching question_label → the form's <label> — the exact gap the
+  // Jam 08627082 UAT exposed (years-of-experience, "2+ years?" Yes/No). Sensitive
+  // answers (salary) stay review-gated (BR-156).
+  const answers = [
+    {
+      questionKey: 'sf_years',
+      questionLabel: 'Years of professional Salesforce experience',
+      answer: '8',
+      answerType: 'text' as const,
+    },
+    {
+      questionKey: 'sf_2yr',
+      questionLabel: 'Do you have 2+ years of Salesforce experience',
+      answer: 'Yes',
+      answerType: 'boolean' as const,
+    },
+    {
+      questionKey: 'desired_salary',
+      questionLabel: 'Desired annual base salary',
+      answer: '$150,000',
+      answerType: 'text' as const,
+      sensitive: true,
+    },
+  ]
+
+  test('fills standing answers to opaque screeners by question label; salary stays gated (BR-156)', async ({
+    page,
+  }) => {
+    await page.setContent(greenhouseScreenersFixtureHtml)
+    await page.evaluate(installReactSelectMock)
+    const report = await page.evaluate(applyAutofill, {
+      config: { ...greenhouseConfig, fields: [] },
+      payload: {},
+      answers,
+    })
+
+    // Text + react-select screeners fill from the Answer Library, by label.
+    expect(report.filled).toEqual(expect.arrayContaining(['answer:sf_years', 'answer:sf_2yr']))
+    expect(await page.inputValue('#question_700001')).toBe('8')
+    expect(await page.getAttribute('#sf2_rs', 'data-value')).toBe('Yes')
+
+    // Sensitive salary: a label + value exist, but it is NEVER auto-filled.
+    expect(await page.inputValue('#question_700003')).toBe('')
+    expect(report.filled).not.toContain('answer:desired_salary')
+    const skipped = Object.fromEntries(report.skipped.map((s) => [s.key, s.reason]))
+    expect(skipped['answer:desired_salary']).toBe('manual_required')
+  })
+
+  test('never auto-submits while filling the Answer Library (BR-151)', async ({ page }) => {
+    await page.setContent(greenhouseScreenersFixtureHtml)
+    await page.evaluate(installReactSelectMock)
+    await page.evaluate(() => {
+      document.getElementById('application_form')?.addEventListener('submit', (e) => {
+        e.preventDefault()
+        document.body.setAttribute('data-submitted', '1')
+      })
+    })
+    await page.evaluate(applyAutofill, { config: { ...greenhouseConfig, fields: [] }, payload: {}, answers })
     expect(await page.getAttribute('body', 'data-submitted')).toBeNull()
   })
 })

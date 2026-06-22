@@ -94,7 +94,7 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
 
   // Resolve the fillable control from a matched <label>: the react-select control
   // for select fields, the <input>/<textarea> for text fields; null if none fits.
-  const controlFromLabel = (label: Element, field: FieldConfig): HTMLElement | null => {
+  const controlFromLabel = (label: Element, selectType: boolean): HTMLElement | null => {
     let target: HTMLElement | null = null
     const forId = label.getAttribute('for')
     if (forId) target = document.getElementById(forId)
@@ -103,7 +103,8 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
       target = label.parentElement.querySelector<HTMLElement>(`${SELECT_CTRL}, input, textarea, select`)
     }
     if (!target) return null
-    if (isSelect(field)) {
+    if (selectType) {
+      if (target instanceof HTMLSelectElement) return target
       if (target.matches(SELECT_CTRL)) return target
       const within = target.querySelector<HTMLElement>(SELECT_CTRL)
       if (within) return within
@@ -141,10 +142,11 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
     return hits.length === 1 ? hits[0] : null
   }
 
-  // Tier 1: match the field's <label> text, then resolve its control. Falls back
-  // to attribute scoring for text fields; refuses to guess for select fields.
-  const locateByLabel = (field: FieldConfig): HTMLElement | null => {
-    const wants = (field.labels ?? []).map(normText).filter(Boolean)
+  // Tier 1: match a set of normalized label phrasings to a form <label>/<legend>,
+  // then resolve its control. `selectType` picks the react-select / native-select
+  // path; text falls back to attribute scoring. Ambiguous select → refuse to guess
+  // (UAT-4). Shared by the field path (B5) and the Answer Library path (B4).
+  const locateByLabelText = (wants: string[], selectType: boolean): HTMLElement | null => {
     if (!wants.length) return null
     const labels = Array.from(document.querySelectorAll('label, legend'))
     let matches = labels.filter((l) => {
@@ -154,15 +156,17 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
     if (matches.length > 1) {
       // Ambiguous → tie-break to exact label equality; else refuse to guess.
       const exact = matches.filter((l) => wants.includes(normText(l.textContent ?? '')))
-      if (exact.length !== 1) return isSelect(field) ? null : locateTextByAttrs(wants)
+      if (exact.length !== 1) return selectType ? null : locateTextByAttrs(wants)
       matches = exact
     }
     if (matches.length === 1) {
-      const ctrl = controlFromLabel(matches[0], field)
+      const ctrl = controlFromLabel(matches[0], selectType)
       if (ctrl) return ctrl
     }
-    return isSelect(field) ? null : locateTextByAttrs(wants)
+    return selectType ? null : locateTextByAttrs(wants)
   }
+  const locateByLabel = (field: FieldConfig): HTMLElement | null =>
+    locateByLabelText((field.labels ?? []).map(normText).filter(Boolean), isSelect(field))
 
   for (const field of config.fields) {
     let el = document.querySelector<HTMLElement>(field.selector)
@@ -209,6 +213,55 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
       report.filled.push(field.key)
     } else {
       report.skipped.push({ key: field.key, reason: 'needs_strategy' })
+    }
+  }
+
+  // ---- B4 Master Answers Library pass (ADR-014) ---------------------------
+  // Beyond the board's known fields, fill the user's pre-stored standing answers
+  // to recurring custom screeners (years-of-skill, certifications, "2+ years X?"…).
+  // Each is located by matching its question_label/aliases to the form's <label>
+  // text — the opaque `#question_<id>` screeners have no stable selector. Sensitive
+  // answers (salary / EEO / work-auth) are NEVER auto-filled — review-gated (BR-156).
+  for (const entry of input.answers ?? []) {
+    const key = `answer:${entry.questionKey}`
+    if (entry.sensitive) {
+      report.skipped.push({ key, reason: 'manual_required' })
+      continue
+    }
+    if (!entry.answer || !entry.answer.trim()) {
+      report.skipped.push({ key, reason: 'no_value' })
+      continue
+    }
+    const wants = [entry.questionLabel, ...(entry.aliases ?? [])].map(normText).filter(Boolean)
+    const choice = entry.answerType === 'select' || entry.answerType === 'boolean'
+    const el = locateByLabelText(wants, choice)
+    if (!el) {
+      report.missing.push(key)
+      continue
+    }
+    if (choice) {
+      if (el instanceof HTMLSelectElement) {
+        // Native <select>: commit the anti-collision option match (pickOption).
+        const opt = pickOption(Array.from(el.options), entry.answer.trim().toLowerCase())
+        if (opt instanceof HTMLOptionElement) {
+          el.value = opt.value
+          el.dispatchEvent(new Event('change', { bubbles: true }))
+          el.setAttribute('data-bkt-filled', '1')
+          report.filled.push(key)
+        } else {
+          report.skipped.push({ key, reason: 'needs_strategy' })
+        }
+      } else if (await fillReactSelect(el, entry.answer)) {
+        report.filled.push(key)
+      } else {
+        report.skipped.push({ key, reason: 'needs_strategy' })
+      }
+    } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      setNativeValue(el, entry.answer)
+      el.setAttribute('data-bkt-filled', '1')
+      report.filled.push(key)
+    } else {
+      report.skipped.push({ key, reason: 'needs_strategy' })
     }
   }
   return report

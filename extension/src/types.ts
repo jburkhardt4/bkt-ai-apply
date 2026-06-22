@@ -54,10 +54,35 @@ export interface AutofillReport {
   skipped: { key: string; reason: SkipReason }[]
 }
 
+/**
+ * A pre-stored standing answer to a recurring custom screener — the Master
+ * Answers Library (ADR-014 B4), persisted in `application_answers`. The macro
+ * locates the field by matching `questionLabel` / `aliases` against the form's
+ * visible <label> text (the opaque `#question_<id>` screeners have no stable
+ * selector), then fills `answer` per `answerType`. `sensitive` answers
+ * (salary / EEO / work-auth / legal) are NEVER auto-filled — review-gated (BR-156).
+ */
+export interface AnswerEntry {
+  /** Stable key (application_answers.question_key) — used for reporting. */
+  questionKey: string
+  /** Canonical question text (application_answers.question_label) — matched, normalized, against the form's <label>. */
+  questionLabel: string
+  /** Alternate phrasings of the same question, also matched. */
+  aliases?: string[]
+  /** The stored value to fill (an option's visible label, for choice types). */
+  answer: string
+  /** Shapes how the field is located + filled. */
+  answerType: 'text' | 'textarea' | 'select' | 'boolean'
+  /** Review-gated → never auto-filled, surfaced for the human (BR-156). */
+  sensitive?: boolean
+}
+
 /** Argument to the in-page autofill function. */
 export interface AutofillInput {
   config: BoardConfig
   payload: AutofillPayload
+  /** Master Answers Library entries filled beyond the board's known fields (B4). */
+  answers?: AnswerEntry[]
 }
 
 /** Data for the injected Match-Score panel (mirrors the Phase 2a JobFitPanel). */

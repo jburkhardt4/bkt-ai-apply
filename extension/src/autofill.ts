@@ -113,6 +113,11 @@ export async function applyAutofill(input: AutofillInput): Promise<AutofillRepor
       const container = target.closest<HTMLElement>('[class*="select__"]')
       return container?.querySelector<HTMLElement>(SELECT_CTRL) ?? null
     }
+    // A plain text/textarea field. Reject an <input> that is really a react-select's
+    // inner search box (its <label> points at it via `for`), so a text-typed answer
+    // never types into a choice widget instead of letting a select entry pick an
+    // option — this is what makes JB's type-conditional answers safe (B4).
+    if (target.closest('[class*="select__"]')) return null
     if (target instanceof HTMLInputElement) {
       return target.type === 'file' || target.type === 'hidden' ? null : target
     }

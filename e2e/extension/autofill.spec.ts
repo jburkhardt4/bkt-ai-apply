@@ -251,6 +251,55 @@ test.describe('Apply-macro autofill — B4 Master Answers Library @extension', (
     await page.evaluate(applyAutofill, { config: { ...greenhouseConfig, fields: [] }, payload: {}, answers })
     expect(await page.getAttribute('body', 'data-submitted')).toBeNull()
   })
+
+  test('type-conditional answers: same question fills text vs picklist by field type', async ({
+    page,
+  }) => {
+    // JB's notice-period rule: free-text forms get "1 Week's Notice"; picklists get
+    // "Immediately". Two entries, same label, different answerType — only the one
+    // whose control type is present fills, and the text entry must NOT hijack the
+    // react-select's inner input.
+    const notice = [
+      { questionKey: 'notice_text', questionLabel: 'Notice period', answer: "1 Week's Notice", answerType: 'text' as const },
+      { questionKey: 'notice_pick', questionLabel: 'Notice period', answer: 'Immediately', answerType: 'select' as const },
+    ]
+    // (a) Free-text form → the text entry fills it; the select entry finds nothing.
+    await page.setContent(
+      `<!doctype html><html><body><form><label for="np">Notice period</label><input id="np" type="text" /></form></body></html>`,
+    )
+    let report = await page.evaluate(applyAutofill, {
+      config: { ...greenhouseConfig, fields: [] },
+      payload: {},
+      answers: notice,
+    })
+    expect(await page.inputValue('#np')).toBe("1 Week's Notice")
+    expect(report.filled).toContain('answer:notice_text')
+    expect(report.filled).not.toContain('answer:notice_pick')
+
+    // (b) Picklist form → the select entry commits "Immediately"; the text entry
+    // does NOT type into the react-select's inner input.
+    await page.setContent(
+      `<!doctype html><html><body><form>
+        <label for="np-input">Notice period</label>
+        <div id="np_rs" class="select__control rs-control" tabindex="0" data-options="Immediately|2-4 weeks|2 months">
+          <div class="select__input-container"><input id="np-input" class="select__input" /></div>
+          <span class="select__placeholder">Select...</span>
+        </div>
+        <div class="rs-menu" hidden></div>
+      </form></body></html>`,
+    )
+    await page.evaluate(installReactSelectMock)
+    report = await page.evaluate(applyAutofill, {
+      config: { ...greenhouseConfig, fields: [] },
+      payload: {},
+      answers: notice,
+    })
+    expect(await page.getAttribute('#np_rs', 'data-value')).toBe('Immediately')
+    // The text entry found no plain text field (its <label> points at the
+    // react-select's inner input, which the locator rejects) → it filled nothing.
+    expect(report.filled).not.toContain('answer:notice_text')
+    expect(report.filled).toContain('answer:notice_pick')
+  })
 })
 
 test.describe('Apply-macro autofill — Ashby applySignals cross-board (B5) @extension', () => {

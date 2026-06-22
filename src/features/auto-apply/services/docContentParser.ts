@@ -185,3 +185,114 @@ export function parseGeneratedLetter(
     body: body.length > 0 ? body : paragraphs,
   }
 }
+
+/* ─────────────────────── VERBATIM TRANSCRIPTION ─────────────────────── */
+// Maps an UPLOADED / pasted resume's OWN text into the structured builder fields
+// WITHOUT rewording it — the opposite of Auto-Align (which rewrites via the LLM).
+// Heuristic + best-effort: resume layouts vary wildly, so section detection is
+// imperfect, but the candidate's actual words are preserved and they edit from
+// there. Pure + unit-tested.
+
+const CONTACT_RE =
+  /[\w.+-]+@[\w-]+\.[\w.-]+|https?:\/\/|linkedin\.com|github\.com|\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/i
+const DATE_RE =
+  /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(?:19|20)?\d{2}\b|\b(?:19|20)\d{2}\b|\b(?:present|current)\b/i
+
+/** The resume section a line announces, or null. A heading is a short line (not a
+ *  bullet) matching a known section word — handles ALL-CAPS / Title-case / colon. */
+function headingOf(line: string): 'summary' | 'experience' | 'education' | 'skills' | null {
+  if (BULLET_RE.test(line)) return null
+  const t = line.trim().replace(/[:–—\-\s]+$/, '').toLowerCase()
+  if (!t || t.length > 40) return null
+  const map: [RegExp, 'summary' | 'experience' | 'education' | 'skills'][] = [
+    [/^(?:professional\s+)?summary$|^profile$|^objective$|^about(?:\s+me)?$/, 'summary'],
+    [/^(?:work|professional|employment)?\s*(?:experience|history)$/, 'experience'],
+    [/^education$|^academics?$|^academic background$/, 'education'],
+    [/^(?:technical |core )?skills$|^competenc|^expertise$|^technologies$/, 'skills'],
+  ]
+  for (const [re, key] of map) if (re.test(t)) return key
+  return null
+}
+
+/** Splits a role / education header line into its name, org, and date token —
+ *  best-effort across the common "Title — Org · 2019-Present" style layouts. */
+function splitHeader(line: string): { left: string; org: string; when: string } {
+  const dm = line.match(DATE_RE)
+  const when = dm ? line.slice(line.indexOf(dm[0])).trim() : ''
+  let rest = (when ? line.replace(when, '') : line).trim()
+  rest = rest.replace(/^[\s|,·–—-]+|[\s|,·–—-]+$/g, '').trim()
+  const parts = rest.split(/\s+(?:at|@)\s+|\s+[|·–—]\s+|\s+-\s+|,\s+/i)
+  return { left: (parts[0] ?? rest).trim(), org: parts.slice(1).join(', ').trim(), when }
+}
+
+/** Parses an experience block into roles: a dated (or first) non-bullet line opens
+ *  a role; bullets attach to it; other lines become context bullets. */
+function parseExperienceBlock(lines: string[]): ResumeContent['experience'] {
+  const roles: ResumeContent['experience'] = []
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+    if (BULLET_RE.test(line)) {
+      if (!roles.length) roles.push({ role: '', org: '', when: '', bullets: [] })
+      roles[roles.length - 1]!.bullets.push(line.replace(BULLET_RE, '').trim())
+    } else if (DATE_RE.test(line) || roles.length === 0) {
+      const h = splitHeader(line)
+      roles.push({ role: h.left, org: h.org, when: h.when, bullets: [] })
+    } else {
+      roles[roles.length - 1]!.bullets.push(line)
+    }
+  }
+  return roles.filter((r) => r.role || r.org || r.bullets.length)
+}
+
+/** Parses an education block: one entry per non-empty line (degree / org / dates). */
+function parseEducationBlock(lines: string[]): ResumeContent['education'] {
+  return lines
+    .map((l) => l.trim().replace(BULLET_RE, '').trim())
+    .filter(Boolean)
+    .map((line) => {
+      const { left, org, when } = splitHeader(line)
+      return { degree: left, org, when }
+    })
+}
+
+/**
+ * Transcribes a resume's plain text into the structured builder content VERBATIM.
+ * Splits on recognized section headings; the candidate's own wording is preserved
+ * (summary, bullets, skills are not reworded). Header block → name / contact /
+ * headline. Never throws — an unparseable doc still yields the raw text as summary.
+ */
+export function transcribeResume(text: string): ResumeContent {
+  const lines = normalizeText(text).split('\n')
+  const buckets = { header: [] as string[], summary: [] as string[], experience: [] as string[], education: [] as string[], skills: [] as string[] }
+  let cur: keyof typeof buckets = 'header'
+  for (const raw of lines) {
+    const h = headingOf(raw)
+    if (h) cur = h
+    else buckets[cur].push(raw)
+  }
+
+  const header = buckets.header.map((l) => l.trim()).filter(Boolean)
+  const name = header[0] ?? ''
+  const contact = header.find((l) => CONTACT_RE.test(l)) ?? ''
+  const headline = header.slice(1).find((l) => l !== contact && !CONTACT_RE.test(l)) ?? ''
+  const headerRemainder = header
+    .filter((l) => l !== name && l !== headline && !CONTACT_RE.test(l))
+    .join(' ')
+  const summary = sanitizeDashes(
+    (buckets.summary.join('\n').trim() || headerRemainder).replace(/\s+/g, ' ').trim(),
+  )
+
+  return {
+    name,
+    contact,
+    headline,
+    summary,
+    experience: parseExperienceBlock(buckets.experience).map((r) => ({
+      ...r,
+      bullets: sanitizeDashList(r.bullets),
+    })),
+    education: parseEducationBlock(buckets.education),
+    skills: sanitizeDashList(splitSkills(buckets.skills.join('\n'))).slice(0, 40),
+  }
+}

@@ -14,6 +14,18 @@ import { PreviewModal } from './DocPaper'
 import type { DocContent, DocType } from './DocPaper'
 import { DocBuilder } from './DocBuilder'
 import type { AiTargetJob } from './DocAssistant'
+import { transcribeResume } from '../services/docContentParser'
+
+/** True when a file's bytes read as plain text (not a PDF/DOCX binary), so its
+ *  content can be transcribed directly. PDF/DOCX resumes need the paste-text path
+ *  (no client-side extractor — see DocsScreen notes). */
+function looksLikeText(s: string): boolean {
+  const t = s.trim()
+  if (t.length < 30) return false
+  if (t.startsWith('%PDF') || t.startsWith('PK')) return false
+  const printable = s.replace(/[^ -~\s]/g, '')
+  return printable.length / s.length > 0.85
+}
 
 const DOC_COPY: Record<DocType, { title: string; newLabel: string; desc: string; drop: string; hint: string }> = {
   resume: {
@@ -35,13 +47,22 @@ const DOC_COPY: Record<DocType, { title: string; newLabel: string; desc: string;
 const KIND_TONE: Record<string, BktBadgeTone> = { Base: 'brand', Customized: 'info', Archived: 'neutral' }
 
 /* ---- drag-and-drop upload zone with simulated progress ---- */
-function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; onUploaded: (name: string) => void }) {
+function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; onUploaded: (name: string, text: string) => void }) {
   const [over, setOver] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [fileName, setFileName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const start = (name: string) => {
+  // Reads the file's bytes as text (so a .txt/.md resume can be transcribed
+  // directly), then runs the progress animation and hands the name + text up.
+  const start = async (file: File | null) => {
+    const name = file?.name ?? 'Uploaded_Resume.pdf'
+    let text = ''
+    try {
+      if (file) text = await file.text()
+    } catch {
+      text = ''
+    }
     setFileName(name)
     setProgress(0)
     const t0 = performance.now()
@@ -52,7 +73,7 @@ function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; o
       else
         setTimeout(() => {
           setProgress(null)
-          onUploaded(name)
+          onUploaded(name, text)
         }, 250)
     }
     requestAnimationFrame(tick)
@@ -68,8 +89,8 @@ function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; o
       onDrop={(e: DragEvent) => {
         e.preventDefault()
         setOver(false)
-        const f = e.dataTransfer.files && e.dataTransfer.files[0]
-        start(f ? f.name : 'Uploaded_Resume.pdf')
+        const f = (e.dataTransfer.files && e.dataTransfer.files[0]) ?? null
+        void start(f)
       }}
       onClick={() => progress == null && inputRef.current && inputRef.current.click()}
       className={progress == null ? 'bkt-press' : ''}
@@ -92,7 +113,7 @@ function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; o
         style={{ display: 'none' }}
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
           const f = e.target.files && e.target.files[0]
-          if (f) start(f.name)
+          if (f) void start(f)
           e.target.value = ''
         }}
       />
@@ -275,7 +296,8 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
   const seed = type === 'resume' ? docs.resumes : docs.letters
   const [items, setItems] = useState<DocItem[]>(seed)
   const [previewItem, setPreviewItem] = useState<DocItem | null>(null)
-  const [builder, setBuilder] = useState<{ item: DocItem | null; autoAlign?: boolean } | null>(null)
+  const [builder, setBuilder] = useState<{ item: DocItem | null; autoAlign?: boolean; content?: DocContent } | null>(null)
+  const [paste, setPaste] = useState<{ open: boolean; text: string }>({ open: false, text: '' })
 
   const templateOf = (item: DocItem) => docs.templates.find((t) => t.id === item.template) ?? docs.templates[0]!
   const contentOf = (item: DocItem): DocContent => {
@@ -294,7 +316,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
     }
   }
 
-  const upload = (name: string) => {
+  const upload = (name: string, text: string) => {
     const now = new Date()
     const stamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.toLocaleTimeString('en-US')}`
     setItems((xs) => [
@@ -309,7 +331,33 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
       },
       ...xs,
     ])
+    // TRANSCRIBE (not rewrite): when the resume's text is readable, parse it
+    // verbatim into the structured builder. PDF/DOCX read as binary → steer the
+    // user to the paste box (no client-side PDF extractor yet).
+    if (type === 'resume' && looksLikeText(text)) {
+      setBuilder({ item: null, content: transcribeResume(text) })
+      onToast(`Transcribed ${name} into the builder`, 'circle-check', 'var(--bkt-success)')
+      return
+    }
+    if (type === 'resume' && text && !looksLikeText(text)) {
+      setPaste((p) => ({ ...p, open: true }))
+      onToast(`Couldn't read text from ${name} — paste your resume below to transcribe`, 'circle-alert', 'var(--bkt-blue-300)')
+      return
+    }
     onToast(`Uploaded ${name}`, 'circle-check', 'var(--bkt-success)')
+  }
+
+  // Transcribe pasted resume text verbatim into the builder (reliable for the
+  // PDF / Word content a user copies in — no rewrite).
+  const transcribePasted = () => {
+    const text = paste.text.trim()
+    if (text.length < 30) {
+      onToast('Paste your resume text to transcribe', 'circle-alert', 'var(--bkt-blue-300)')
+      return
+    }
+    setBuilder({ item: null, content: transcribeResume(text) })
+    setPaste({ open: false, text: '' })
+    onToast('Transcribed your resume into the builder', 'circle-check', 'var(--bkt-success)')
   }
   const del = (item: DocItem) => {
     setItems((xs) => xs.filter((x) => x.id !== item.id))
@@ -323,7 +371,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
         docs={docs}
         item={builder.item}
         autoAlign={builder.autoAlign}
-        initialContent={builder.item ? contentOf(builder.item) : type === 'resume' ? docs.resumeContent : docs.letterContent}
+        initialContent={builder.content ?? (builder.item ? contentOf(builder.item) : type === 'resume' ? docs.resumeContent : docs.letterContent)}
         userId={userId}
         lastJob={lastJob}
         aiVariant={aiVariant}
@@ -359,6 +407,56 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
         <div className="bkt-enter">
           <UploadZone copy={copy} onUploaded={upload} />
         </div>
+
+        {type === 'resume' && (
+          <div className="bkt-enter" style={{ display: 'flex', flexDirection: 'column', gap: paste.open ? 10 : 0 }}>
+            <button
+              onClick={() => setPaste((p) => ({ ...p, open: !p.open }))}
+              className="bkt-press"
+              style={{
+                alignSelf: 'flex-start',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '2px 0',
+                font: '600 var(--text-sm)/1 var(--font-body)',
+                color: 'var(--primary)',
+              }}
+            >
+              <Icon name="file-text" size={14} />
+              {paste.open ? 'Hide paste box' : 'Or paste your resume text — transcribed verbatim (best for PDF / Word)'}
+            </button>
+            {paste.open && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <textarea
+                  value={paste.text}
+                  onChange={(e) => setPaste((p) => ({ ...p, text: e.target.value }))}
+                  rows={8}
+                  placeholder="Paste your resume here — it is transcribed into the builder verbatim, not rewritten."
+                  className="bkt-scroll"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    resize: 'vertical',
+                    padding: '11px 13px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-lg)',
+                    font: '400 var(--text-sm)/1.5 var(--font-body)',
+                    color: 'var(--text-strong)',
+                    outline: 'none',
+                  }}
+                />
+                <BktButton variant="primary" size="md" iconLeft={<Icon name="check" size={15} />} onClick={transcribePasted} style={{ alignSelf: 'flex-start' }}>
+                  Transcribe to builder
+                </BktButton>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="bkt-enter" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
           <div

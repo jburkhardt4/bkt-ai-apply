@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseGeneratedLetter, parseGeneratedResume, toParagraphs } from './docContentParser'
+import { parseGeneratedLetter, parseGeneratedResume, toParagraphs, transcribeResume } from './docContentParser'
 
 describe('parseGeneratedResume', () => {
   const opts = {
@@ -60,6 +60,62 @@ describe('parseGeneratedResume', () => {
     expect(patch.summary).not.toMatch(/[—–]/)
     expect(patch.summary).toBe('Consulting leader, pragmatic architecture and clean governance.')
     expect(patch.experience?.[0]?.bullets.some((b) => /[—–]/.test(b))).toBe(false)
+  })
+})
+
+describe('transcribeResume', () => {
+  const RESUME = [
+    'Jane Q. Candidate',
+    'Senior Salesforce Architect',
+    'jane@example.com · (555) 123-4567 · linkedin.com/in/janeqc',
+    '',
+    'SUMMARY',
+    'Salesforce architect with 8 years delivering enterprise CRM. Led 10+ implementations.',
+    '',
+    'EXPERIENCE',
+    'Salesforce Architect — Acme Consulting · 2019–Present',
+    '- Designed CPQ architecture cutting quote time 38%.',
+    '- Led delivery teams of 30+ consultants.',
+    'Salesforce Admin, BetaCorp, 2016-2019',
+    '- Built 40+ Flows and validation rules.',
+    '',
+    'EDUCATION',
+    'B.S. Information Systems — State University · 2015',
+    '',
+    'SKILLS',
+    'Apex, LWC, Sales Cloud, Service Cloud, Flows',
+  ].join('\n')
+
+  it('transcribes the header, summary, education, and skills VERBATIM (no rewrite)', () => {
+    const r = transcribeResume(RESUME)
+    expect(r.name).toBe('Jane Q. Candidate')
+    expect(r.headline).toBe('Senior Salesforce Architect')
+    expect(r.contact).toContain('jane@example.com')
+    // The candidate's own words are preserved — not reworded.
+    expect(r.summary).toContain('8 years delivering enterprise CRM')
+    expect(r.summary).toContain('Led 10+ implementations')
+    expect(r.skills).toEqual(expect.arrayContaining(['Apex', 'LWC', 'Sales Cloud', 'Service Cloud', 'Flows']))
+    expect(r.education).toHaveLength(1)
+    expect(r.education[0]?.degree).toContain('Information Systems')
+    expect(r.education[0]?.when).toBe('2015')
+  })
+
+  it('splits experience into roles with verbatim bullets', () => {
+    const r = transcribeResume(RESUME)
+    expect(r.experience).toHaveLength(2)
+    expect(r.experience[0]?.role).toContain('Architect')
+    expect(r.experience[0]?.org).toContain('Acme')
+    expect(r.experience[0]?.when).toContain('2019')
+    expect(r.experience[0]?.bullets).toContain('Designed CPQ architecture cutting quote time 38%.')
+    expect(r.experience[1]?.role).toContain('Admin')
+    expect(r.experience[1]?.bullets).toContain('Built 40+ Flows and validation rules.')
+  })
+
+  it('never throws on unstructured text; preserves the content (no rewrite)', () => {
+    const r = transcribeResume('Just some freeform text about me.\nMore detail here.')
+    expect(r.name).toBe('Just some freeform text about me.')
+    // The second line is preserved (as headline/summary) — nothing is lost or reworded.
+    expect(`${r.headline} ${r.summary}`).toContain('More detail here')
   })
 })
 

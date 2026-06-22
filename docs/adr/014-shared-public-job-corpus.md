@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-22
-- **Relates:** CLAUDE.md non-negotiable #5 (user scoping), ADR-013 (headless prep / ATS read APIs), ADR-007 (server-side match scoring), ADR-015 (crawler + indexing), migrations `20260622000001_create_job_corpus`, `20260603000004_create_jobs`, `20260603000001_create_companies`
+- **Relates:** CLAUDE.md non-negotiable #5 (user scoping), ADR-013 (headless prep / ATS read APIs), ADR-007 (server-side match scoring), ADR-015 (crawler + indexing), migrations `20260622000001_create_job_corpus`, `20260603000004_create_jobs`, `20260603000003_create_companies`
 - **Decided by:** JB, 2026-06-22
 
 ## Context

@@ -8,7 +8,7 @@ metadata:
 ATS crawler subsystem (ADR-015; context in [[project-job-corpus-indexing]]).
 
 **Pure, vitest-tested layer** — `supabase/functions/_shared/crawl/`:
-- `types.ts` (UnifiedPosting / BoardRef / ListRequest / Cursor), `normalize.ts` (stripHtml, decodeEntities, classifyRemoteType, parseSalaryFromText, buildPosting), `listEndpoint.ts` (board-level list-URL builder — the deliberate twin of `_shared/prep/buildReadEndpoint.ts`; Lever pagination via `nextCursor`), `discovery.ts` (`extractBoardRef`, reuses `_shared/prep/atsFamily.detectAtsFamily`), `adapters/{greenhouse,lever,ashby}.ts` + `index.ts` (`parseList` / `isCrawlable`), `seeds.ts` (EMPTY by design — no fabricated tokens; discover harvests real tokens from `jobs.source_url`).
+- `types.ts` (UnifiedPosting / BoardRef / ListRequest / Cursor), `normalize.ts` (stripHtml, decodeEntities, classifyRemoteType, parseSalaryFromText, buildPosting), `listEndpoint.ts` (board-level list-URL builder — the deliberate twin of `_shared/prep/buildReadEndpoint.ts`; Lever pagination via `nextCursor`), `discovery.ts` (`extractBoardRef`, reuses `_shared/prep/atsFamily.detectAtsFamily`), `adapters/{greenhouse,lever,ashby}.ts` + `index.ts` (`parseList` / `isCrawlable`), `seeds.ts` (4 live-verified tokens — techholding/monsterenergy/directive/swans; no fabricated tokens; discover also harvests real tokens from `jobs.source_url`).
 
 **Edge functions** (Deno; mirror `submission-worker`, see [[project-edge-function-conventions]]): `crawler-worker/index.ts` (claim → rate-limit → paginated fetch → parseList → upsert → close-missing → board state) and `crawler-discover/index.ts` (seed upsert + harvest + enqueue).
 

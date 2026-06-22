@@ -62,8 +62,11 @@ GRANT  EXECUTE ON FUNCTION public.consume_crawl_token(text, numeric, numeric) TO
 
 -- ── upsert_job_postings ─────────────────────────────────────
 -- No-churn upsert of normalized postings (ADR-015 Decision 6). For each row:
---   * compute content_hash = sha256 of the canonical subset (title,
---     description_text, location_raw, salary_min/max, employment_type, department);
+--   * compute content_hash = sha256 of the canonical subset spanning every stored
+--     field a fresh crawl can change — title, company, description_text,
+--     location_raw, remote_type, department, team, employment_type,
+--     application_url, external_url, salary_min/max/currency/interval, posted_at —
+--     so an apply-URL or filter-field change is detected, not silently dropped;
 --   * INSERT when new; UPDATE all columns when the hash changed; otherwise only
 --     bump last_seen_at (and clear closed_at) — no updated_at churn, no snapshot.
 --   * append a job_posting_snapshots row ONLY on insert or change (bounds the
@@ -114,12 +117,20 @@ BEGIN
 
     v_canon :=
          coalesce(v_title, '')                       || E'\x1f' ||
+         coalesce(v_row->>'company_name', '')         || E'\x1f' ||
          coalesce(v_row->>'description_text', '')     || E'\x1f' ||
          coalesce(v_row->>'location_raw', '')         || E'\x1f' ||
+         coalesce(v_row->>'remote_type', '')          || E'\x1f' ||
+         coalesce(v_row->>'department', '')           || E'\x1f' ||
+         coalesce(v_row->>'team', '')                 || E'\x1f' ||
+         coalesce(v_row->>'employment_type', '')      || E'\x1f' ||
+         coalesce(v_row->>'application_url', '')       || E'\x1f' ||
+         coalesce(v_row->>'external_url', '')         || E'\x1f' ||
          coalesce(v_row->>'salary_min', '')           || E'\x1f' ||
          coalesce(v_row->>'salary_max', '')           || E'\x1f' ||
-         coalesce(v_row->>'employment_type', '')      || E'\x1f' ||
-         coalesce(v_row->>'department', '');
+         coalesce(v_row->>'salary_currency', '')      || E'\x1f' ||
+         coalesce(v_row->>'salary_interval', '')      || E'\x1f' ||
+         coalesce(v_row->>'posted_at', '');
     v_hash := encode(extensions.digest(v_canon, 'sha256'), 'hex');
 
     SELECT content_hash INTO v_existing

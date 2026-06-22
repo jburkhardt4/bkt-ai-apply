@@ -6,7 +6,9 @@
  *      a board's sync state).
  *   2. Harvest board tokens from existing jobs.source_url rows (the prospector
  *      already ingests real Greenhouse/Ashby URLs) via the pure extractBoardRef.
- *   3. enqueue_due_crawl_jobs — one list_sync per active, stale board with no
+ *   3. requeue_stale_crawl_jobs — return crashed/timed-out 'running' leases to
+ *      'pending' so a dead lease never permanently suppresses a board.
+ *   4. enqueue_due_crawl_jobs — one list_sync per active, stale board with no
  *      open job. crawler-worker drains the queue.
  *
  * Invoked by pg_cron via net.http_post (daily). CRON_SECRET gates the endpoint
@@ -90,11 +92,18 @@ async function runDiscover(supabase: SupabaseClient) {
     harvested = rows.length
   }
 
-  // 3) Enqueue list_sync for due boards.
+  // 3) Self-heal: return crawl_jobs stuck in 'running' past their lease (a crashed
+  // or timed-out worker) to 'pending' BEFORE enqueueing. Otherwise enqueue's
+  // "no open (pending/running) job" guard would treat the dead lease as live work
+  // and the board would stay permanently ineligible for future crawls.
+  const { data: requeued, error: rErr } = await supabase.rpc('requeue_stale_crawl_jobs')
+  if (rErr) throw new Error(`requeue_stale_crawl_jobs: ${rErr.message}`)
+
+  // 4) Enqueue list_sync for due boards.
   const { data: enqueued, error: eErr } = await supabase.rpc('enqueue_due_crawl_jobs', { p_max: ENQUEUE_MAX })
   if (eErr) throw new Error(`enqueue_due_crawl_jobs: ${eErr.message}`)
 
-  return { seeded, candidateBoards: found.size, harvested, enqueued: enqueued ?? 0 }
+  return { seeded, candidateBoards: found.size, harvested, requeued: requeued ?? 0, enqueued: enqueued ?? 0 }
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {

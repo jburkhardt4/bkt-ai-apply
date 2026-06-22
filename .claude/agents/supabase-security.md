@@ -37,6 +37,9 @@ If the target of a security check does not exist, HOLD with the missing path —
 - auth state boundary remains in src/contexts/AuthContext.tsx (BR-003)
 - db types generation workflow when schema changed (`pnpm db:gen-types`)
 
+## Approved RLS Exceptions (cite the ADR; do NOT flag as BR-005 violations)
+- **Shared public job corpus (ADR-014, 2026-06-22):** `job_postings`, `job_posting_snapshots`, `ats_boards`, `crawl_jobs`, `crawl_host_buckets` are intentionally NOT user-scoped. RLS stays ENABLED; the approved posture is `SELECT TO authenticated USING (true)` + **no** insert/update/delete policy (writes are service-role only). Approved because these hold only public job-posting data (no user PII); precedent is the shared `companies` table. For these tables: verify RLS is enabled and that no write policy exists — do NOT require `user_id` scoping or treat read-all as a data-isolation risk. Enforce the INVARIANT instead: **they must never gain a `user_id`/PII column** (a PR that adds one is the violation). Service-role-only SECURITY DEFINER RPCs (`claim_crawl_jobs`, `consume_crawl_token`, `upsert_job_postings`, `close_missing_job_postings`, `enqueue_due_crawl_jobs`, `requeue_stale_crawl_jobs`) with `EXECUTE` revoked from anon/authenticated are correct, not findings.
+
 ## Lesson Capture (on any HOLD / BLOCK / escalation)
 Emit one `lesson_candidate` per distinct failure:
 - id: LSN-<draft>

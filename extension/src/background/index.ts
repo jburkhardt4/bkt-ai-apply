@@ -29,7 +29,8 @@ import {
 import type { ContactProfile } from '../payload'
 import { preparedToPayload, type PreparedFieldRow } from '../preparedFill'
 import type { ExtractedSession } from '../auth/session'
-import type { FitPanelData } from '../types'
+import type { AnswerEntry, FitPanelData } from '../types'
+import { toAnswerEntries, type ApplicationAnswerRow } from '../configs/answerSignals'
 
 const SESSION_KEY = 'bktSession'
 const DOCUMENTS_BUCKET = 'documents'
@@ -126,28 +127,25 @@ async function fetchProfileRow(
   return (data as CandidateProfileRow | null) ?? null
 }
 
-/** Custom screener answers the user pre-stored (application_answers table),
- *  keyed by question_key → answer. RLS-scoped to the user's own rows (BR-005);
- *  best-effort — never throws (autofill proceeds without them). These are used
- *  for autofill ONLY and are NEVER sent to the LLM. */
-async function fetchApplicationAnswers(
+/** The user's pre-stored standing answers (application_answers table) as enriched
+ *  AnswerEntry[] — question_label drives the B4 label matcher, plus alias phrasings
+ *  + the review-gate flag (answerSignals). RLS-scoped to the user's own rows
+ *  (BR-005); best-effort — never throws. Used for autofill ONLY, NEVER sent to the
+ *  LLM. Sensitive answers stay review-gated in the macro (BR-156). */
+async function fetchAnswerEntries(
   supabase: SupabaseClient,
   userId: string | null,
-): Promise<Record<string, string>> {
+): Promise<AnswerEntry[]> {
   try {
-    let query = supabase.from('application_answers').select('question_key,answer')
+    let query = supabase
+      .from('application_answers')
+      .select('question_key,question_label,answer,answer_type')
     if (userId) query = query.eq('user_id', userId)
     const { data, error } = await query
-    if (error || !data) return {}
-    const out: Record<string, string> = {}
-    for (const row of data as { question_key: string | null; answer: string | null }[]) {
-      const key = row.question_key?.trim()
-      const answer = row.answer
-      if (key && typeof answer === 'string' && answer.trim()) out[key] = answer
-    }
-    return out
+    if (error || !data) return []
+    return toAnswerEntries(data as ApplicationAnswerRow[])
   } catch {
-    return {}
+    return []
   }
 }
 
@@ -283,7 +281,7 @@ async function handleProfile(): Promise<ProfileResponse> {
     // so the extra table adds no serial latency to the (human-triggered) autofill.
     const [row, answers] = await Promise.all([
       fetchProfileRow(supabase, session.userId),
-      fetchApplicationAnswers(supabase, session.userId),
+      fetchAnswerEntries(supabase, session.userId),
     ])
     if (!row) return { ok: false, reason: 'no_profile' }
     const eeo = toEeoMap(row.eeo_disclosures)
@@ -302,9 +300,8 @@ async function handleProfile(): Promise<ProfileResponse> {
       workAuthorization: row.work_authorization ?? undefined,
       requiresSponsorship: typeof row.requires_sponsorship === 'boolean' ? row.requires_sponsorship : undefined,
       ...(Object.keys(eeo).length ? { eeo } : {}),
-      ...(Object.keys(answers).length ? { answers } : {}),
     }
-    return { ok: true, profile }
+    return { ok: true, profile, answers }
   } catch (e) {
     return { ok: false, reason: 'error', message: errMessage(e) }
   }

@@ -10,7 +10,7 @@
 import { resolveBoardConfig } from '../configs'
 import { applyAutofill } from '../autofill'
 import { renderMatchScorePanel } from '../matchScorePanel'
-import type { AutofillPayload, BoardConfig } from '../types'
+import type { AnswerEntry, AutofillPayload, BoardConfig } from '../types'
 import { buildPayload } from '../payload'
 import { detectStopConditions, describeStopReason } from '../stopConditions'
 import { detectNativeApply, renderNativeApplyNote } from '../nativeApply'
@@ -152,15 +152,23 @@ async function runAutofill(
   payload: AutofillPayload,
   gated: string[],
   source: 'prepared' | 'profile',
+  answers: AnswerEntry[] = [],
 ): Promise<void> {
-  const report = await applyAutofill({ config, payload })
-  const fileNote = report.skipped.some((s) => s.reason === 'manual_required')
-    ? ' Attach your resume manually.'
-    : ''
+  const report = await applyAutofill({ config, payload, answers })
+  const needsFile = report.skipped.some(
+    (s) => s.reason === 'manual_required' && (s.key === 'resume' || s.key === 'cover_letter'),
+  )
+  // Review-gated answers (salary / work-auth / sponsorship) come back as
+  // manual_required under an `answer:` key — surface them distinctly (BR-156).
+  const reviewCount = report.skipped.filter(
+    (s) => s.reason === 'manual_required' && s.key.startsWith('answer:'),
+  ).length
+  const fileNote = needsFile ? ' Attach your resume manually.' : ''
+  const reviewNote = reviewCount ? ` ${reviewCount} sensitive answer(s) held for your review.` : ''
   const label = source === 'prepared' ? 'Prepared autofill' : 'Filled'
   setStatus(
     `${label}: ${report.filled.length} field(s). Review, then submit yourself.` +
-      `${fileNote}${gatedNote(gated)}${stopConditionNote()}`,
+      `${fileNote}${reviewNote}${gatedNote(gated)}${stopConditionNote()}`,
   )
 }
 
@@ -202,7 +210,7 @@ async function onAutofill(config: BoardConfig): Promise<void> {
     )
     return
   }
-  await runAutofill(config, buildPayload(res.profile), [], 'profile')
+  await runAutofill(config, buildPayload(res.profile), [], 'profile', res.answers)
 }
 
 function buildControls(config: BoardConfig): void {

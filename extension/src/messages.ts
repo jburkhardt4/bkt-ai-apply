@@ -1,7 +1,7 @@
 // BKT Apply-Macro — message protocol between the content scripts and the MV3
 // background worker. Centralised so both ends stay in lock-step.
 
-import type { AutofillPayload, FitPanelData } from './types'
+import type { AnswerEntry, AutofillPayload, FitPanelData } from './types'
 import type { ContactProfile } from './payload'
 import type { ExtractedSession } from './auth/session'
 
@@ -51,7 +51,7 @@ export type ScoreResponse =
   | { ok: false; reason: 'needs_login' | 'error'; message?: string }
 
 export type ProfileResponse =
-  | { ok: true; profile: ContactProfile }
+  | { ok: true; profile: ContactProfile; answers: AnswerEntry[] }
   | { ok: false; reason: 'needs_login' | 'no_profile' | 'error'; message?: string }
 
 /**

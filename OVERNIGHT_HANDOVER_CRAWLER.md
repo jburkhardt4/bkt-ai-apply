@@ -44,6 +44,7 @@ All 5 authorized tasks completed. Everything is committed/pushed and the crawler
 ## ⚠️ Blockers / decisions waiting on you
 
 1. **CRON_SECRET is NOT set (intentional — it's project-wide).** The crawler crons run **fail-open**, consistent with the existing gmail-sync / prospector-cron crons (which also have no secret). Setting `CRON_SECRET` would **401 those existing crons** unless every cron header is updated in the same change. To activate the gate project-wide:
+
    ```bash
    SECRET=$(openssl rand -hex 32)
    supabase secrets set CRON_SECRET="$SECRET" --project-ref rmoyuwesfljuygvpdolf
@@ -51,6 +52,7 @@ All 5 authorized tasks completed. Everything is committed/pushed and the crawler
    # gmail-sync-15m, prospector-cron-8am, prospector-cron-6pm) adding to each headers jsonb:
    #   'x-cron-secret', '<that SECRET>'
    ```
+
 2. **`corpus-projector` is deployed-ready but NOT deployed/scheduled.** It writes into users' `jobs` tables, so I left the cron flip to you. To turn it on: `supabase functions deploy corpus-projector --no-verify-jwt --project-ref rmoyuwesfljuygvpdolf`, then `cron.schedule('corpus-projector-30m', '*/30 * * * *', ...)` (same net.http_post pattern).
 3. **15 `source='corpus'` jobs are now in your `jobs` table** (the projector test). They're real & relevant (remote Salesforce roles). If unwanted: `DELETE FROM public.jobs WHERE source='corpus';`
 4. **Blocked boards need manual reactivation** by design — `UPDATE ats_boards SET last_status='ok', consecutive_failures=0 WHERE board_token='…';`

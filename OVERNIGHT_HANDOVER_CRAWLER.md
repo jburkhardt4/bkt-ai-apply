@@ -9,24 +9,29 @@ All 5 authorized tasks completed. Everything is committed/pushed and the crawler
 ## ✅ Done & shipped
 
 ### 1. The 3 follow-up Codex review comments — fixed, verified, pushed (`7b53084`)
+
 - **Circuit breaker** (`enqueue_due_crawl_jobs`): now skips `blocked` boards (manual reactivation) and backs off failing boards (15 min × `consecutive_failures`, capped at 8). **Verified live** — a blocked board was skipped while a healthy board enqueued. Re-applied to the hosted DB.
 - **Harvest company labels** (`crawler-discover`): harvest now carries the job's `company_id` + `display_name` onto the board, so `job_postings.company_name` populates for company-weighted FTS.
 - **Empty-enumeration warning** (`crawler-worker`): a full crawl returning 0 postings now logs a warning and (still) skips close-missing — keeps the transient-empty mass-closure guard, makes the skip auditable.
 - Replied inline on all 3 Codex threads.
 
 ### 2. Edge functions DEPLOYED + SCHEDULED (gate override used, as authorized)
+
 - `crawler-worker` and `crawler-discover` deployed via Supabase CLI (`--no-verify-jwt`, bundled from disk).
 - **pg_cron active:** `crawler-discover-6h` (`0 */6 * * *`) + `crawler-worker-10m` (`*/10 * * * *`), mirroring the gmail-sync `net.http_post` pattern.
 - **Smoke-tested end-to-end against real ATS APIs:** discover seeded 4 boards + enqueued 4 jobs; worker crawled and **ingested 288 real postings** (techholding 19, monsterenergy 185, directive 78, swans 6), all `ok`, zero errors. FTS verified on real data (85 "engineer", 217 "manager", 99 remote).
 
 ### 3. Real boards seeded — verified, pushed (`15da517`)
+
 - `seeds.ts` populated with 4 **live-verified** tokens (each confirmed returning real jobs before seeding): `techholding`, `monsterenergy` (Greenhouse); `directive`, `swans` (Ashby).
 - ⚠️ **Did NOT use your "Slalom / Anthropic / Scale AI" examples** — the `jb-answer-library-seed` memory explicitly flags those URLs as **fabricated (404)**. I used your verified targets + a no-fabrication policy. Add more via `seeds.ts` (or the harvest step picks up boards already in `jobs.source_url`).
 
 ### 4. Schema tech debt resolved — pushed (`f058820`)
+
 - Added `20260622000004_candidate_profiles_add_name_columns` (idempotent `ADD COLUMN IF NOT EXISTS first_name/last_name text NOT NULL DEFAULT ''`, matching the live shape). The columns existed in the DB with no backing migration — now DB, migration, and `db.types.ts` all agree.
 
 ### 5. Phase 5 projector — built, verified, pushed (`2f057c8`)
+
 - RPCs `project_corpus_for_profile` + `project_corpus_all` (service-role): FTS-match a profile's `job_titles` (OR'd tsquery) against the corpus, filter by environment→remote_type + `min_salary`, insert top `ts_rank` matches into the owner's `jobs` as `source='corpus'` (deduped on `UNIQUE(source_url)`). `jobs` table + RLS untouched.
 - Thin `corpus-projector` edge function wraps `project_corpus_all`.
 - **Verified live:** your profile projected **15 relevant remote Salesforce / Sales-Ops consultant roles** (Directive + Swans) into your `jobs`; re-run inserted 0 (idempotent); empty profile inserted 0.
@@ -55,6 +60,7 @@ All 5 authorized tasks completed. Everything is committed/pushed and the crawler
 ---
 
 ## 📋 Open follow-ups (not blockers — future phases)
+
 - **Phase 4: Workday** (the next big item — prompt below).
 - Projector refinements: location matching (currently env + salary + FTS only), keyword-boosted ranking, and a search UI over `job_postings`.
 - `job_posting_snapshots` retention/prune policy (append-only growth).

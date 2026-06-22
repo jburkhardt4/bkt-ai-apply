@@ -49,7 +49,8 @@ All 5 authorized tasks completed. Everything is committed/pushed and the crawler
 2. **`corpus-projector` is deployed-ready but NOT deployed/scheduled.** It writes into users' `jobs` tables, so I left the cron flip to you. To turn it on: `supabase functions deploy corpus-projector --no-verify-jwt --project-ref rmoyuwesfljuygvpdolf`, then `cron.schedule('corpus-projector-30m', '*/30 * * * *', ...)` (same net.http_post pattern).
 3. **15 `source='corpus'` jobs are now in your `jobs` table** (the projector test). They're real & relevant (remote Salesforce roles). If unwanted: `DELETE FROM public.jobs WHERE source='corpus';`
 4. **Blocked boards need manual reactivation** by design — `UPDATE ats_boards SET last_status='ok', consecutive_failures=0 WHERE board_token='…';`
-5. **PR #29 CI:** my 4 pushes will trigger Codex re-reviews; an hourly monitor is armed to catch + address new comments overnight (within a 3-retry budget). Status at handover time noted in the run log.
+5. **PR #29 CI:** the real **`CI` workflow (typecheck · lint · test) passes** on every commit (`success` on the latest), Vercel passes, e2e skips (no UI changes) — PR is **MERGEABLE**. ⚠️ A *separate* repo workflow, `agentic-pr-code-review-auto-resolve-comments.lock.yml`, reports **failure on every push** (empty job list = fails at startup; it also failed on unrelated commits). It is **not** a required check and does not block the PR — looks like a pre-existing CI-automation/permissions issue, untouched (I don't modify CI infra autonomously). Worth a look when you're back.
+6. **New review comments:** my pushes will trigger fresh Codex/Copilot re-reviews. An hourly monitor is armed to catch + address new comments overnight (3-retry budget per the overnight authorization).
 
 ---
 

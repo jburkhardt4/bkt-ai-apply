@@ -46,10 +46,18 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [user?.id])
 
+  // Redirect unauthenticated users to /login — but with a short grace window so a
+  // late INITIAL_SESSION / token-refresh from onAuthStateChange can still deliver
+  // the session that getSession() missed on a cold sub-route load. Without it,
+  // deep-linking or refreshing a protected route races auth hydration and bounces
+  // to /login (audit §6 #5). If the session arrives, `user` changes, this effect
+  // re-runs and the cleanup cancels the pending bounce.
   useEffect(() => {
-    if (!loading && !user) {
-      window.location.assign('/login')
-    }
+    if (loading || user) return
+    const timer = setTimeout(() => {
+      if (!window.location.pathname.startsWith('/login')) window.location.assign('/login')
+    }, 1200)
+    return () => clearTimeout(timer)
   }, [loading, user])
 
   if (loading || !user) {

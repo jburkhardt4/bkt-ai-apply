@@ -41,6 +41,43 @@ function FilterTab({ label, count, badge, active, onClick }: { label: string; co
   )
 }
 
+/** Sort cycle for the Sort button (audit §6 #6 — was a dead no-op). */
+const SORT_MODES: { label: string; cmp: (a: JobMatch, b: JobMatch) => number }[] = [
+  { label: 'Score ↓', cmp: (a, b) => b.score - a.score },
+  { label: 'Score ↑', cmp: (a, b) => a.score - b.score },
+  { label: 'Company', cmp: (a, b) => a.company.localeCompare(b.company) },
+]
+
+/** Per-column filter dropdown (audit §6 #3 — ported from the prospector table).
+ *  Renders nothing when the column has no values in view. */
+function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  if (options.length === 0) return null
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label={label}
+      style={{
+        height: 32,
+        padding: '0 8px',
+        borderRadius: 'var(--radius-md)',
+        border: `1px solid ${value ? 'var(--primary)' : 'var(--border)'}`,
+        background: 'var(--surface)',
+        color: value ? 'var(--text-strong)' : 'var(--text-muted)',
+        font: '500 var(--text-sm)/1 var(--font-body)',
+        cursor: 'pointer',
+      }}
+    >
+      <option value="">{label}</option>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export interface JobsScreenProps {
   jobs: JobMatch[]
   stats: { submitted: number; matches: number }
@@ -74,6 +111,11 @@ export function JobsScreen({
   const [filter, setFilter] = useState('Review Matches')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
+  const [sortIdx, setSortIdx] = useState(0)
+  // Per-column filters (audit §6 #3 — ported from the prospector table).
+  const [typeFilter, setTypeFilter] = useState('')
+  const [envFilter, setEnvFilter] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
 
   // Reset to the first page whenever the active tab changes so navigation never
   // lands on an out-of-range page.
@@ -81,12 +123,23 @@ export function JobsScreen({
     setFilter(next)
     setPage(0)
   }
+  // Any column/search filter change returns to page 0 for the same reason.
+  const onColumnFilter = (set: (v: string) => void) => (v: string) => {
+    set(v)
+    setPage(0)
+  }
 
   const reviewCount = jobs.filter((j) => j.status === 'Review').length
   const inProgressCount = jobs.filter((j) => j.status === 'In progress').length
   const declinedCount = jobs.filter((j) => j.status === 'Declined').length
 
-  const visible = jobs.filter((j) => {
+  // Distinct per-column filter options from the data currently in view.
+  const uniq = (vals: (string | undefined)[]) => [...new Set(vals.filter((v): v is string => !!v))].sort()
+  const typeOptions = uniq(jobs.map((j) => j.jobType))
+  const envOptions = uniq(jobs.map((j) => j.remoteType))
+  const sourceOptions = uniq(jobs.map((j) => j.sourceBoard))
+
+  const filtered = jobs.filter((j) => {
     const f =
       filter === 'All'
         ? true
@@ -98,14 +151,22 @@ export function JobsScreen({
               ? j.status === 'Applied'
               : j.status === 'Declined'
     const q = query.trim().toLowerCase()
-    return f && (!q || j.company.toLowerCase().includes(q) || j.title.toLowerCase().includes(q))
+    return (
+      f &&
+      (!q || j.company.toLowerCase().includes(q) || j.title.toLowerCase().includes(q)) &&
+      (!typeFilter || j.jobType === typeFilter) &&
+      (!envFilter || j.remoteType === envFilter) &&
+      (!sourceFilter || j.sourceBoard === sourceFilter)
+    )
   })
 
-  // Client-side pagination of the tab-filtered rows (data is already in memory;
-  // safePage clamps if `visible` shrinks under optimistic apply/decline).
-  const pageCount = getPageCount(visible.length)
+  const sorted = [...filtered].sort(SORT_MODES[sortIdx].cmp)
+
+  // Client-side pagination of the filtered + sorted rows (data is already in
+  // memory; safePage clamps if the set shrinks under optimistic apply/decline).
+  const pageCount = getPageCount(sorted.length)
   const safePage = Math.min(page, pageCount - 1)
-  const paged = visible.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+  const paged = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '0 28px 28px' }}>
@@ -137,7 +198,10 @@ export function JobsScreen({
         <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
         <div style={{ flex: 1 }}></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6, flexWrap: 'wrap' }}>
+          <FilterSelect label="Type" value={typeFilter} options={typeOptions} onChange={onColumnFilter(setTypeFilter)} />
+          <FilterSelect label="Environment" value={envFilter} options={envOptions} onChange={onColumnFilter(setEnvFilter)} />
+          <FilterSelect label="Source" value={sourceFilter} options={sourceOptions} onChange={onColumnFilter(setSourceFilter)} />
           <BktInput
             size="sm"
             placeholder="Search jobs or companies..."
@@ -149,8 +213,13 @@ export function JobsScreen({
             iconLeft={<Icon name="search" size={14} />}
             style={{ width: 230 }}
           />
-          <BktButton variant="outline" size="sm" iconLeft={<Icon name="arrow-up-down" size={14} />}>
-            Sort
+          <BktButton
+            variant="outline"
+            size="sm"
+            iconLeft={<Icon name="arrow-up-down" size={14} />}
+            onClick={() => setSortIdx((i) => (i + 1) % SORT_MODES.length)}
+          >
+            Sort: {SORT_MODES[sortIdx].label}
           </BktButton>
           <BktButton variant="outline" size="sm" iconLeft={<Icon name="refresh-cw" size={14} />} onClick={onRefresh}>
             Refresh
@@ -190,6 +259,9 @@ export function JobsScreen({
               score={j.score}
               status={j.status}
               source={j.source}
+              sourceBoard={j.sourceBoard}
+              jobType={j.jobType}
+              remoteType={j.remoteType}
               comp={showComp ? j.comp || '—' : null}
               updatedAt={j.updated}
               selected={selectedId === j.id}
@@ -202,7 +274,7 @@ export function JobsScreen({
             />
           ))}
         </div>
-        {visible.length === 0 && (
+        {sorted.length === 0 && (
           <div style={{ padding: '38px 18px', textAlign: 'center', color: 'var(--text-muted)', font: '400 var(--text-base)/1.5 var(--font-body)' }}>
             No jobs match this view.
           </div>

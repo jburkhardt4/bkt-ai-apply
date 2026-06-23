@@ -71,6 +71,16 @@ function appsRefetch(result: DbResult) {
   return { select, maybeSingle }
 }
 
+/** candidate_profiles eligibility read: .select().eq().maybeSingle(). Defaults to
+ *  no row so the graduation eligibility gate stays inert in these orchestration
+ *  tests (the gate's own logic is covered in eligibilityService.test.ts). */
+function candidateProfiles(result: DbResult = { data: null, error: null }) {
+  const maybeSingle = vi.fn().mockResolvedValue(result)
+  const eq = vi.fn(() => ({ maybeSingle }))
+  const select = vi.fn(() => ({ eq }))
+  return { select, maybeSingle }
+}
+
 function setClient(from: ReturnType<typeof vi.fn>) {
   mockGetSupabaseClientSafe.mockReturnValue({ from } as unknown as ReturnType<typeof getSupabaseClientSafe>)
 }
@@ -114,6 +124,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins.insert }))
     setClient(from)
@@ -140,6 +151,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins.insert }))
     setClient(from)
@@ -165,6 +177,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins1.insert }))
       .mockImplementationOnce(() => ({ insert: ins2.insert }))
@@ -195,6 +208,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ update: upd.update }))
     setClient(from)
@@ -215,6 +229,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins.insert }))
       .mockImplementationOnce(() => ({ select: refetch.select }))
@@ -233,6 +248,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins.insert }))
     setClient(from)
@@ -259,6 +275,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins.insert }))
     setClient(from)
@@ -283,6 +300,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins.insert }))
     setClient(from)
@@ -308,6 +326,7 @@ describe('graduateProspectorMatches', () => {
     const from = vi
       .fn()
       .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: candidateProfiles().select }))
       .mockImplementationOnce(() => ({ select: scan.select }))
       .mockImplementationOnce(() => ({ insert: ins1.insert }))
       .mockImplementationOnce(() => ({ insert: ins2.insert }))

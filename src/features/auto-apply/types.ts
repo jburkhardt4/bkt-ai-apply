@@ -53,6 +53,18 @@ export interface JobMatch {
   /** jobs.source provenance ('prospector' | 'corpus') — drives the "Job Board"
    *  badge so crawled ATS postings are distinguishable in the inbox (ADR-016). */
   source?: string
+  /** jobs.job_type ('full-time' | 'contract' | …) — table column + per-column filter. */
+  jobType?: string
+  /** jobs.remote_type ('remote' | 'hybrid' | 'on-site') — environment column + filter. */
+  remoteType?: string
+  /** jobs.posted_at — when the posting went live (the table "Posted" column). */
+  postedAt?: string
+  /** Human board name derived from the posting URL (Greenhouse / Ashby / Lever /
+   *  Workday / LinkedIn …) so crawled rows show real provenance, not a generic badge. */
+  sourceBoard?: string
+  /** jobs.description_formatted — normalized Markdown JD rendered in the detail
+   *  sidebar via JobDescriptionMarkdown (reconnected; see audit §6 #4). */
+  descriptionFormatted?: string
 }
 
 /* ---- Inbox ---- */
@@ -252,5 +264,4 @@ export type NavKey =
   | 'notifications'
   | 'pipeline'
   | 'ingestion'
-  | 'prospector'
   | 'integrations'

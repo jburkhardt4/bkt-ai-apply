@@ -1,106 +1,88 @@
-# Overnight Run — Headless Prep Pipeline + `prepared_*` Data Model (ADR-013)
+# Overnight Remediation — Post-Audit Fixes + UI Consolidation (2026-06-23)
 
-**Date:** 2026-06-20 (overnight, autonomous) · **Branch:** `simplifyAI-apply-macro`
-**Exit condition MET:** schema + configs fully mapped, full suite passes with **0 errors**.
+Executes the remediation plan in [`docs/qa/dashboard-uat-audit.md`](docs/qa/dashboard-uat-audit.md) §6
+and the "Native Merge" UI consolidation. **Validation: `pnpm validate` green (888 tests, lint +
+typecheck clean) · `pnpm build` green** (1987 modules; bundle shrank after the orphan sweep). Net diff:
+**30 files, +532 / −4240**.
+
+> Architecture decision honored: **Native Merge** — `/prospector` removed entirely; its rich
+> affordances ported into the Dashboard. **The collapsible "Search Profile" panel is preserved**
+> (`useProspectorProfile` + `ProspectorProfileForm` kept and still wired in `AutoApplyDashboard`).
 
 ---
 
-## TL;DR
+## Phase 1 — HIGH-severity data regressions
 
-Built the **"headless prep + human submit"** pipeline from the 2026-06-20 job-board research, at the
-scope you locked: **Full pipeline + extension**, **new `prepared_*` tables**, **Complement** (the
-ADR-006 live ATS-POST adapters stay frozen; prep + the human-in-the-loop extension is the gap-filler).
-The server reads a posting's ATS form schema from its **public, auth-free read API**, maps your profile
-onto it with per-field confidence + sensitivity, and the extension fills the **non-sensitive** fields in
-your own session — you click submit. Sensitive fields (EEO/work-auth/salary/legal) are **review-gated in
-the database** and never auto-filled.
+### 1.1 — Inbox 100-row cap → true pagination
+- `autoApplyService.fetchProspectInboxJobs` replaced the hard `.limit(100)` with a `.range()` sweep
+  (page 200, safety bound 5000) that fetches **every** prospected/corpus job, then orders by match
+  score desc. **No discovered job is unreachable anymore.** (`autoApplyService.ts`)
+- Test mock updated to support `.range()` (`autoApplyService.test.ts`).
 
-Delegated per your Step D: `@ai-integrations` built the server prep layer + the extension changes;
-`@feature-dev` built the frontend service/hook/review surface. I owned the stateful spine (migration,
-types, authoritative validation, self-heal, docs).
+### 1.2 — Hard eligibility / location filter
+- New **`eligibilityService.ts`** (pure, deterministic, **11 unit tests** in `eligibilityService.test.ts`):
+  - `assessEligibility(job, profile)` → `block` (posting explicitly excludes US-based candidates —
+    the Swans wall), `penalize` (foreign-located, no US-remote — the Plative/India case;
+    `GEO_MISMATCH_PENALTY = 45`), or `ok`.
+  - `deriveEligibilityProfile(candidate_profiles row)` — US-authorized from work-authorization /
+    location; **defaults to NOT gating** when the profile is empty/unknown (never over-gates).
+- Wired into the **ready-queue gate**: `prospectorGraduationService.applyEligibilityGate` drops
+  `block` postings and any whose score − penalty falls below the 60 floor, **before** an application is
+  created. **Fail-open** (a gate error never blocks legitimate graduation).
 
-## Green gates (authoritative, run by the orchestrator)
+---
 
-| Gate | Result |
-| --- | --- |
-| `pnpm typecheck` (`tsc -b`) | ✅ 0 errors |
-| `pnpm lint` (`eslint .`) | ✅ 0 problems |
-| `pnpm test` (vitest) | ✅ 41 files / **375 tests** |
-| `pnpm build:ext` | ✅ bundle ready |
-| `deno check` (prepare-application) | ✅ 0 (after import-map fix) |
-| `xvfb-run pnpm test:ext` (Playwright) | ✅ **25/25** (incl. 3 new prepared-fill specs) |
+## Phase 2 — UI consolidation (MEDIUM regressions)
 
-Independent adversarial verifiers (one per tree) re-ran scoped validation and returned **pass** on all
-three, confirming the changes are additive (broke no existing test) and the invariants hold.
+### 2.1 — Removed the temporary `/prospector` route + orphans
+- Reverted the 4 route hooks (`router.ts`, `types.ts` NavKey, `App.tsx` import+case,
+  `AutoApplySidebar.tsx` nav item).
+- Deleted `ProspectorPage.tsx`, `ProspectorDashboard.tsx`, **12 orphaned leaf files** (search-results
+  table, job sheet, ready-queue, run-status, toggle, job-fields + 6 hooks + seed data), and **2
+  obsolete e2e specs**. Verified each was reachable only from the deleted pages; **kept** everything the
+  Search Profile panel / run + graduation services depend on.
 
-## What shipped
+### 2.2 — Ported the rich table affordances into `JobsScreen`
+- **Per-column filter dropdowns**: Type · Environment · Source (derived from the rows in view).
+- **Functional Sort** (was a dead no-op): cycles Score ↓ / Score ↑ / Company.
+- **Dropped fields surfaced**: `JobRow` now shows the **real board name** (Greenhouse / Ashby / Lever /
+  Workday / LinkedIn …, via `boardFromUrl`) instead of a generic "Job Board" badge, plus **job-type ·
+  environment** chips next to the title. (Match-score already rendered via `MatchScore`; salary =
+  Compensation column; recency = Updated column, posted_at-derived for prospect rows.)
+- Data plumbing: `JobMatch` + `mapProspectJob`/`mapApplication` + both selects now carry `jobType`,
+  `remoteType`, `postedAt`, `sourceBoard`, `descriptionFormatted` (`types.ts`, `autoApplyService.ts`).
 
-### Database — migration `20260620000001_prepared_applications` (applied to hosted `rmoyuwesfljuygvpdolf` via MCP)
+### 2.3 — Reconnected the formatted JD + real source badge
+- `JDSidebar` Overview tab now renders `JobDescriptionMarkdown` from `descriptionFormatted` (falls back
+  to the raw overview, or a "No description" state) — the formatted JD is reconnected.
+- The hardcoded **"Review Matches"** header badge is replaced by the **real source board** (or "Job
+  Board" for corpus) + the actual status chip.
 
-- **`prepared_applications`** — one row per prep attempt: `job_ref`, `ats_family`, `antibot_tier`,
-  `form_schema_snapshot`, `match_score`, `mode`, `status`, `gating_reason`, `document_versions`,
-  `prepared_by`. RLS own-row; `(user_id, job_id)` upsert index.
-- **`prepared_application_fields`** — one row per mapped field: `value_source`, `confidence`,
-  `is_sensitive`, `review_gate`, `free_text_draft`, `redaction_safe`. RLS own-row.
-- **BR-156 enforced in the DB**: trigger `fn_prepared_field_force_gate` forces `review_gate=true` when
-  `is_sensitive=true`, plus `CHECK (NOT is_sensitive OR review_gate)`. Security advisor clean
-  (`search_path=''`).
+### 2.4 — Dead Sort button + auth-hydration race
+- Sort button wired (see 2.2).
+- `AppShell` redirect guard now uses a **1200 ms grace window** so a late `INITIAL_SESSION` /
+  token-refresh can cancel the bounce — deep-linking / refreshing a protected sub-route no longer
+  races auth hydration into `/login`.
 
-### Server prep layer (`@ai-integrations`) — `supabase/functions/`
+---
 
-- Pure, Deno-free, **vitest-tested (63 tests)** modules in `_shared/prep/`: `atsFamily`,
-  `buildReadEndpoint`, `schemaParse` (Greenhouse/Lever/Ashby/SmartRecruiters), `canonicalKey`,
-  `sensitivity`, `fieldMap`, `gating`, `draftFreeText` (Phase-5 scaffold).
-- `prepare-application/` edge function — on-demand, **RLS-scoped to the caller** (anon key + forwarded
-  JWT, `user_id` from `auth.getUser()`, no service-role), reads schema → maps → gates → upserts the prep
-  rows. `deno check` green via the import-map bare specifier.
+## Notes, scope decisions & follow-ups (honest)
 
-### Extension (`@ai-integrations`) — `extension/src/`
+- **Eligibility is a service-layer gate, not an Edge change.** The `score-job-fit` Edge Function is
+  unchanged (Edge deploys are JB-gated and escape `pnpm validate`). The gate runs at graduation
+  (dashboard mount + after scoring); it prevents *new* ineligible graduations but does **not**
+  retroactively un-graduate applications created before this change — a one-off cleanup could follow.
+- **Eligibility regexes are heuristic** — they catch the observed Swans (US-exclusion) and Plative
+  (India) patterns and a conservative foreign-country list. Other phrasings may need tuning; the pure
+  function + tests make that low-risk to extend.
+- **Phase 2.2 is a pragmatic Native Merge**: job-type/environment/board are surfaced as inline chips +
+  per-column filter dropdowns rather than a full discrete-column grid rewrite of the shared `JobRow`
+  (lower risk, same information + filtering). A denser multi-column grid can be a follow-up if desired.
+- **JD formatting is read-only here**: `JDSidebar` renders the cached `jobs.description_formatted` (or
+  raw overview). It does **not** lazily call `format-jd` on open the way the old `ProspectorJobSheet`
+  did; on-demand formatting for never-formatted rows is a possible follow-up.
+- No DB migrations or generated-type changes. No commits/pushes beyond this branch.
 
-- `preparedFill.ts` (excludes review-gated fields), `stopConditions.ts` (CAPTCHA/MFA/login-wall),
-  `BKT_PREPARED` message + `handlePrepared`. Content script **prefers** prepared data, surfaces gated
-  fields + stop-conditions, **never auto-submits** (`autoClick:false`). Greenhouse config +
-  `phone_country`. New `preparedFill.spec.ts` (Playwright).
-
-### Frontend (`@feature-dev`) — `src/features/`
-
-- `preparedApplicationService.ts` (+17 tests), `usePreparedApplications` hook, `PreparedApplicationReview.tsx`
-  (flags review-gated fields "Needs your review", hides their values). Verified the existing
-  Preferences→`candidate_profiles` wiring is intact (no redo).
-
-## Mode-gating policy (BR-157)
-
-Auto-mode unattended prep is allowed only when **all** hold: family in the low anti-bot tier
-{greenhouse, lever, ashby, smartrecruiters} · no sensitive field in the schema · `match_score ≥ 75` ·
-source is a read-API surface. Otherwise → `needs_review` with a `gating_reason`.
-**Workday / LinkedIn / Indeed are never Auto-eligible and are never headless-read.**
-
-## Docs updated
-
-- `docs/adr/013-headless-prep-and-prepared-applications.md` (new)
-- `docs/requirements/03-data-entities.md` → E-017/E-018, count 16→18
-- `docs/domain/business-rules.md` → BR-156–160
-- Project memory: `headless-prep-pipeline.md` (+ index)
-
-## Remaining (live-tune / follow-ups — NOT blockers; build is green)
-
-1. **ATS read-endpoint shapes are live-tune**: Ashby + SmartRecruiters response envelopes and the Lever
-   custom-question key are UNVERIFIED against real postings. Parsers fail safe (a misparse downgrades to
-   `needs_review`, never a silent auto-prep). Verify each against one live posting before production prep.
-2. **Prep cron** (`prepared_by='cron'`) is a guarded **501 scaffold** — batch auto-prep is the next build.
-3. **AI free-text drafting** (`draftFreeText`) is a Phase-5 scaffold (returns `{draft:null}`); wiring it
-   through `src/lib/ai-router.ts` is the next step (always review-gated, never to the LLM for EEO/answers).
-4. **`PreparedApplicationReview`** is built and tested but **not yet mounted** in a route — wire it into the
-   auto-apply UI when the prep flow goes live.
-5. **`employment_history` editor** in Preferences deferred (column exists; UI carried disproportionate risk).
-6. `prepare-application` edge function is **not yet deployed** to the hosted project (separate
-   `deploy_edge_function` step when you're ready to exercise on-demand prep live).
-
-## Notes
-
-- **Not committed** — you said "commit" only last time after the run; this run's exit condition was the
-  green suite + this summary. Everything is staged-ready. Say the word and I'll commit (and/or push).
-- A stray **`BKT-Autofill-Bug-Screenshot.webp`** (prior session) and a **`supabase/functions/deno.lock`**
-  (created by my `deno check`) are untracked and intentionally excluded.
-- Your message "ignore the writingtools prompt please delete now" matched **nothing** in the repo, memory,
-  or filenames — I deleted nothing. If you meant the stray screenshot above, confirm and I'll remove it.
+## Blockers encountered
+- None blocking. The graduation + autoApplyService test mocks needed updating for the new query shapes
+  (`.range()`, the candidate_profiles eligibility read) — done; all 888 tests pass.

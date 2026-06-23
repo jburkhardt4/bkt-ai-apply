@@ -17,7 +17,7 @@ type DbResult = { data: unknown; error: unknown }
  *  `result`. Lets us mock the long .select().eq().order().limit()… chains. */
 function thenable(result: DbResult) {
   const b: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'in', 'order', 'limit', 'insert', 'update', 'delete']) {
+  for (const m of ['select', 'eq', 'in', 'order', 'limit', 'range', 'insert', 'update', 'delete']) {
     b[m] = vi.fn(() => b)
   }
   b.maybeSingle = vi.fn(() => Promise.resolve(result))

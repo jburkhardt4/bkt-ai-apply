@@ -11,9 +11,18 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { ChipPill, QualLine, SkillTag } from '@/components/bkt/bits'
 import { companyLogo } from '@/components/bkt/format'
 import { PreparedApplicationReview } from '@/features/applications/components/PreparedApplicationReview'
+import { JobDescriptionMarkdown } from '@/features/jobs/components/JobDescriptionMarkdown'
 import { openSourceUrl } from '../openSourceUrl'
 import type { TimelineEvent } from '../services/autoApplyService'
 import type { JobMatch, SearchJob } from '../types'
+
+/** Status → badge tone for the JD header chip (mirrors JobRow's STATUS_TONE). */
+const STATUS_TONE: Record<string, 'brand' | 'warning' | 'success' | 'danger'> = {
+  Review: 'brand',
+  'In progress': 'warning',
+  Applied: 'success',
+  Declined: 'danger',
+}
 
 function JDTab({ label, badge, active, onClick }: { label: string; badge?: ReactNode; active: boolean; onClick: () => void }) {
   return (
@@ -99,6 +108,10 @@ export function JDSidebar({
   // label; SearchJob has no status, so /search keeps "Apply".
   const applyLabel = 'status' in job && job.status === 'In progress' ? 'Mark as applied' : 'Apply'
 
+  // Reconnected formatted JD (audit §6 #4): prefer the normalized Markdown, fall
+  // back to the raw overview; JobDescriptionMarkdown renders either as clean prose.
+  const jdMarkdown = (('descriptionFormatted' in job && job.descriptionFormatted) || job.overview || '').trim()
+
   // Job Fit tab states: a 0 score with no matches/gaps means no AI score has
   // been persisted yet; a heuristic_fallback source means the shown score is an
   // estimate (e.g. full AI scoring queued under the monthly cap, BR-141).
@@ -173,9 +186,20 @@ export function JDSidebar({
                 {job.updated}
               </ChipPill>
             )}
-            <BktBadge tone="brand" appearance="soft">
-              Review Matches
-            </BktBadge>
+            {'sourceBoard' in job && job.sourceBoard ? (
+              <BktBadge tone="neutral" appearance="outline">
+                {job.sourceBoard}
+              </BktBadge>
+            ) : 'source' in job && job.source === 'corpus' ? (
+              <BktBadge tone="neutral" appearance="outline">
+                Job Board
+              </BktBadge>
+            ) : null}
+            {'status' in job && job.status && (
+              <BktBadge tone={STATUS_TONE[job.status] ?? 'brand'} appearance="soft">
+                {job.status === 'Review' ? 'Review Match' : job.status}
+              </BktBadge>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, background: 'var(--bkt-slate-100)', borderRadius: 'var(--radius-pill)', padding: 4, alignSelf: 'flex-start' }}>
             <JDTab label="Overview" active={tab === 'overview'} onClick={() => setTab('overview')} />
@@ -189,7 +213,13 @@ export function JDSidebar({
         <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           {tab === 'overview' && (
             <>
-              <p style={{ margin: 0, font: '400 var(--text-base)/1.65 var(--font-body)', color: 'var(--text-body)' }}>{job.overview}</p>
+              {jdMarkdown ? (
+                <JobDescriptionMarkdown markdown={jdMarkdown} />
+              ) : (
+                <p style={{ margin: 0, font: '400 var(--text-base)/1.5 var(--font-body)', color: 'var(--text-muted)' }}>
+                  No description provided.
+                </p>
+              )}
               <div>
                 <div style={{ font: '700 var(--text-md)/1 var(--font-display)', color: 'var(--text-strong)', marginBottom: 10 }}>Skills</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

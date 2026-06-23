@@ -21,6 +21,12 @@ import {
   enqueueForSubmission,
   fetchSubmitThreshold,
 } from '@/features/applications/services/submissionQueueService'
+import {
+  assessEligibility,
+  deriveEligibilityProfile,
+  effectiveScore,
+  type CandidateProfileEligibilityRow,
+} from '@/features/auto-apply/services/eligibilityService'
 
 /** Pipeline-entry threshold — matches useProspectorReadyQueue (BR-020). */
 const READY_QUEUE_MIN_SCORE = 60
@@ -92,6 +98,12 @@ export async function graduateProspectorMatches(params: {
       bestByJob.set(raw.job_id, raw.overall_score)
     }
   }
+  if (bestByJob.size === 0) return { created: 0, enqueued: 0 }
+
+  // Hard eligibility / location gate (dashboard-uat-audit §6 #2): drop postings
+  // that explicitly exclude the candidate and demote geographically-mismatched
+  // roles below the ready floor, BEFORE any application is created.
+  await applyEligibilityGate(supabase, userId, bestByJob)
   if (bestByJob.size === 0) return { created: 0, enqueued: 0 }
 
   const jobIds = [...bestByJob.keys()]
@@ -177,4 +189,58 @@ export async function graduateProspectorMatches(params: {
   }
 
   return { created, enqueued }
+}
+
+interface GateJobRow {
+  id: string
+  title: string | null
+  location: string | null
+  description: string | null
+  remote_type: string | null
+}
+
+/**
+ * Mutates `bestByJob` in place, removing postings the candidate is ineligible
+ * for so they never graduate into the Ready-to-Apply queue:
+ *   - `block`    — the posting explicitly excludes the candidate (hard gate).
+ *   - `penalize` — a geographic mismatch that drops the effective score below
+ *                  the ready floor (READY_QUEUE_MIN_SCORE).
+ * Gating only applies when the candidate is confidently US-authorized; an
+ * unknown/empty profile leaves every match untouched (never over-gates).
+ */
+async function applyEligibilityGate(
+  supabase: NonNullable<ReturnType<typeof getSupabaseClientSafe>>,
+  userId: string,
+  bestByJob: Map<string, number>,
+): Promise<void> {
+  try {
+    const { data: profileRow } = await supabase
+      .from('candidate_profiles')
+      .select('location, work_authorization')
+      .eq('user_id', userId)
+      .maybeSingle()
+    const profile = deriveEligibilityProfile(profileRow as CandidateProfileEligibilityRow | null)
+    if (!profile.usAuthorized) return
+
+    const { data: jobRows, error } = await supabase
+      .from('jobs')
+      .select('id, title, location, description, remote_type')
+      .eq('user_id', userId)
+      .in('id', [...bestByJob.keys()])
+    if (error || !jobRows) return
+
+    for (const row of jobRows as GateJobRow[]) {
+      const score = bestByJob.get(row.id)
+      if (score == null) continue
+      const assessment = assessEligibility(
+        { title: row.title, location: row.location, description: row.description, remoteType: row.remote_type },
+        profile,
+      )
+      if (assessment.severity === 'block' || effectiveScore(score, assessment) < READY_QUEUE_MIN_SCORE) {
+        bestByJob.delete(row.id)
+      }
+    }
+  } catch {
+    // Fail-open: an eligibility-gate error must never block legitimate graduation.
+  }
 }

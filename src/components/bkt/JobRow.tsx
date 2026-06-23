@@ -20,6 +20,13 @@ export interface JobRowProps {
   status?: JobStatus
   /** jobs.source provenance — a 'corpus' row shows a "Job Board" badge (ADR-016). */
   source?: string
+  /** Real board name (Greenhouse / Ashby / Lever / …) — preferred over the
+   *  generic "Job Board" badge when known (audit §6 #3). */
+  sourceBoard?: string
+  /** jobs.job_type — a compact chip next to the title (audit §6 #3). */
+  jobType?: string
+  /** jobs.remote_type — environment chip next to the title (audit §6 #3). */
+  remoteType?: string
   updatedAt?: string
   onApply?: () => void
   onDecline?: () => void
@@ -48,6 +55,9 @@ export function JobRow({
   score,
   status = 'Review',
   source,
+  sourceBoard,
+  jobType,
+  remoteType,
   updatedAt = '2 hours ago',
   onApply,
   onDecline,
@@ -98,11 +108,15 @@ export function JobRow({
         <BktBadge tone={STATUS_TONE[status]} appearance="soft" dot={status === 'Review'}>
           {status}
         </BktBadge>
-        {source === 'corpus' && (
+        {sourceBoard ? (
+          <BktBadge tone="neutral" appearance="outline">
+            {sourceBoard}
+          </BktBadge>
+        ) : source === 'corpus' ? (
           <BktBadge tone="neutral" appearance="outline">
             Job Board
           </BktBadge>
-        )}
+        ) : null}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -118,6 +132,11 @@ export function JobRow({
           {title}
         </span>
         {score != null && <MatchScore score={score} />}
+        {(jobType || remoteType) && (
+          <span style={{ flexShrink: 0, font: '500 var(--text-xs)/1 var(--font-body)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+            {[jobType, remoteType].filter(Boolean).join(' · ')}
+          </span>
+        )}
       </div>
 
       {comp != null && (

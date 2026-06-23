@@ -49,6 +49,36 @@ function formatComp(min: number | null, max: number | null): string | undefined 
   return undefined
 }
 
+const KNOWN_BOARDS: [RegExp, string][] = [
+  [/greenhouse\.io/, 'Greenhouse'],
+  [/ashbyhq\.com/, 'Ashby'],
+  [/lever\.co/, 'Lever'],
+  [/myworkdayjobs\.com|workday\.com/, 'Workday'],
+  [/linkedin\.com/, 'LinkedIn'],
+  [/indeed\.com/, 'Indeed'],
+  [/dice\.com/, 'Dice'],
+  [/ziprecruiter\.com/, 'ZipRecruiter'],
+  [/wellfound\.com|angel\.co/, 'Wellfound'],
+  [/upwork\.com/, 'Upwork'],
+]
+
+/** Human-readable board name from a posting URL host (Greenhouse / Ashby / Lever
+ *  / Workday / LinkedIn …) so crawled rows show real provenance. Falls back to a
+ *  capitalized host label; undefined when there is no URL. */
+function boardFromUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  let host: string
+  try {
+    host = new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return undefined
+  }
+  for (const [re, name] of KNOWN_BOARDS) if (re.test(host)) return name
+  const parts = host.split('.')
+  const label = parts.length >= 2 ? parts[parts.length - 2] : host
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : undefined
+}
+
 /* ---------------- jobs / applications ---------------- */
 
 interface LiveScoreRow {
@@ -85,10 +115,15 @@ interface LiveJobJoin {
   title: string
   location: string | null
   description: string | null
+  description_formatted: string | null
   skills: string[] | null
   compensation_min: number | null
   compensation_max: number | null
+  remote_type: string | null
+  job_type: string | null
+  source: string | null
   source_url: string | null
+  posted_at: string | null
   companies: LiveCompanyRow | null
   ai_scores: LiveScoreRow[] | null
 }
@@ -134,22 +169,31 @@ function mapApplication(row: LiveApplicationRow, manualInProgressIds?: Set<strin
     about,
     sourceUrl: job?.source_url ?? undefined,
     applicationUrl: row.application_url ?? job?.source_url ?? undefined,
+    source: job?.source ?? undefined,
+    jobType: job?.job_type ?? undefined,
+    remoteType: job?.remote_type ?? undefined,
+    postedAt: job?.posted_at ?? undefined,
+    sourceBoard: boardFromUrl(job?.source_url),
+    descriptionFormatted: job?.description_formatted ?? undefined,
   }
 }
 
 /* ---- ADR-016: prospected/corpus jobs as inbox JobMatch rows ---- */
 
 const PROSPECT_INBOX_SELECT =
-  'id, title, location, description, skills, compensation_min, compensation_max, source, source_url, posted_at, created_at, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace)'
+  'id, title, location, description, description_formatted, skills, compensation_min, compensation_max, remote_type, job_type, source, source_url, posted_at, created_at, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace)'
 
 interface LiveProspectJobRow {
   id: string
   title: string
   location: string | null
   description: string | null
+  description_formatted: string | null
   skills: string[] | null
   compensation_min: number | null
   compensation_max: number | null
+  remote_type: string | null
+  job_type: string | null
   source: string | null
   source_url: string | null
   posted_at: string | null
@@ -172,6 +216,11 @@ function mapProspectJob(row: LiveProspectJobRow): JobMatch {
     id: `job:${row.id}`,
     jobId: row.id,
     source: row.source ?? undefined,
+    jobType: row.job_type ?? undefined,
+    remoteType: row.remote_type ?? undefined,
+    postedAt: row.posted_at ?? undefined,
+    sourceBoard: boardFromUrl(row.source_url),
+    descriptionFormatted: row.description_formatted ?? undefined,
     stage: 'discovery',
     status: 'Review',
     domain: company?.domain ?? undefined,
@@ -193,27 +242,47 @@ function mapProspectJob(row: LiveProspectJobRow): JobMatch {
   }
 }
 
+/** Page size for the prospect-inbox sweep. The query is looped via `.range()`
+ *  (below) so EVERY prospected/corpus job is reachable — this replaces the old
+ *  hard `.limit(100)` that silently dropped discovered jobs once the pool grew
+ *  past 100 (ADR-016 regression; see docs/qa/dashboard-uat-audit.md §3). */
+const PROSPECT_INBOX_PAGE = 200
+/** Safety bound on the pagination loop (defensive against a runaway dataset). */
+const PROSPECT_INBOX_MAX_ROWS = 5000
+
 /** Prospected/corpus jobs (source IN prospector/corpus) that do NOT yet have an
- *  application, as 'Review' inbox candidates. Dedup vs `appliedJobIds` (a job
- *  with an application is shown as its application row, not duplicated here). */
+ *  application, as 'Review' inbox candidates. Paginates through the full set via
+ *  `.range()` (no row cap) and returns them ordered by match score desc so the
+ *  strongest matches surface first. Dedup vs `appliedJobIds` (a job with an
+ *  application is shown as its application row, not duplicated here). */
 async function fetchProspectInboxJobs(
   supabase: NonNullable<ReturnType<typeof getSupabaseClientSafe>>,
   userId: string,
   appliedJobIds: Set<string>,
 ): Promise<JobMatch[]> {
-  const { data, error } = await supabase
-    .from('jobs')
-    .select(PROSPECT_INBOX_SELECT)
-    .eq('user_id', userId)
-    .in('source', ['prospector', 'corpus'])
-    // Latest ai_scores row only (versioned per job) so score?.[0] is current.
-    .order('scored_at', { ascending: false, referencedTable: 'ai_scores' })
-    .limit(1, { referencedTable: 'ai_scores' })
-    .order('created_at', { ascending: false })
-    .limit(100)
-  if (error) return []
-  const rows = (data ?? []) as unknown as LiveProspectJobRow[]
-  return rows.filter((r) => !appliedJobIds.has(r.id)).map(mapProspectJob)
+  const collected: LiveProspectJobRow[] = []
+  for (let from = 0; from < PROSPECT_INBOX_MAX_ROWS; from += PROSPECT_INBOX_PAGE) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select(PROSPECT_INBOX_SELECT)
+      .eq('user_id', userId)
+      .in('source', ['prospector', 'corpus'])
+      // Latest ai_scores row only (versioned per job) so score?.[0] is current.
+      .order('scored_at', { ascending: false, referencedTable: 'ai_scores' })
+      .limit(1, { referencedTable: 'ai_scores' })
+      .order('created_at', { ascending: false })
+      .range(from, from + PROSPECT_INBOX_PAGE - 1)
+    if (error) break
+    const page = (data ?? []) as unknown as LiveProspectJobRow[]
+    collected.push(...page)
+    if (page.length < PROSPECT_INBOX_PAGE) break
+  }
+  // Map, drop rows already in the pipeline, and surface the strongest matches
+  // first (overall_score desc, mapped onto JobMatch.score by mapProspectJob).
+  return collected
+    .filter((r) => !appliedJobIds.has(r.id))
+    .map(mapProspectJob)
+    .sort((a, b) => b.score - a.score)
 }
 
 export async function fetchJobMatches(userId: string | null): Promise<{ source: DataSource; jobs: JobMatch[] }> {
@@ -223,7 +292,7 @@ export async function fetchJobMatches(userId: string | null): Promise<{ source: 
     const { data, error } = await supabase
       .from('applications')
       .select(
-        'id, stage, match_score, updated_at, application_url, jobs(id, title, location, description, skills, compensation_min, compensation_max, source_url, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace))',
+        'id, stage, match_score, updated_at, application_url, jobs(id, title, location, description, description_formatted, skills, compensation_min, compensation_max, remote_type, job_type, source, source_url, posted_at, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace))',
       )
       .eq('user_id', userId)
       // Embedded ai_scores are versioned per job; order desc by scored_at and

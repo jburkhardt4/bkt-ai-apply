@@ -22,7 +22,6 @@ const ROUTES: Record<string, NavKey> = {
   '/notifications': 'notifications',
   '/pipeline': 'pipeline',
   '/ingestion': 'ingestion',
-  '/prospector': 'prospector',
   '/settings': 'integrations',
 }
 

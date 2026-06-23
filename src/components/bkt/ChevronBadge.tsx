@@ -18,8 +18,8 @@ export function ChevronBadge({ count }: ChevronBadgeProps) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,
-        background: '#cb112d',
-        color: '#fff',
+        background: 'var(--destructive)', // Using BKT design token
+        color: 'var(--destructive-foreground)', // Using BKT design token
         padding: '0 0.4rem',
         borderRadius: 9999,
         fontSize: 14,
@@ -32,23 +32,21 @@ export function ChevronBadge({ count }: ChevronBadgeProps) {
         {/* top chevron — offset by half the 1.6s cycle so it is perfectly out of
             phase with the bottom one (the seamless upward-flow stagger). */}
         <span
+          className={animate ? 'bkt-chevron-flow' : undefined}
           style={{
             display: 'flex',
             marginBottom: -3,
-            animation: animate ? 'bkt-chevron-pulse 1.6s ease-in-out infinite' : undefined,
             animationDelay: animate ? '0.8s' : undefined,
           }}
         >
-          <Icon name="chevron-up" size={10} strokeWidth={2.6} color="#fff" />
+          <Icon name="chevron-up" size={10} strokeWidth={2.6} color="currentColor" />
         </span>
         {/* bottom chevron — leads the pulse at 0s delay */}
         <span
-          style={{
-            display: 'flex',
-            animation: animate ? 'bkt-chevron-pulse 1.6s ease-in-out infinite' : undefined,
-          }}
+          className={animate ? 'bkt-chevron-flow' : undefined}
+          style={{ display: 'flex' }}
         >
-          <Icon name="chevron-up" size={10} strokeWidth={2.6} color="#fff" />
+          <Icon name="chevron-up" size={10} strokeWidth={2.6} color="currentColor" />
         </span>
       </span>
       <span className="bkt-num">{count}</span>

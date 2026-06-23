@@ -531,6 +531,11 @@ code, kbd, pre, samp { font-family: var(--font-mono); }
   100% { opacity: 0; transform: translateY(-3px); }
 }
 
+/* NEW: The utility class to apply the infinite flowing chevron animation */
+.bkt-chevron-flow {
+  animation: bkt-chevron-pulse 1.6s ease-in-out infinite;
+}
+
 /* ---- Reduced motion: collapse to instant, keep end states ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -8,7 +8,7 @@ import { BktCard, BktStatCard } from '@/components/bkt/BktCard'
 import { BktInput } from '@/components/bkt/BktInput'
 import { JobRow } from '@/components/bkt/JobRow'
 import { BktPagination } from '@/components/bkt/BktPagination'
-import { ChevronBadge } from '@/components/bkt/ChevronBadge'
+import { BktBadge } from '@/components/bkt/BktBadge'
 import { SearchingPanel } from './SearchingPanel'
 import { companyLogo } from '@/components/bkt/format'
 import { PAGE_SIZE, getPageCount } from '@/lib/pagination'
@@ -132,7 +132,7 @@ export function JobsScreen({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 22, borderBottom: '1px solid var(--border)' }}>
         <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => selectFilter('All')} />
-        <FilterTab label="Review Matches" count={reviewCount} badge={reviewCount > 0 ? <ChevronBadge count={reviewCount} /> : undefined} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
+        <FilterTab label="Review Matches" count={reviewCount} badge={reviewCount > 0 ? <BktBadge tone="brand" appearance="soft" style={{ border: '1px solid var(--bkt-blue-200)' }}>{reviewCount}</BktBadge> : undefined} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
         <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => selectFilter('In progress')} />
         <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />

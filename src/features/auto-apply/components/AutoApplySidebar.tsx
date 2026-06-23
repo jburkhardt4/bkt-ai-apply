@@ -6,6 +6,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
+import { ChevronBadge } from '@/components/bkt/ChevronBadge'
 import { brandAsset } from '../assets'
 import type { NavKey } from '../types'
 
@@ -86,14 +87,9 @@ function NavItem({
     >
       <Icon name={icon} size={17} strokeWidth={active ? 2 : 1.8} />
       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-      {badge != null && (
-        <BktBadge tone="brand" appearance="solid" style={{ gap: 3 }}>
-          <Icon name="chevrons-up" size={11} strokeWidth={2.4} />
-          {badge}
-        </BktBadge>
-      )}
+      {badge != null && badge}
       {count != null && (
-        <BktBadge tone="danger" appearance="solid">
+        <BktBadge tone="danger" appearance="solid" style={{ background: '#cb112d', border: '1px solid transparent' }}>
           {count}
         </BktBadge>
       )}
@@ -146,8 +142,8 @@ export function AutoApplySidebar({ active, onNavigate, userName, userEmail, badg
               key={it.key}
               icon={it.icon}
               label={it.label}
-              badge={it.key === 'dashboard' ? badges.dashboard : undefined}
-              count={it.key === 'inbox' ? badges.inbox : undefined}
+              badge={it.key === 'dashboard' && badges.dashboard ? <ChevronBadge count={badges.dashboard} /> : undefined}
+              count={it.key === 'inbox' && badges.inbox ? badges.inbox : undefined}
               active={active === it.key}
               onClick={() => onNavigate(it.key)}
             />

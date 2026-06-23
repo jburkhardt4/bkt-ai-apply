@@ -22,21 +22,20 @@ export function ChevronBadge({ count }: ChevronBadgeProps) {
         color: 'var(--destructive-foreground)', // Using BKT design token
         padding: '0 0.4rem',
         borderRadius: 9999,
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 600,
         lineHeight: 1.5,
         transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out',
       }}
     >
       <span aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        {/* top chevron — offset by half the 1.6s cycle so it is perfectly out of
-            phase with the bottom one (the seamless upward-flow stagger). */}
+        {/* top chevron — 0.4s stagger behind the bottom one creates the upward "wave". */}
         <span
           className={animate ? 'bkt-chevron-flow' : undefined}
           style={{
             display: 'flex',
-            marginBottom: -3,
-            animationDelay: animate ? '0.8s' : undefined,
+            marginBottom: -6,
+            animationDelay: animate ? '0.4s' : undefined,
           }}
         >
           <Icon name="chevron-up" size={10} strokeWidth={2.6} color="currentColor" />

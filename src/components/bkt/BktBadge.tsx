@@ -49,7 +49,7 @@ export function BktBadge({
         padding: '0 10px',
         borderRadius: 'var(--radius-pill)',
         fontFamily: 'var(--font-body)',
-        fontSize: 'var(--text-2xs)',
+        fontSize: 'calc(var(--text-2xs) - 1px)',
         fontWeight: 700,
         letterSpacing: '0.01em',
         lineHeight: 1,

@@ -521,14 +521,13 @@ code, kbd, pre, samp { font-family: var(--font-mono); }
   100% { margin-left: 100%; }
 }
 
-/* Continuous upward chevron FLOW — the "matches awaiting review" badge. Two
-   chevrons run this keyframe offset by half the duration (see ChevronBadge.tsx)
-   so one fades in rising as the other fades out, reading as a seamless upward
-   stream rather than an in-place pulse. */
+/* Staggered chevron pulse — the "matches awaiting review" badge. The two chevrons
+   run this keyframe with the top one offset by 0.4s (see ChevronBadge.tsx), so
+   they bob in a slight phase-shift that reads as a gentle upward "wave" (both stay
+   partially visible — the opacity floor of 0.4 keeps it a wave, not a blink). */
 @keyframes bkt-chevron-pulse {
-  0%   { opacity: 0; transform: translateY(3px); }
-  50%  { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-3px); }
+  0%, 100% { opacity: 0.4; transform: translateY(2px); }
+  50%      { opacity: 1;   transform: translateY(-1px); }
 }
 
 /* NEW: The utility class to apply the infinite flowing chevron animation */
@@ -542,5 +541,18 @@ code, kbd, pre, samp { font-family: var(--font-mono); }
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  /* Scoped exemption: the match-review chevron is a tiny 3px drift, not the kind
+     of large/parallax motion reduce-motion targets — keep the "awaiting review"
+     cue alive. Override ONLY the two properties the `*` guard clobbers
+     (animation-duration + iteration-count) as LONGHANDS. Do NOT use the
+     `animation` shorthand here: it resets animation-delay to 0 with !important,
+     which would beat the top chevron's inline 0.4s delay and kill the wave. The
+     base `.bkt-chevron-flow` rule still supplies the name/timing; the inline
+     per-chevron delay still supplies the stagger. Delete this block to honor
+     reduce-motion strictly for the badge too. */
+  .bkt-chevron-flow {
+    animation-duration: 1.6s !important;
+    animation-iteration-count: infinite !important;
   }
 }

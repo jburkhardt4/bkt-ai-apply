@@ -46,6 +46,13 @@ export interface JobMatch {
   /** Live rows carry the pipeline ids needed for stage transitions. */
   applicationId?: string
   stage?: string
+  /** Underlying jobs.id for rows NOT yet in the pipeline (prospected/corpus jobs
+   *  with no application). Apply/Decline lazily create the application from it
+   *  (ADR-016). Application-backed rows leave this undefined. */
+  jobId?: string
+  /** jobs.source provenance ('prospector' | 'corpus') — drives the "Job Board"
+   *  badge so crawled ATS postings are distinguishable in the inbox (ADR-016). */
+  source?: string
 }
 
 /* ---- Inbox ---- */
@@ -245,5 +252,4 @@ export type NavKey =
   | 'notifications'
   | 'pipeline'
   | 'ingestion'
-  | 'prospector'
   | 'integrations'

@@ -137,6 +137,85 @@ function mapApplication(row: LiveApplicationRow, manualInProgressIds?: Set<strin
   }
 }
 
+/* ---- ADR-016: prospected/corpus jobs as inbox JobMatch rows ---- */
+
+const PROSPECT_INBOX_SELECT =
+  'id, title, location, description, skills, compensation_min, compensation_max, source, source_url, posted_at, created_at, companies(name, domain, industry, size_range), ai_scores(overall_score, strengths, gaps, recommendation, reasoning_trace)'
+
+interface LiveProspectJobRow {
+  id: string
+  title: string
+  location: string | null
+  description: string | null
+  skills: string[] | null
+  compensation_min: number | null
+  compensation_max: number | null
+  source: string | null
+  source_url: string | null
+  posted_at: string | null
+  created_at: string
+  companies: LiveCompanyRow | null
+  ai_scores: LiveScoreRow[] | null
+}
+
+/** Maps a prospected/corpus `jobs` row (no application yet) into a 'Review'
+ *  inbox JobMatch. Carries jobId (so Apply/Decline can lazily create the
+ *  application) + source (for the "Job Board" badge). applicationId is absent. */
+function mapProspectJob(row: LiveProspectJobRow): JobMatch {
+  const company = row.companies
+  const score = row.ai_scores?.[0] ?? null
+  const about =
+    company && (company.industry || company.size_range)
+      ? [company.industry, company.size_range].filter(Boolean).join(' · ')
+      : undefined
+  return {
+    id: `job:${row.id}`,
+    jobId: row.id,
+    source: row.source ?? undefined,
+    stage: 'discovery',
+    status: 'Review',
+    domain: company?.domain ?? undefined,
+    company: company?.name ?? 'Unknown company',
+    title: row.title,
+    score: Math.round(score?.overall_score ?? 0),
+    updated: relativeTime(row.posted_at ?? row.created_at),
+    comp: formatComp(row.compensation_min, row.compensation_max),
+    location: row.location ?? undefined,
+    overview: row.description ?? undefined,
+    skills: row.skills ?? undefined,
+    keyMatches: score?.strengths ?? undefined,
+    keyGaps: score?.gaps ?? undefined,
+    recommendation: toRecommendation(score?.recommendation),
+    scoreSource: deriveScoreSource(score),
+    about,
+    sourceUrl: row.source_url ?? undefined,
+    applicationUrl: row.source_url ?? undefined,
+  }
+}
+
+/** Prospected/corpus jobs (source IN prospector/corpus) that do NOT yet have an
+ *  application, as 'Review' inbox candidates. Dedup vs `appliedJobIds` (a job
+ *  with an application is shown as its application row, not duplicated here). */
+async function fetchProspectInboxJobs(
+  supabase: NonNullable<ReturnType<typeof getSupabaseClientSafe>>,
+  userId: string,
+  appliedJobIds: Set<string>,
+): Promise<JobMatch[]> {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(PROSPECT_INBOX_SELECT)
+    .eq('user_id', userId)
+    .in('source', ['prospector', 'corpus'])
+    // Latest ai_scores row only (versioned per job) so score?.[0] is current.
+    .order('scored_at', { ascending: false, referencedTable: 'ai_scores' })
+    .limit(1, { referencedTable: 'ai_scores' })
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) return []
+  const rows = (data ?? []) as unknown as LiveProspectJobRow[]
+  return rows.filter((r) => !appliedJobIds.has(r.id)).map(mapProspectJob)
+}
+
 export async function fetchJobMatches(userId: string | null): Promise<{ source: DataSource; jobs: JobMatch[] }> {
   const supabase = getSupabaseClientSafe()
   if (!supabase || !userId) return { source: 'demo', jobs: JOBS_SEED.jobs }
@@ -154,7 +233,6 @@ export async function fetchJobMatches(userId: string | null): Promise<{ source: 
       .order('updated_at', { ascending: false })
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as unknown as LiveApplicationRow[]
-    if (rows.length === 0) return { source: 'demo', jobs: JOBS_SEED.jobs }
 
     // Overlay: discovery-stage applications JB has opened for a manual apply
     // (review/assist modes) carry a `submission_attempt` marker event. One
@@ -178,7 +256,19 @@ export async function fetchJobMatches(userId: string | null): Promise<{ source: 
         )
       }
     }
-    return { source: 'live', jobs: rows.map((row) => mapApplication(row, manualInProgressIds)) }
+    const appJobs = rows.map((row) => mapApplication(row, manualInProgressIds))
+
+    // ADR-016: merge in prospected/corpus jobs that have no application yet as
+    // 'Review' inbox candidates so the Dashboard is the central inbox. Dedup by
+    // job_id — a job already in the pipeline shows as its application row.
+    const appliedJobIds = new Set(
+      rows.map((r) => r.jobs?.id).filter((id): id is string => id != null),
+    )
+    const prospectJobs = await fetchProspectInboxJobs(supabase, userId, appliedJobIds)
+
+    const merged = [...appJobs, ...prospectJobs]
+    if (merged.length === 0) return { source: 'demo', jobs: JOBS_SEED.jobs }
+    return { source: 'live', jobs: merged }
   } catch {
     return { source: 'demo', jobs: JOBS_SEED.jobs }
   }
@@ -522,6 +612,55 @@ export async function unsaveJob(userId: string | null, jobId: string): Promise<v
   if (error) throw new Error(error.message)
 }
 
+/** Find-or-create the user's `discovery` application for a posting. Absorbs a
+ *  concurrent-create 23505 by re-fetching. Shared by autoApplyToJob (auto) and
+ *  ensureApplicationForJob (the Dashboard manual-apply / decline path, ADR-016). */
+async function findOrCreateDiscoveryApplication(
+  supabase: NonNullable<ReturnType<typeof getSupabaseClientSafe>>,
+  userId: string,
+  jobId: string,
+): Promise<{ id: string; stage: string }> {
+  const existing = await supabase
+    .from('applications')
+    .select('id, stage')
+    .eq('user_id', userId)
+    .eq('job_id', jobId)
+    .maybeSingle()
+  if (existing.error) throw new Error(existing.error.message)
+  if (existing.data) return existing.data as { id: string; stage: string }
+
+  const inserted = await supabase
+    .from('applications')
+    .insert({ user_id: userId, job_id: jobId, stage: 'discovery' })
+    .select('id, stage')
+    .single()
+  if (inserted.error) {
+    if (inserted.error.code === '23505') {
+      const refetch = await supabase
+        .from('applications')
+        .select('id, stage')
+        .eq('user_id', userId)
+        .eq('job_id', jobId)
+        .single()
+      if (refetch.error) throw new Error(refetch.error.message)
+      return refetch.data as { id: string; stage: string }
+    }
+    throw new Error(inserted.error.message)
+  }
+  return inserted.data as { id: string; stage: string }
+}
+
+/** ADR-016: ensure a `discovery` application exists for a prospected/corpus job
+ *  (an inbox row with no pipeline footprint yet) and return its id, so the
+ *  Dashboard can run the normal manual-apply / decline transitions against it.
+ *  Returns null in demo mode (no Supabase / no user). */
+export async function ensureApplicationForJob(userId: string | null, jobId: string): Promise<string | null> {
+  const supabase = getSupabaseClientSafe()
+  if (!supabase || !userId) return null
+  const app = await findOrCreateDiscoveryApplication(supabase, userId, jobId)
+  return app.id
+}
+
 /** Auto-apply to a discovered posting: ensure an application exists, then
  *  transition discovery → applied via the `transition_stage` RPC (which
  *  writes the application_events audit row — event-sourcing non-negotiable).
@@ -529,14 +668,7 @@ export async function unsaveJob(userId: string | null, jobId: string): Promise<v
 export async function autoApplyToJob(userId: string | null, jobId: string): Promise<{ applied: boolean }> {
   const supabase = getSupabaseClientSafe()
   if (!supabase || !userId) return { applied: false }
-  const existing = await supabase.from('applications').select('id, stage').eq('user_id', userId).eq('job_id', jobId).maybeSingle()
-  if (existing.error) throw new Error(existing.error.message)
-  let application = existing.data as { id: string; stage: string } | null
-  if (!application) {
-    const inserted = await supabase.from('applications').insert({ user_id: userId, job_id: jobId, stage: 'discovery' }).select('id, stage').single()
-    if (inserted.error) throw new Error(inserted.error.message)
-    application = inserted.data as { id: string; stage: string }
-  }
+  const application = await findOrCreateDiscoveryApplication(supabase, userId, jobId)
   if (application.stage !== 'discovery') return { applied: false }
   await transitionStage({
     applicationId: application.id,

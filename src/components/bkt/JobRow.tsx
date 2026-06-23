@@ -18,6 +18,8 @@ export interface JobRowProps {
   comp?: string | null
   score?: number
   status?: JobStatus
+  /** jobs.source provenance — a 'corpus' row shows a "Job Board" badge (ADR-016). */
+  source?: string
   updatedAt?: string
   onApply?: () => void
   onDecline?: () => void
@@ -45,6 +47,7 @@ export function JobRow({
   comp = null,
   score,
   status = 'Review',
+  source,
   updatedAt = '2 hours ago',
   onApply,
   onDecline,
@@ -95,6 +98,11 @@ export function JobRow({
         <BktBadge tone={STATUS_TONE[status]} appearance="soft" dot={status === 'Review'}>
           {status}
         </BktBadge>
+        {source === 'corpus' && (
+          <BktBadge tone="neutral" appearance="outline">
+            Job Board
+          </BktBadge>
+        )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>

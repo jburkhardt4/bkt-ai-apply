@@ -4,12 +4,14 @@
 // Data comes from useJobMatches (live Supabase rows when configured,
 // design-system seeds otherwise); Apply/Decline write event-sourced stage
 // transitions in live mode.
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBktToast } from '@/components/bkt/toast-context'
 import { useAuth } from '@/contexts/auth-context'
 import {
   applyToJob,
+  autoApplyToJob,
   declineJob,
+  ensureApplicationForJob,
   fetchApplicationTimeline,
   fetchJobMatches,
   markManualApplied,
@@ -17,13 +19,19 @@ import {
 } from './services/autoApplyService'
 import { openSourceUrl } from './openSourceUrl'
 import { fetchSubmittedCount } from '@/features/applications/services/applicationService'
+import { runScoreForJob } from '@/features/applications/services/ingestionService'
 import { useProspectorProfile } from '@/features/jobs/hooks/useProspectorProfile'
+import { ProspectorProfileForm, type ProspectorFormValues } from '@/features/jobs/components/ProspectorProfileForm'
+import { graduateProspectorMatches } from '@/features/jobs/services/prospectorGraduationService'
 import { triggerProspectorRun } from '@/features/jobs/services/prospectorRunService'
 import { usePreparedApplications } from './hooks/usePreparedApplications'
 import { useAsyncData } from './hooks/useAutoApplyData'
 import { useBudget, useCredits, useReviewMode } from './state'
 import { JOBS_SEED } from './data/jobsData'
 import { BudgetModal, ModeTabs, ReviewModeMenu, TopBar } from './components/chrome'
+import { BktButton } from '@/components/bkt/BktButton'
+import { BktCard } from '@/components/bkt/BktCard'
+import { Icon } from '@/components/bkt/Icon'
 import { REVIEW_MODES } from './reviewModes'
 import { JobsScreen } from './screens/JobsScreen'
 import { QuickReview } from './screens/QuickReview'
@@ -61,9 +69,13 @@ export function AutoApplyDashboard() {
   // the Application-Behaviour mode (Review → paused), wired in useReviewMode.
   // `searchActive` mirrors prospecting_profiles.is_active; Resume kicks an
   // immediate run while the 12-hour pg_cron owns the recurring cadence.
-  const { profile: prospectorProfile, toggleActive } = useProspectorProfile()
+  const { profile: prospectorProfile, toggleActive, upsertProfile, isSaving: profileSaving } = useProspectorProfile()
   const searchActive = prospectorProfile?.is_active ?? false
   const [searching, setSearching] = useState(false)
+  // ADR-016: the Auto-Search config panel + on-demand scoring live on the
+  // Dashboard now (migrated from the removed /prospector page).
+  const [configOpen, setConfigOpen] = useState(false)
+  const [isScoring, setIsScoring] = useState(false)
 
   // Live: DB-derived submitted count (fall back to in-view Applied rows until
   // the count resolves). Demo/seed: the seeded stat stays stable.
@@ -85,8 +97,18 @@ export function AutoApplyDashboard() {
       setCredits((c) => Math.max(0, c - 1))
       toast(`Application queued — ${j.company}`, 'circle-check', 'var(--bkt-success)')
       if (live) {
-        applyToJob(j, userId)
-          .then(() => reloadSubmitted())
+        // Prospected/corpus rows (jobId, no applicationId) lazily create + apply
+        // via autoApplyToJob; application rows use the existing applyToJob (ADR-016).
+        const op = j.applicationId
+          ? applyToJob(j, userId)
+          : j.jobId
+            ? autoApplyToJob(userId, j.jobId).then(() => undefined)
+            : Promise.resolve()
+        op
+          .then(() => {
+            reloadSubmitted()
+            if (!j.applicationId) reload()
+          })
           .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
       }
       return
@@ -118,9 +140,16 @@ export function AutoApplyDashboard() {
       toast('No source link — mark as applied manually', 'circle-alert', 'var(--bkt-warning)')
     }
     if (live) {
-      markManualInProgress(j, userId)
-        .then(() => reload())
-        .catch(() => undefined)
+      // Prospected/corpus rows have no application yet — create one (ADR-016),
+      // then record the manual-in-progress marker against it.
+      const marker = j.applicationId
+        ? markManualInProgress(j, userId)
+        : j.jobId
+          ? ensureApplicationForJob(userId, j.jobId).then((appId) =>
+              appId ? markManualInProgress({ ...j, applicationId: appId }, userId) : undefined,
+            )
+          : Promise.resolve()
+      marker.then(() => reload()).catch(() => undefined)
     }
   }
 
@@ -130,7 +159,20 @@ export function AutoApplyDashboard() {
     setStatus(id, 'Declined')
     toast(`Declined — ${j.company}`, 'circle-x', 'var(--bkt-danger)')
     if (live) {
-      declineJob(j, userId).catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
+      // Prospected/corpus rows: create the application first, then decline it so
+      // the dismissal is event-sourced like any other stage change (ADR-016).
+      const op = j.applicationId
+        ? declineJob(j, userId)
+        : j.jobId
+          ? ensureApplicationForJob(userId, j.jobId).then((appId) =>
+              appId ? declineJob({ ...j, applicationId: appId, stage: 'discovery' }, userId) : undefined,
+            )
+          : Promise.resolve()
+      op
+        .then(() => {
+          if (!j.applicationId) reload()
+        })
+        .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stage transition failed', 'circle-alert', 'var(--bkt-danger)'))
     }
   }
 
@@ -222,6 +264,81 @@ export function AutoApplyDashboard() {
       })
   }
 
+  // ── Auto-Search config (migrated from /prospector, ADR-016) ──
+  const handleSaveProfile = useCallback(
+    async (values: ProspectorFormValues) => {
+      await upsertProfile({
+        job_titles: values.jobTitles,
+        locations: values.locations,
+        job_types: values.jobTypes,
+        environments: values.environments,
+        min_salary: values.minSalary,
+        keywords: values.keywords,
+        is_active: prospectorProfile?.is_active ?? false,
+      })
+      toast('Search profile saved', 'circle-check', 'var(--bkt-success)')
+    },
+    [upsertProfile, prospectorProfile, toast],
+  )
+
+  // ── Score unscored inbox jobs (migrated, ADR-016) ──
+  // Sequential per BR-052/BR-104 cost-cap; each runScoreForJob is timeout-bounded
+  // in scoreJobFitWithLlm so the batch can't hang. Graduates ≥60 matches after.
+  const scoreTargets = jobs.filter((j) => j.jobId != null && j.scoreSource === undefined)
+  const handleScoreInbox = async () => {
+    if (!userId || isScoring) return
+    const targets = jobs.filter((j) => j.jobId != null && j.scoreSource === undefined)
+    if (targets.length === 0) return
+    setIsScoring(true)
+    toast(`Scoring ${targets.length} ${targets.length === 1 ? 'job' : 'jobs'}…`, 'sparkles', 'var(--bkt-blue-300)')
+    let saved = 0
+    let failed = 0
+    for (const j of targets) {
+      const jobId = j.jobId
+      if (!jobId) continue
+      try {
+        await runScoreForJob({ userId, jobId, prospectorProfile })
+        saved += 1
+      } catch {
+        failed += 1
+      }
+    }
+    // Graduate freshly-scored ≥60 matches into the pipeline (idempotent, mode-aware).
+    try {
+      await graduateProspectorMatches({ userId, reviewMode })
+    } catch {
+      // Non-fatal — scores still landed; the inbox refetch reflects them.
+    }
+    reload()
+    toast(
+      failed > 0 ? `Scored ${saved} · ${failed} failed` : `Scored ${saved} ${saved === 1 ? 'job' : 'jobs'}`,
+      failed > 0 ? 'circle-alert' : 'circle-check',
+      failed > 0 ? 'var(--bkt-warning)' : 'var(--bkt-success)',
+    )
+    setIsScoring(false)
+  }
+
+  // ── Graduate already-scored matches once per mount (migrated, ADR-016) ──
+  // Prospector jobs scored in earlier sessions never created applications, so the
+  // Review Matches inbox could miss strong matches; this backfills them on mount.
+  const graduatedRef = useRef(false)
+  useEffect(() => {
+    if (!userId || graduatedRef.current) return
+    graduatedRef.current = true
+    graduateProspectorMatches({ userId, reviewMode })
+      .then((result) => {
+        if (result.created > 0) {
+          reload()
+          toast(
+            `${result.created} ${result.created === 1 ? 'match' : 'matches'} added to your pipeline`,
+            'circle-check',
+            'var(--bkt-success)',
+          )
+        }
+      })
+      .catch(() => undefined)
+  }, [userId, reviewMode, reload, toast])
+
   return (
     <>
       <TopBar
@@ -243,6 +360,41 @@ export function AutoApplyDashboard() {
           }}
         />
       </div>
+      {mode === 'jobs' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 28px 0', flexWrap: 'wrap' }}>
+          <BktButton
+            variant="outline"
+            size="sm"
+            iconLeft={<Icon name={configOpen ? 'chevron-down' : 'sliders-horizontal'} size={14} />}
+            onClick={() => setConfigOpen((o) => !o)}
+          >
+            Search Profile
+          </BktButton>
+          {scoreTargets.length > 0 && (
+            <BktButton
+              variant="outline"
+              size="sm"
+              iconLeft={<Icon name="sparkles" size={14} />}
+              onClick={handleScoreInbox}
+              disabled={isScoring}
+            >
+              {isScoring ? 'Scoring…' : `Score ${scoreTargets.length} ${scoreTargets.length === 1 ? 'job' : 'jobs'}`}
+            </BktButton>
+          )}
+        </div>
+      )}
+      {mode === 'jobs' && configOpen && (
+        <div style={{ padding: '10px 28px 0' }}>
+          <BktCard radius="xl">
+            <ProspectorProfileForm
+              key={prospectorProfile?.id ?? 'new'}
+              profile={prospectorProfile}
+              isSaving={profileSaving}
+              onSave={handleSaveProfile}
+            />
+          </BktCard>
+        </div>
+      )}
       <div key={mode} className="bkt-blur-in" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: 14 }}>
         {loading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', font: '400 var(--text-sm)/1 var(--font-body)' }}>

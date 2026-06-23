@@ -8,8 +8,11 @@ import { getSupabaseClientSafe } from '@/lib/supabase'
 import { summarizeRunResults, type ProspectorRunResponse } from '../summarizeRunResults'
 
 // Transport/UX ceiling on the invoke — a hung Edge Function must not strand the
-// "searching…" state. Mirrors ProspectorDashboard's RUN_NOW_TIMEOUT_MS.
-const RUN_TIMEOUT_MS = 30_000
+// "searching…" state. A full prospector run fans out several SerpApi queries, so
+// 30s aborted legitimate runs mid-flight; 90s gives a real run room to finish
+// while still capping a genuinely hung function (the Dashboard Play/Resume is now
+// the only on-demand run path after the /prospector page was removed, ADR-016).
+const RUN_TIMEOUT_MS = 90_000
 
 export interface ProspectorRunOutcome {
   ok: boolean

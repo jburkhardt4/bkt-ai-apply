@@ -189,6 +189,7 @@ export function JobsScreen({
               title={j.title}
               score={j.score}
               status={j.status}
+              source={j.source}
               comp={showComp ? j.comp || '—' : null}
               updatedAt={j.updated}
               selected={selectedId === j.id}

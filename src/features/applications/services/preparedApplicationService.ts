@@ -52,8 +52,8 @@ export interface TriggerPrepareInput {
   }
   /** Internal `jobs`-table FK, ONLY when the caller holds a real jobs.id. The
    *  dashboard rows expose an `applications.id` (not a jobs id), so they pass null
-   *  and the server keys the prepared row by job_ref.source_url instead — sending
-   *  a non-jobs id here would violate the prepared_applications.job_id FK. */
+   *  and the dashboard matches the prepared row by job_ref.source_url instead —
+   *  sending a non-jobs id here would violate the prepared_applications.job_id FK. */
   jobId?: string | null
   /** Application-behaviour hint ('auto' | 'hybrid'); the server defaults to
    *  'hybrid' and re-asserts the authoritative mode-gating policy (ADR-013). */

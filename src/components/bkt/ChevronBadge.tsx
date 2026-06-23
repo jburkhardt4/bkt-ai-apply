@@ -29,13 +29,14 @@ export function ChevronBadge({ count }: ChevronBadgeProps) {
       }}
     >
       <span aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        {/* top chevron — 0.4s delay creates the flowing stagger */}
+        {/* top chevron — offset by half the 1.6s cycle so it is perfectly out of
+            phase with the bottom one (the seamless upward-flow stagger). */}
         <span
           style={{
             display: 'flex',
             marginBottom: -3,
             animation: animate ? 'bkt-chevron-pulse 1.6s ease-in-out infinite' : undefined,
-            animationDelay: animate ? '0.4s' : undefined,
+            animationDelay: animate ? '0.8s' : undefined,
           }}
         >
           <Icon name="chevron-up" size={10} strokeWidth={2.6} color="#fff" />

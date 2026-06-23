@@ -521,10 +521,14 @@ code, kbd, pre, samp { font-family: var(--font-mono); }
   100% { margin-left: 100%; }
 }
 
-/* Staggered chevron pulse — the "matches awaiting review" notification badge. */
+/* Continuous upward chevron FLOW — the "matches awaiting review" badge. Two
+   chevrons run this keyframe offset by half the duration (see ChevronBadge.tsx)
+   so one fades in rising as the other fades out, reading as a seamless upward
+   stream rather than an in-place pulse. */
 @keyframes bkt-chevron-pulse {
-  0%, 100% { opacity: 0.4; transform: translateY(2px); }
-  50%      { opacity: 1;   transform: translateY(-1px); }
+  0%   { opacity: 0; transform: translateY(3px); }
+  50%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-3px); }
 }
 
 /* ---- Reduced motion: collapse to instant, keep end states ---- */

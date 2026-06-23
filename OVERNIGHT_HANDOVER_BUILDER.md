@@ -71,7 +71,6 @@ row; extension v0.1.2 wired DB → engine).
 
 **Steps:**
 
-1. **Get the extension** (already built): download **`bkt-extension.zip`** from the repo root
    (it's on `main` @ `50c57a8`, and present in your Explorer). Unzip it.
 2. **Load it:** `chrome://extensions` → remove the old BKT card → **Load unpacked** → pick the
    `bkt-extension` folder. Confirm the card shows **version 0.1.2**.

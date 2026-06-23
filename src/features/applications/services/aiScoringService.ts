@@ -286,6 +286,14 @@ export async function persistScoreFallback(
   }
 }
 
+// Hard ceiling on the score-job-fit Edge invoke. Corpus jobs (crawled ATS boards)
+// carry the full description_text — far larger than a SerpApi snippet — so the LLM
+// call can run long; without a bound, a single hung call strands the sequential
+// batch scoring loop (handleScoreJobs) forever. On timeout we abort and surface a
+// typed Edge error so the caller persists a heuristic fallback — the job still gets
+// a score (BR-104). Transport/UX bound, not a business threshold (cf. LSN-001).
+const SCORE_JOB_FIT_TIMEOUT_MS = 30_000
+
 /**
  * Scores a job via the routed LLM (`score-job-fit` Edge Function) and persists
  * the result through the existing persistAiScore path.
@@ -312,14 +320,42 @@ export async function scoreJobFitWithLlm(
   }
 
   const supabase = getSupabaseClient()
-  const { data, error } = await supabase.functions.invoke<EdgeJobFitResponse>('score-job-fit', {
-    body: {
-      provider: route.modelProvider,
-      model: route.modelName,
-      job: input.job,
-      profile: input.profile,
-    },
-  })
+
+  // Abort the invoke if it outruns the ceiling so a hung Edge call can't strand a
+  // batch scoring loop. supabase-js forwards `signal` to the underlying fetch.
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), SCORE_JOB_FIT_TIMEOUT_MS)
+  let data: EdgeJobFitResponse | null
+  let error: unknown
+  try {
+    const res = await supabase.functions.invoke<EdgeJobFitResponse>('score-job-fit', {
+      body: {
+        provider: route.modelProvider,
+        model: route.modelName,
+        job: input.job,
+        profile: input.profile,
+      },
+      signal: controller.signal,
+    })
+    data = res.data
+    error = res.error
+  } catch (err) {
+    // invoke throws on abort (timeout) or a transport-level failure. Normalize to a
+    // typed Edge error so runScoreForJob persists a heuristic fallback (degraded but
+    // specific) instead of letting the batch hang.
+    const aborted =
+      controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')
+    throw new ScoreJobFitEdgeError(
+      aborted
+        ? `score-job-fit timed out after ${SCORE_JOB_FIT_TIMEOUT_MS}ms`
+        : err instanceof Error
+          ? err.message
+          : 'score-job-fit failed',
+      { code: aborted ? 'timeout' : 'transport_error', provider: route.modelProvider },
+    )
+  } finally {
+    clearTimeout(timeoutId)
+  }
 
   if (error) {
     // Edge Function returned a normalized error body `{ error, code, provider }`.

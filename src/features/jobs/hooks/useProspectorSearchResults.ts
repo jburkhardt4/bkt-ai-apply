@@ -16,7 +16,8 @@
  *   BR-004 — all DB access via getSupabaseClient()
  *   BR-005 — every query filters by user_id
  *   BR-008 — auth state via useAuth() only
- *   BR-105 — source = 'prospector' filter
+ *   BR-105 — source IN ('prospector','corpus') filter — corpus = crawled ATS
+ *            job-board postings projected into jobs (ADR-016); both surface here.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -39,6 +40,8 @@ export interface ProspectorSearchResult {
   description_formatted: string | null
   posted_at: string | null
   match_score: number | null
+  /** Provenance of the row: 'prospector' (SerpApi) or 'corpus' (crawled ATS board). */
+  source: string | null
   source_url: string
   created_at: string
 }
@@ -99,6 +102,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           description,
           description_formatted,
           posted_at,
+          source,
           source_url,
           created_at,
           companies (
@@ -113,7 +117,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
           { count: 'exact' },
         )
         .eq('user_id', user.id)
-        .eq('source', 'prospector')
+        .in('source', ['prospector', 'corpus'])
         .order('created_at', { ascending: false })
         .range(from, to),
     )
@@ -172,6 +176,7 @@ export function useProspectorSearchResults(): UseProspectorSearchResultsResult {
               description_formatted: row.description_formatted,
               posted_at: row.posted_at,
               match_score: matchScore,
+              source: row.source ?? null,
               source_url: row.source_url,
               created_at: row.created_at,
             }

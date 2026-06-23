@@ -29,13 +29,13 @@ const T = (day: number) => `2026-06-0${day}T00:00:00.000Z`
 
 // ── Chainable builders mirroring the exact terminal point of each query ──────
 
-/** ai_scores: .select().eq().eq().order() → awaited directly. */
+/** ai_scores: .select().eq().in().order() → awaited directly. */
 function aiScores(result: DbResult) {
   const order = vi.fn().mockResolvedValue(result)
-  const eq2 = vi.fn(() => ({ order }))
-  const eq1 = vi.fn(() => ({ eq: eq2 }))
+  const inFn = vi.fn(() => ({ order }))
+  const eq1 = vi.fn(() => ({ in: inFn }))
   const select = vi.fn(() => ({ eq: eq1 }))
-  return { select }
+  return { select, in: inFn }
 }
 
 /** applications scan: .select().eq().in() → awaited directly. */
@@ -105,6 +105,24 @@ describe('graduateProspectorMatches', () => {
     expect(from).toHaveBeenCalledWith('ai_scores')
     expect(mockThreshold).not.toHaveBeenCalled()
     expect(mockEnqueue).not.toHaveBeenCalled()
+  })
+
+  it('scans both prospector- and corpus-sourced jobs so crawled jobs graduate (BR-105, ADR-016)', async () => {
+    const scores = aiScores({ data: [{ job_id: 'job-1', overall_score: 82, scored_at: T(3) }], error: null })
+    const scan = appsScan({ data: [], error: null })
+    const ins = appsInsert({ data: { id: 'app-1' }, error: null })
+    const from = vi
+      .fn()
+      .mockImplementationOnce(() => ({ select: scores.select }))
+      .mockImplementationOnce(() => ({ select: scan.select }))
+      .mockImplementationOnce(() => ({ insert: ins.insert }))
+    setClient(from)
+
+    const result = await graduateProspectorMatches({ userId: 'user-1', reviewMode: 'review' })
+
+    // The source filter must admit corpus rows (crawled ATS boards), not just prospector.
+    expect(scores.in).toHaveBeenCalledWith('jobs.source', ['prospector', 'corpus'])
+    expect(result.created).toBe(1)
   })
 
   it('uses the latest score per job — a job rescored below threshold is not graduated', async () => {

@@ -94,6 +94,9 @@ describe('scoreJobFitWithLlm', () => {
 
     expect(invoke).toHaveBeenCalledWith('score-job-fit', {
       body: { provider: 'anthropic', model: 'Claude Opus 4.6', job: baseInput.job, profile: baseInput.profile },
+      // The invoke is now bounded by an AbortController so a hung Edge call can't
+      // strand a batch scoring loop.
+      signal: expect.anything(),
     })
     expect(result.status).toBe('saved')
     if (result.status === 'saved') {
@@ -146,6 +149,31 @@ describe('scoreJobFitWithLlm', () => {
       provider: 'anthropic',
     })
     // The error is thrown at the source; no ai_scores row is persisted here.
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('throws a typed ScoreJobFitEdgeError with code "timeout" when the invoke aborts (hung Edge call)', async () => {
+    mockRouteAiTask.mockResolvedValue(route(false))
+    // supabase-js throws an AbortError when the forwarded signal fires.
+    invoke.mockRejectedValue(new DOMException('The operation was aborted', 'AbortError'))
+
+    await expect(scoreJobFitWithLlm(baseInput)).rejects.toMatchObject({
+      code: 'timeout',
+      provider: 'anthropic',
+    })
+    await expect(scoreJobFitWithLlm(baseInput)).rejects.toBeInstanceOf(ScoreJobFitEdgeError)
+    // No ai_scores row persisted here; runScoreForJob catches the throw and falls back.
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('throws a typed ScoreJobFitEdgeError with code "transport_error" when the invoke rejects (network)', async () => {
+    mockRouteAiTask.mockResolvedValue(route(false))
+    invoke.mockRejectedValue(new Error('network down'))
+
+    await expect(scoreJobFitWithLlm(baseInput)).rejects.toMatchObject({
+      code: 'transport_error',
+      provider: 'anthropic',
+    })
     expect(insert).not.toHaveBeenCalled()
   })
 

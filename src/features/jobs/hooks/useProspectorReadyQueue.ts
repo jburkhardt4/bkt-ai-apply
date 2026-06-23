@@ -4,7 +4,7 @@
  * Queries applications joined to jobs where:
  *   - applications.user_id = current user (BR-005)
  *   - applications.match_score >= 60 (BR-105, BR-020)
- *   - jobs.source = 'prospector' (BR-105)
+ *   - jobs.source IN ('prospector','corpus') (BR-105) — corpus = crawled ATS board
  *
  * Returns a shaped list of ProspectorJobMatch objects for the ReadyQueue UI.
  *
@@ -19,7 +19,7 @@
  *   BR-005 — every query filters by user_id
  *   BR-008 — auth state via useAuth() only
  *   BR-020 — match_score >= 60 threshold
- *   BR-105 — source = 'prospector' filter
+ *   BR-105 — source IN ('prospector','corpus') filter
  *   BR-081 / BR-082 — types from generated db.types.ts only
  */
 
@@ -77,7 +77,8 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
 
     // Join applications -> jobs to filter by both match_score and jobs.source.
     // The select uses a nested join: jobs!inner ensures only rows with a matching
-    // jobs row are returned (inner join semantics).
+    // jobs row are returned (inner join semantics). Both prospector (SerpApi) and
+    // corpus (crawled ATS board, ADR-016) jobs surface in the Ready queue.
     Promise.resolve(
       supabase
         .from('applications')
@@ -99,7 +100,7 @@ export function useProspectorReadyQueue(): UseProspectorReadyQueueResult {
         )
         .eq('user_id', user.id)
         .gte('match_score', READY_QUEUE_MIN_SCORE)
-        .eq('jobs.source', 'prospector')
+        .in('jobs.source', ['prospector', 'corpus'])
         .order('match_score', { ascending: false })
         .range(from, to),
     )

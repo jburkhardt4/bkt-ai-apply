@@ -24,10 +24,12 @@ import {
   type ProspectorRunResponse,
 } from './summarizeRunResults'
 
-// Manual "Run Now" invoke ceiling. Transport/UX timeout — NOT a domain rule, so
-// a literal const is intentional here (cf. LSN-001, which bans hardcoding
-// *business* thresholds, not request timeouts).
-const RUN_NOW_TIMEOUT_MS = 30_000
+// Manual "Run Now" invoke ceiling. A full prospector run fans out several SerpApi
+// queries, so the old 30s bound aborted legitimate runs mid-flight (the "~30s
+// failure"); 90s gives a real run room to finish while still capping a genuinely
+// hung Edge Function. Transport/UX timeout — NOT a domain rule, so a literal const
+// is intentional here (cf. LSN-001, which bans hardcoding *business* thresholds).
+const RUN_NOW_TIMEOUT_MS = 90_000
 
 export function ProspectorDashboard() {
   const { user } = useAuth()
@@ -105,7 +107,13 @@ export function ProspectorDashboard() {
   const [isRunning, setIsRunning] = useState(false)
 
   const handleRunNow = useCallback(async () => {
-    if (!user || !profile || isRunning) return
+    if (!user || isRunning) return
+    if (!profile) {
+      // Run Now needs a saved profile (job titles drive the search). Without one the
+      // click previously did nothing — surface why instead of silently bailing.
+      toast.info('Save a search profile before running a search.')
+      return
+    }
 
     setIsRunning(true)
 
@@ -205,7 +213,12 @@ export function ProspectorDashboard() {
     let saved = 0
     let queued = 0
     let failed = 0
+    let processed = 0
     for (const job of unscored) {
+      // Live progress so a long batch reads as "working", not "stuck". Each job is
+      // bounded by SCORE_JOB_FIT_TIMEOUT_MS in scoreJobFitWithLlm, so the count
+      // always advances even when an Edge call hangs (it falls back to heuristic).
+      toast.loading(`Scoring ${processed + 1} / ${unscored.length}…`, { id: toastId })
       try {
         const result = await runScoreForJob({
           userId: user.id,
@@ -217,6 +230,7 @@ export function ProspectorDashboard() {
       } catch {
         failed += 1
       }
+      processed += 1
     }
 
     // Graduate the freshly-scored jobs into the pipeline: create discovery

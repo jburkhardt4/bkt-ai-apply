@@ -10,7 +10,7 @@
 // Rules:
 //   BR-004 — all DB access via getSupabaseClient()
 //   BR-005 — every query filters by user_id
-//   BR-020 / BR-105 — match_score >= 60, source = 'prospector'
+//   BR-020 / BR-105 — match_score >= 60, source IN ('prospector','corpus')
 //   BR-130 / BR-131 — mode-based autonomy via decideQueueAction; the worker's
 //                     claim_submission still re-validates server-side, so
 //                     enqueuing 'approved' never bypasses a guardrail.
@@ -62,7 +62,7 @@ export async function graduateProspectorMatches(params: {
   if (!supabase) return { created: 0, enqueued: 0 }
   const { userId, reviewMode } = params
 
-  // All scores for this user's prospector jobs, newest first. No score-threshold
+  // All scores for this user's prospector + corpus jobs, newest first. No score-threshold
   // filter here — we need ALL rows so we can pick the latest per job (not the
   // highest). Applying gte(60) before we've isolated the latest row would let
   // an old high score shadow a more-recent low score, graduating a job that has
@@ -71,7 +71,7 @@ export async function graduateProspectorMatches(params: {
     .from('ai_scores')
     .select('job_id, overall_score, scored_at, jobs!inner(source)')
     .eq('user_id', userId)
-    .eq('jobs.source', 'prospector')
+    .in('jobs.source', ['prospector', 'corpus'])
     .order('scored_at', { ascending: false })
 
   if (scoreError) {

@@ -218,6 +218,25 @@ function ScorePill({ score }: { score: number | null }) {
   )
 }
 
+// ── Source provenance badge ───────────────────────────────────────────────────
+// Distinguishes crawled ATS job-board postings (source='corpus', ADR-016) from
+// SerpApi search results (source='prospector'). Unknown/null source → no badge.
+
+function SourceBadge({ source }: { source: string | null }) {
+  if (source !== 'corpus' && source !== 'prospector') return null
+  const isCorpus = source === 'corpus'
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+        isCorpus ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+      )}
+    >
+      {isCorpus ? 'Job Board' : 'Search'}
+    </span>
+  )
+}
+
 // ── Sort chevron ──────────────────────────────────────────────────────────────
 
 interface SortChevronProps {
@@ -582,7 +601,10 @@ function JobCell({ col, job }: CellProps) {
     case 'source':
       return (
         <td className={cn(tdClass, 'whitespace-nowrap text-sm text-muted-foreground')}>
-          {deriveSourceLabel(job.source_url)}
+          <span className="inline-flex items-center gap-2">
+            <SourceBadge source={job.source} />
+            {deriveSourceLabel(job.source_url)}
+          </span>
         </td>
       )
     default:
@@ -1033,6 +1055,7 @@ function JobCard({ job, index, onSelect, onDismiss }: JobCardProps) {
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <SourceBadge source={job.source} />
           {job.remote_type ? (
             <span
               className={cn(

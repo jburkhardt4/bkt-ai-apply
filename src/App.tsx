@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import LoginPage from './pages/LoginPage'
 import IngestionPage from './pages/IngestionPage'
 import PipelinePage from './pages/PipelinePage'
+import ProspectorPage from './pages/ProspectorPage'
 import SettingsPage from './pages/SettingsPage'
 import { AppShell } from './components/AppShell'
 import { AutoApplyDashboard } from './features/auto-apply/AutoApplyDashboard'
@@ -53,6 +54,12 @@ function RoutedPage({ navKey }: { navKey: NavKey }) {
       return (
         <LegacyPage>
           <IngestionPage />
+        </LegacyPage>
+      )
+    case 'prospector':
+      return (
+        <LegacyPage>
+          <ProspectorPage />
         </LegacyPage>
       )
     case 'integrations':

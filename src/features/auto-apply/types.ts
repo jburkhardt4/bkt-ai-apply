@@ -252,4 +252,5 @@ export type NavKey =
   | 'notifications'
   | 'pipeline'
   | 'ingestion'
+  | 'prospector'
   | 'integrations'

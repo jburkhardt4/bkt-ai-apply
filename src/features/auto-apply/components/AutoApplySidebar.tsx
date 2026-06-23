@@ -43,6 +43,7 @@ const NAV: { group: string; items: NavItemDef[] }[] = [
     items: [
       { icon: 'kanban', label: 'Pipeline', key: 'pipeline' },
       { icon: 'upload', label: 'Ingestion', key: 'ingestion' },
+      { icon: 'radar', label: 'Prospector (legacy)', key: 'prospector' },
       { icon: 'plug', label: 'Integrations', key: 'integrations' },
     ],
   },

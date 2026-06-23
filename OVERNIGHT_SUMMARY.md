@@ -14,12 +14,14 @@ typecheck clean) · `pnpm build` green** (1987 modules; bundle shrank after the 
 ## Phase 1 — HIGH-severity data regressions
 
 ### 1.1 — Inbox 100-row cap → true pagination
+
 - `autoApplyService.fetchProspectInboxJobs` replaced the hard `.limit(100)` with a `.range()` sweep
   (page 200, safety bound 5000) that fetches **every** prospected/corpus job, then orders by match
   score desc. **No discovered job is unreachable anymore.** (`autoApplyService.ts`)
 - Test mock updated to support `.range()` (`autoApplyService.test.ts`).
 
 ### 1.2 — Hard eligibility / location filter
+
 - New **`eligibilityService.ts`** (pure, deterministic, **11 unit tests** in `eligibilityService.test.ts`):
   - `assessEligibility(job, profile)` → `block` (posting explicitly excludes US-based candidates —
     the Swans wall), `penalize` (foreign-located, no US-remote — the Plative/India case;
@@ -35,6 +37,7 @@ typecheck clean) · `pnpm build` green** (1987 modules; bundle shrank after the 
 ## Phase 2 — UI consolidation (MEDIUM regressions)
 
 ### 2.1 — Removed the temporary `/prospector` route + orphans
+
 - Reverted the 4 route hooks (`router.ts`, `types.ts` NavKey, `App.tsx` import+case,
   `AutoApplySidebar.tsx` nav item).
 - Deleted `ProspectorPage.tsx`, `ProspectorDashboard.tsx`, **12 orphaned leaf files** (search-results
@@ -43,6 +46,7 @@ typecheck clean) · `pnpm build` green** (1987 modules; bundle shrank after the 
   Search Profile panel / run + graduation services depend on.
 
 ### 2.2 — Ported the rich table affordances into `JobsScreen`
+
 - **Per-column filter dropdowns**: Type · Environment · Source (derived from the rows in view).
 - **Functional Sort** (was a dead no-op): cycles Score ↓ / Score ↑ / Company.
 - **Dropped fields surfaced**: `JobRow` now shows the **real board name** (Greenhouse / Ashby / Lever /
@@ -53,12 +57,14 @@ typecheck clean) · `pnpm build` green** (1987 modules; bundle shrank after the 
   `remoteType`, `postedAt`, `sourceBoard`, `descriptionFormatted` (`types.ts`, `autoApplyService.ts`).
 
 ### 2.3 — Reconnected the formatted JD + real source badge
+
 - `JDSidebar` Overview tab now renders `JobDescriptionMarkdown` from `descriptionFormatted` (falls back
   to the raw overview, or a "No description" state) — the formatted JD is reconnected.
 - The hardcoded **"Review Matches"** header badge is replaced by the **real source board** (or "Job
   Board" for corpus) + the actual status chip.
 
 ### 2.4 — Dead Sort button + auth-hydration race
+
 - Sort button wired (see 2.2).
 - `AppShell` redirect guard now uses a **1200 ms grace window** so a late `INITIAL_SESSION` /
   token-refresh can cancel the bounce — deep-linking / refreshing a protected sub-route no longer
@@ -84,5 +90,6 @@ typecheck clean) · `pnpm build` green** (1987 modules; bundle shrank after the 
 - No DB migrations or generated-type changes. No commits/pushes beyond this branch.
 
 ## Blockers encountered
+
 - None blocking. The graduation + autoApplyService test mocks needed updating for the new query shapes
   (`.range()`, the candidate_profiles eligibility read) — done; all 888 tests pass.

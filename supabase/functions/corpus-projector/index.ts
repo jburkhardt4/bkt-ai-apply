@@ -1,5 +1,5 @@
 /**
- * corpus-projector — Edge Function (ADR-014 Decision 5, Phase 5)
+ * corpus-projector — Edge Function (ADR-019 Decision 5, Phase 5)
  *
  * Projects the shared job_postings corpus into per-user jobs: for every active
  * prospecting_profile it calls the service-role RPC project_corpus_all, which

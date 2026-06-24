@@ -2,12 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-23
-- **Relates:** ADR-014/015 (shared corpus + crawler), BR-105 (Prospector source filter — amended), BR-020 (≥60 pipeline entry), BR-149 (manual source-link handoff), event-sourcing non-negotiable #4
+- **Relates:** ADR-019/015 (shared corpus + crawler), BR-105 (Prospector source filter — amended), BR-020 (≥60 pipeline entry), BR-149 (manual source-link handoff), event-sourcing non-negotiable #4
 - **Decided by:** JB, 2026-06-23
 
 ## Context
 
-After ADR-014/015, crawled ATS postings (`jobs.source='corpus'`) and SerpApi discoveries
+After ADR-019/015, crawled ATS postings (`jobs.source='corpus'`) and SerpApi discoveries
 (`jobs.source='prospector'`) both land in the user-scoped `jobs` table. II.B broadened the three
 Prospector data filters to `.in('source', ['prospector','corpus'])` so corpus jobs are visible, and
 amended BR-105.

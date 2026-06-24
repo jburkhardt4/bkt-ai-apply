@@ -26,6 +26,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm validate
 
+  knowledge:
+    name: knowledge (kb:check)
+    runs-on: ubuntu-latest
+    # Knowledge-base integrity: unique ADR/BR/LSN/PAT ids, valid `portability`
+    # tags, resolvable CLAUDE.md reference paths, and a fresh bundle (--strict).
+    # No deps — build-knowledge.mjs uses only Node builtins.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build-knowledge.mjs check --strict
+
   e2e:
     name: e2e (Playwright)
     needs: validate

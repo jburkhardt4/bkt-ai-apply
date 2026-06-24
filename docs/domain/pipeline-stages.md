@@ -44,5 +44,5 @@ Discovery → Applied → Screening → Interview Scheduled → Interview Comple
 
 - Business rules governing thresholds and entry gates: `docs/domain/business-rules.md` (e.g. BR-020 ≥60 pipeline entry).
 - Auto-submission posture: `docs/adr/006-full-auto-submission.md`, `docs/adr/001-auto-apply-threshold.md`.
-- Discovery sources (corpus/crawler/prospector): `docs/adr/014-shared-public-job-corpus.md`, `015-ats-crawler-and-indexing.md`, `016-consolidate-prospector-into-dashboard.md`.
+- Discovery sources (corpus/crawler/prospector): `docs/adr/019-shared-public-job-corpus.md`, `015-ats-crawler-and-indexing.md`, `016-consolidate-prospector-into-dashboard.md`.
 - Schema: `docs/domain/data-model.md` and generated `src/types/db.types.ts`.

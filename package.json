@@ -21,7 +21,10 @@
     "kit:sync:advisory": "node scripts/sync-claude-kit.mjs --target ../bktAdvisory --profile full",
     "kit:sync:estimator": "node scripts/sync-claude-kit.mjs --target ../bktadvisoryprojectestimator --profile minimal",
     "kit:check:advisory": "node scripts/sync-claude-kit.mjs --target ../bktAdvisory --check",
-    "kit:check:estimator": "node scripts/sync-claude-kit.mjs --target ../bktadvisoryprojectestimator --check"
+    "kit:check:estimator": "node scripts/sync-claude-kit.mjs --target ../bktadvisoryprojectestimator --check",
+    "kb:build": "node scripts/build-knowledge.mjs build",
+    "kb:check": "node scripts/build-knowledge.mjs check",
+    "kb:sync": "node scripts/build-knowledge.mjs sync"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.4",

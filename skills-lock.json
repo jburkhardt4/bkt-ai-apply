@@ -7,6 +7,12 @@
       "skillPath": "skills/baoyu-design/SKILL.md",
       "computedHash": "23b6ee6d2418be5565d37a823bf372b859ec4841c08d7480d9d34798db34aaf6"
     },
+    "bkt-knowledge": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/bkt-knowledge/SKILL.md",
+      "computedHash": "b6a660261c7256b7857dab25e4314b583061b224eb3585686f29d5c29ee6b837"
+    },
     "brandkit": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",

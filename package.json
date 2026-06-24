@@ -17,7 +17,11 @@
     "build:ext": "node scripts/build-extension.mjs",
     "test:ext": "playwright test --config=playwright.extension.config.ts",
     "validate": "pnpm typecheck && pnpm lint && pnpm test",
-    "db:gen-types": "pnpm exec supabase gen types typescript --linked > src/types/db.types.ts"
+    "db:gen-types": "pnpm exec supabase gen types typescript --linked > src/types/db.types.ts",
+    "kit:sync:advisory": "node scripts/sync-claude-kit.mjs --target ../bktAdvisory --profile full",
+    "kit:sync:estimator": "node scripts/sync-claude-kit.mjs --target ../bktadvisoryprojectestimator --profile minimal",
+    "kit:check:advisory": "node scripts/sync-claude-kit.mjs --target ../bktAdvisory --check",
+    "kit:check:estimator": "node scripts/sync-claude-kit.mjs --target ../bktadvisoryprojectestimator --check"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.4",

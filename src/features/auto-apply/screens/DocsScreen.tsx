@@ -7,7 +7,7 @@ import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
 import type { BktBadgeTone } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
-import { formatStamp } from '@/components/bkt/format'
+import { formatBytes, formatStamp } from '@/components/bkt/format'
 import type { ToastFn } from '@/components/bkt/toast'
 import type { DocItem, DocsData, LetterContent, ResumeContent } from '../types'
 import { PreviewModal } from './DocPaper'
@@ -15,16 +15,24 @@ import type { DocContent, DocType } from './DocPaper'
 import { DocBuilder } from './DocBuilder'
 import type { AiTargetJob } from './DocAssistant'
 import { transcribeResume } from '../services/docContentParser'
+import { extractResumeText } from '../services/resumeFileExtractor'
+import type { ResumeFileKind } from '../services/resumeFileExtractor'
 
-/** True when a file's bytes read as plain text (not a PDF/DOCX binary), so its
- *  content can be transcribed directly. PDF/DOCX resumes need the paste-text path
- *  (no client-side extractor — see DocsScreen notes). */
-function looksLikeText(s: string): boolean {
-  const t = s.trim()
-  if (t.length < 30) return false
-  if (t.startsWith('%PDF') || t.startsWith('PK')) return false
-  const printable = s.replace(/[^ -~\s]/g, '')
-  return printable.length / s.length > 0.85
+/** Result of reading an uploaded file: the real byte size plus either the
+ *  extracted text (with its detected kind) or a user-facing error message. */
+interface UploadResult {
+  name: string
+  size: number
+  text: string
+  kind: ResumeFileKind | null
+  error?: string
+}
+
+/** Friendly label for a successfully extracted file kind. */
+const KIND_LABEL: Record<ResumeFileKind, string> = {
+  pdf: 'PDF',
+  docx: 'Word document',
+  text: 'resume',
 }
 
 const DOC_COPY: Record<DocType, { title: string; newLabel: string; desc: string; drop: string; hint: string }> = {
@@ -33,50 +41,60 @@ const DOC_COPY: Record<DocType, { title: string; newLabel: string; desc: string;
     newLabel: 'New Resume',
     desc: 'Your base resume plus every customized version Auto Apply has generated. Drop a file below or build one from scratch.',
     drop: 'Drag & drop a resume here',
-    hint: 'PDF or DOCX, up to 10 MB — or click to browse',
+    hint: 'PDF, DOCX, TXT, or MD, up to 10 MB — or click to browse',
   },
   letter: {
     title: 'Cover Letters',
     newLabel: 'New Cover Letter',
     desc: 'Base and tailored cover letters. Drop a file below, or let the builder draft one against a saved job.',
     drop: 'Drag & drop a cover letter here',
-    hint: 'PDF or DOCX, up to 10 MB — or click to browse',
+    hint: 'PDF, DOCX, TXT, or MD, up to 10 MB — or click to browse',
   },
 }
 
 const KIND_TONE: Record<string, BktBadgeTone> = { Base: 'brand', Customized: 'info', Archived: 'neutral' }
 
-/* ---- drag-and-drop upload zone with simulated progress ---- */
-function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; onUploaded: (name: string, text: string) => void }) {
+/* ---- drag-and-drop upload zone with real multi-format extraction ---- */
+function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; onUploaded: (result: UploadResult) => void }) {
   const [over, setOver] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [fileName, setFileName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Reads the file's bytes as text (so a .txt/.md resume can be transcribed
-  // directly), then runs the progress animation and hands the name + text up.
+  // Extracts the file's real text (PDF/DOCX/TXT/MD via resumeFileExtractor) while
+  // a progress bar animates to 95%; once both finish it jumps to 100% and hands
+  // the extracted text (or a friendly error) up to the parent.
   const start = async (file: File | null) => {
-    const name = file?.name ?? 'Uploaded_Resume.pdf'
-    let text = ''
-    try {
-      if (file) text = await file.text()
-    } catch {
-      text = ''
-    }
-    setFileName(name)
+    if (!file) return
+    setFileName(file.name)
     setProgress(0)
     const t0 = performance.now()
-    const tick = () => {
-      const p = Math.min(100, ((performance.now() - t0) / 1100) * 100)
-      setProgress(p)
-      if (p < 100) requestAnimationFrame(tick)
-      else
-        setTimeout(() => {
-          setProgress(null)
-          onUploaded(name, text)
-        }, 250)
-    }
-    requestAnimationFrame(tick)
+    const [extraction] = await Promise.all([
+      extractResumeText(file).then(
+        (r): UploadResult => ({ name: file.name, size: file.size, text: r.text, kind: r.kind }),
+        (e: unknown): UploadResult => ({
+          name: file.name,
+          size: file.size,
+          text: '',
+          kind: null,
+          error: e instanceof Error ? e.message : 'Could not read this file.',
+        }),
+      ),
+      new Promise<void>((resolve) => {
+        const tick = () => {
+          const p = Math.min(95, ((performance.now() - t0) / 1000) * 95)
+          setProgress(p)
+          if (p < 95) requestAnimationFrame(tick)
+          else resolve()
+        }
+        requestAnimationFrame(tick)
+      }),
+    ])
+    setProgress(100)
+    setTimeout(() => {
+      setProgress(null)
+      onUploaded(extraction)
+    }, 220)
   }
 
   return (
@@ -109,7 +127,7 @@ function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; o
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.doc,.docx"
+        accept=".pdf,.docx,.txt,.md,.markdown"
         style={{ display: 'none' }}
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
           const f = e.target.files && e.target.files[0]
@@ -316,35 +334,41 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
     }
   }
 
-  const upload = (name: string, text: string) => {
+  const upload = (result: UploadResult) => {
     const now = new Date()
     const stamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.toLocaleTimeString('en-US')}`
     setItems((xs) => [
       {
         id: 'u' + Date.now(),
-        name,
+        name: result.name,
         kind: 'Base',
         updated: stamp,
-        size: `${150 + Math.round(Math.random() * 80)} KB`,
+        size: formatBytes(result.size),
         template: 'classic',
         note: 'Uploaded just now',
       },
       ...xs,
     ])
-    // TRANSCRIBE (not rewrite): when the resume's text is readable, parse it
-    // verbatim into the structured builder. PDF/DOCX read as binary → steer the
-    // user to the paste box (no client-side PDF extractor yet).
-    if (type === 'resume' && looksLikeText(text)) {
-      setBuilder({ item: null, content: transcribeResume(text) })
-      onToast(`Transcribed ${name} into the builder`, 'circle-check', 'var(--bkt-success)')
+    // TRANSCRIBE (not rewrite): the extractor pulled real text from the PDF /
+    // DOCX / TXT / MD; parse it verbatim into the structured builder.
+    if (type === 'resume' && result.text) {
+      setBuilder({ item: null, content: transcribeResume(result.text) })
+      const label = result.kind ? KIND_LABEL[result.kind] : 'resume'
+      onToast(`Transcribed your ${label} into the builder`, 'circle-check', 'var(--bkt-success)')
       return
     }
-    if (type === 'resume' && text && !looksLikeText(text)) {
+    // Extraction failed (scanned/image PDF, legacy .doc, unreadable file) →
+    // open the paste box so the user can still transcribe verbatim.
+    if (type === 'resume') {
       setPaste((p) => ({ ...p, open: true }))
-      onToast(`Couldn't read text from ${name} — paste your resume below to transcribe`, 'circle-alert', 'var(--bkt-blue-300)')
+      onToast(
+        result.error ?? `Couldn't read text from ${result.name} — paste your resume below to transcribe`,
+        'circle-alert',
+        'var(--bkt-blue-300)',
+      )
       return
     }
-    onToast(`Uploaded ${name}`, 'circle-check', 'var(--bkt-success)')
+    onToast(`Uploaded ${result.name}`, 'circle-check', 'var(--bkt-success)')
   }
 
   // Transcribe pasted resume text verbatim into the builder (reliable for the
@@ -427,7 +451,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
               }}
             >
               <Icon name="file-text" size={14} />
-              {paste.open ? 'Hide paste box' : 'Or paste your resume text — transcribed verbatim (best for PDF / Word)'}
+              {paste.open ? 'Hide paste box' : 'Or paste your resume text — transcribed verbatim (a fallback if a file will not read)'}
             </button>
             {paste.open && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

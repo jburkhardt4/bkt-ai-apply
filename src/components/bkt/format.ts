@@ -2,6 +2,14 @@
 // feature screens (split from bits.tsx so component files only export
 // components, per react-refresh/only-export-components).
 
+/** Human-readable file size, e.g. 184320 → "180 KB", 2_400_000 → "2.3 MB".
+ *  Used for upload history rows so they show the real byte size. */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB'
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 /** Company-logo resolver — jobs/emails carry a `domain` from the sourced
  *  posting link. Swap for the production logo service in one place. */
 export function companyLogo(domain?: string | null): string | null {

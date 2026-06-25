@@ -17,6 +17,7 @@ import type { AiTargetJob } from './DocAssistant'
 import { transcribeResume } from '../services/docContentParser'
 import { extractResumeText } from '../services/resumeFileExtractor'
 import type { ResumeFileKind } from '../services/resumeFileExtractor'
+import { saveUploadedResumeText } from '../../applications/services/candidateProfileService'
 
 /** Result of reading an uploaded file: the real byte size plus either the
  *  extracted text (with its detected kind) or a user-facing error message. */
@@ -212,6 +213,7 @@ function RowAction({ name, label, onClick, danger = false }: { name: string; lab
 function DocRow({
   item,
   dateOrder,
+  builderLabel,
   onPreview,
   onEdit,
   onAlign,
@@ -220,6 +222,7 @@ function DocRow({
 }: {
   item: DocItem
   dateOrder: 'dmy' | 'mdy'
+  builderLabel: string
   onPreview: (item: DocItem) => void
   onEdit: (item: DocItem) => void
   onAlign: (item: DocItem) => void
@@ -289,7 +292,7 @@ function DocRow({
       <span style={{ display: 'flex', gap: 2, opacity: hover ? 1 : 0, transition: 'opacity var(--dur-fast) var(--ease-standard)' }}>
         <RowAction name="eye" label="Preview" onClick={() => onPreview(item)} />
         <RowAction name="wand-sparkles" label="Auto-Align to Last Job" onClick={() => onAlign(item)} />
-        <RowAction name="pencil" label="Open in Builder" onClick={() => onEdit(item)} />
+        <RowAction name="pencil" label={builderLabel} onClick={() => onEdit(item)} />
         <RowAction name="download" label="Download" onClick={() => onToast(`Downloading ${item.name}`, 'download', 'var(--bkt-blue-300)')} />
         <RowAction name="trash-2" label="Delete" danger onClick={() => onDelete(item)} />
       </span>
@@ -334,6 +337,10 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
     }
   }
 
+  // Upload only STORES the file (with its extracted text) — it does NOT auto-parse
+  // or jump into the builder. Parsing into sections happens lazily, only when the
+  // user opens the Resume Builder (openInBuilder), so an upload never reformats
+  // their document behind their back.
   const upload = (result: UploadResult) => {
     const now = new Date()
     const stamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.toLocaleTimeString('en-US')}`
@@ -346,23 +353,26 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
         size: formatBytes(result.size),
         template: 'classic',
         note: 'Uploaded just now',
+        rawText: result.text || undefined,
       },
       ...xs,
     ])
-    // TRANSCRIBE (not rewrite): the extractor pulled real text from the PDF /
-    // DOCX / TXT / MD; parse it verbatim into the structured builder.
     if (type === 'resume' && result.text) {
-      setBuilder({ item: null, content: transcribeResume(result.text) })
       const label = result.kind ? KIND_LABEL[result.kind] : 'resume'
-      onToast(`Transcribed your ${label} into the builder`, 'circle-check', 'var(--bkt-success)')
+      onToast(`Uploaded your ${label} — open the Resume Builder to parse it`, 'circle-check', 'var(--bkt-success)')
+      // Persist the extracted text as the master resume so job match-scoring uses
+      // it (BR-150/BR-162). Best-effort + non-blocking; demo mode (no userId) skips.
+      if (userId) {
+        void saveUploadedResumeText(userId, result.text).then((saved) => {
+          if (saved) onToast('Saved as your master resume for job scoring', 'sparkles', 'var(--bkt-blue-300)')
+        })
+      }
       return
     }
-    // Extraction failed (scanned/image PDF, legacy .doc, unreadable file) →
-    // open the paste box so the user can still transcribe verbatim.
     if (type === 'resume') {
-      setPaste((p) => ({ ...p, open: true }))
+      // Extraction failed (scanned/image PDF, legacy .doc, unreadable file).
       onToast(
-        result.error ?? `Couldn't read text from ${result.name} — paste your resume below to transcribe`,
+        result.error ?? `Couldn't read text from ${result.name} — paste your resume text below`,
         'circle-alert',
         'var(--bkt-blue-300)',
       )
@@ -370,6 +380,11 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
     }
     onToast(`Uploaded ${result.name}`, 'circle-check', 'var(--bkt-success)')
   }
+
+  // Opens an item in the builder. An uploaded resume is transcribed into sections
+  // HERE (lazily, on demand) from its stored raw text; seed items use their seed.
+  const openInBuilder = (item: DocItem) =>
+    setBuilder({ item, content: item.rawText ? transcribeResume(item.rawText) : undefined })
 
   // Transcribe pasted resume text verbatim into the builder (reliable for the
   // PDF / Word content a user copies in — no rewrite).
@@ -505,8 +520,9 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
                 key={item.id}
                 item={item}
                 dateOrder={dateOrder}
+                builderLabel={type === 'resume' ? 'Open Resume Builder' : 'Open in Builder'}
                 onPreview={setPreviewItem}
-                onEdit={(it) => setBuilder({ item: it })}
+                onEdit={openInBuilder}
                 onAlign={(it) => setBuilder({ item: it, autoAlign: true })}
                 onDelete={del}
                 onToast={onToast}
@@ -529,7 +545,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
         onClose={() => setPreviewItem(null)}
         onEdit={(it) => {
           setPreviewItem(null)
-          setBuilder({ item: it })
+          openInBuilder(it)
         }}
         onToast={onToast}
       />

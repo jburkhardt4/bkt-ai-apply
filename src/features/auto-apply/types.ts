@@ -187,6 +187,9 @@ export interface ResumeContent {
   experience: ResumeExperience[]
   education: { degree: string; org: string; when: string }[]
   skills: string[]
+  /** Standalone certifications/licenses — kept separate from education so the
+   *  builder renders a dedicated "Certifications" section (BR-162 follow-up). */
+  certifications: string[]
 }
 
 export interface LetterContent {
@@ -212,6 +215,9 @@ export interface DocItem {
   template: string
   note?: string
   summary?: string
+  /** Raw extracted text from an uploaded resume, parsed into the builder lazily
+   *  (only when the user clicks "Open Resume Builder") — not auto-parsed on drop. */
+  rawText?: string
   /** Cover-letter variants override pieces of the letter seed. */
   company?: string
   role?: string

@@ -145,6 +145,20 @@ export function DocPaper({
           </div>
         ))}
       </div>
+      {c.certifications.filter(Boolean).length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <PaperHead t={t} size={px(fs)}>
+            Certifications
+          </PaperHead>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {c.certifications.filter(Boolean).map((cert, i) => (
+              <li key={i} style={{ marginBottom: 2 }}>
+                {cert}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div>
         <PaperHead t={t} size={px(fs)}>
           Skills

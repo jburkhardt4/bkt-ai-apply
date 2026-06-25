@@ -76,6 +76,8 @@ export function decodeXmlEntities(value: string): string {
  */
 export function docxXmlToText(xml: string): string {
   const withBreaks = xml
+    // Drop field-instruction codes (e.g. HYPERLINK/PAGE) — they are not display text.
+    .replace(/<w:instrText\b[^>]*>[\s\S]*?<\/w:instrText>/g, '')
     .replace(/<w:tab\b[^>]*\/?>/g, '\t')
     .replace(/<w:br\b[^>]*\/?>/g, '\n')
     .replace(/<w:cr\b[^>]*\/?>/g, '\n')
@@ -83,6 +85,9 @@ export function docxXmlToText(xml: string): string {
   const stripped = withBreaks.replace(/<[^>]+>/g, '')
   return decodeXmlEntities(stripped)
     .replace(/\r\n?/g, '\n')
+    // Strip a leading run of decorative digits glued before the first real word
+    // (some headers emit numbered <w:t> runs from icons/anchors ahead of the name).
+    .replace(/^\s*\d{6,}(?=\D)/, '')
     .replace(/[ \t]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim()

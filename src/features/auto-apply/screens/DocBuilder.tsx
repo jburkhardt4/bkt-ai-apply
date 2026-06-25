@@ -423,6 +423,21 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
                   }
                 />
               </DBGroup>
+              <DBGroup icon="award" label="Certifications">
+                <DBArea
+                  label="One per line"
+                  rows={3}
+                  value={rc.certifications.join('\n')}
+                  onChange={(v) =>
+                    set({
+                      certifications: v
+                        .split('\n')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                />
+              </DBGroup>
             </>
           ) : (
             <>

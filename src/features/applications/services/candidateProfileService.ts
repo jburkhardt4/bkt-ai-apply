@@ -10,15 +10,16 @@
 //            are RLS-scoped; we filter explicitly too)
 //   BR-082 — DB types come from generated db.types.ts (no handwritten DB types)
 //
-// NO PDF PARSING: the repo ships no PDF text-extraction library and must not add
-// one. candidate_profiles.master_resume_path is documented as the JB-provided
-// master resume PDF; we only read it as text when the path is itself a .txt.
-// Otherwise we fall back to the latest versioned `documents` resume row, whose
-// content the document storage service always writes as text/plain (.txt). When
-// only a PDF (or nothing) is available we return null and scoring proceeds
-// exactly as before (resume enrichment is inert until a .txt resume exists).
+// RESUME TEXT SOURCE: scoring reads the user's master resume as plain text from a
+// `.txt` object — either candidate_profiles.master_resume_path (when it is a .txt)
+// or the latest versioned `documents` resume row (document storage always writes
+// text/plain). PDF/DOCX uploads now reach scoring because the builder extracts
+// their text CLIENT-SIDE (resumeFileExtractor) and persists it here via
+// saveUploadedResumeText() — closing the BR-150 follow-up. When no plain-text
+// resume exists we return null and scoring falls back exactly as before.
 
 import { getSupabaseClient } from '../../../lib/supabase'
+import { createDocumentVersion } from './documentStorageService'
 
 /** Cap to protect the match_scoring token budget (BR-050/054). ~12k chars is a
  *  generous full-resume length while keeping tokens_in modest. */
@@ -94,5 +95,26 @@ export async function fetchCandidateResumeText(userId: string): Promise<string |
     return null
   } catch {
     return null
+  }
+}
+
+/** Minimum length for a persisted resume to be worth scoring against. */
+const MIN_RESUME_CHARS = 30
+
+/**
+ * Persists an uploaded resume's CLIENT-EXTRACTED text as a new plain-text
+ * `documents` resume version, so match-scoring (fetchCandidateResumeText →
+ * buildScoringProfile → score-job-fit) uses the candidate's real resume instead
+ * of the keyword fallback. Best-effort + non-blocking: returns false on any
+ * failure (scoring then proceeds exactly as before). BR-150 / BR-162.
+ */
+export async function saveUploadedResumeText(userId: string, text: string): Promise<boolean> {
+  const trimmed = text?.trim()
+  if (!userId || !trimmed || trimmed.length < MIN_RESUME_CHARS) return false
+  try {
+    await createDocumentVersion({ userId, documentType: 'resume', content: trimmed })
+    return true
+  } catch {
+    return false
   }
 }

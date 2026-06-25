@@ -50,6 +50,13 @@ export const DOCS_SEED: DocsData = {
       { degree: 'B.S. Business Administration', org: 'University of North Carolina at Charlotte', when: '2012' },
     ],
     skills: ['Salesforce Architecture', 'CPQ / Billing', 'Apex & Flows', 'Business Analysis', 'Process Mapping', 'Agile Delivery', 'Stakeholder Management', 'AI Workflow Automation', 'SQL', 'Jira / Confluence'],
+    certifications: [
+      'Salesforce Certified Platform Administrator',
+      'Salesforce Certified Business Analyst',
+      'Salesforce Certified Platform App Builder',
+      'Salesforce Certified AI Associate',
+      'Salesforce Certified Agentforce Specialist',
+    ],
   },
 
   /* ---- builder seed: the base cover letter ---- */

@@ -1,7 +1,7 @@
 // BKT AI-Apply — DocsHome: Resumes / Cover Letters home (history list +
 // drag-and-drop upload), orchestrating the PreviewModal and DocBuilder views.
 // Ported 1:1 from the design-system UI kit (DocsScreen.jsx).
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
@@ -9,15 +9,21 @@ import type { BktBadgeTone } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import { formatBytes, formatStamp } from '@/components/bkt/format'
 import type { ToastFn } from '@/components/bkt/toast'
-import type { DocItem, DocsData, LetterContent, ResumeContent } from '../types'
+import type { DocItem, DocsData } from '../types'
 import { PreviewModal } from './DocPaper'
 import type { DocContent, DocType } from './DocPaper'
 import { DocBuilder } from './DocBuilder'
 import type { AiTargetJob } from './DocAssistant'
-import { transcribeResume } from '../services/docContentParser'
+import { transcribeLetter, transcribeResume } from '../services/docContentParser'
 import { extractResumeText } from '../services/resumeFileExtractor'
 import type { ResumeFileKind } from '../services/resumeFileExtractor'
 import { saveUploadedResumeText } from '../../applications/services/candidateProfileService'
+import {
+  createDocumentVersion,
+  deleteDocument,
+  listDocuments,
+} from '../../applications/services/documentStorageService'
+import type { LoadedDocument } from '../../applications/services/documentStorageService'
 
 /** Result of reading an uploaded file: the real byte size plus either the
  *  extracted text (with its detected kind) or a user-facing error message. */
@@ -314,80 +320,89 @@ export interface DocsHomeProps {
 
 export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVariant = 'rail', onToast }: DocsHomeProps) {
   const copy = DOC_COPY[type]
-  const seed = type === 'resume' ? docs.resumes : docs.letters
-  const [items, setItems] = useState<DocItem[]>(seed)
+  const docType = type === 'resume' ? 'resume' : 'cover_letter'
+  const [items, setItems] = useState<DocItem[]>([])
   const [previewItem, setPreviewItem] = useState<DocItem | null>(null)
   const [builder, setBuilder] = useState<{ item: DocItem | null; autoAlign?: boolean; content?: DocContent } | null>(null)
   const [paste, setPaste] = useState<{ open: boolean; text: string }>({ open: false, text: '' })
 
-  const templateOf = (item: DocItem) => docs.templates.find((t) => t.id === item.template) ?? docs.templates[0]!
-  const contentOf = (item: DocItem): DocContent => {
-    if (type === 'resume') {
-      const base: ResumeContent = docs.resumeContent
-      return item.summary ? { ...base, summary: item.summary } : base
-    }
-    const base: LetterContent = docs.letterContent
+  /** Maps a real stored document to a history row. Display name = first non-empty
+   *  line of the stored text (the person's name / heading), else a version label. */
+  const toItem = (d: LoadedDocument): DocItem => {
+    const firstLine = d.text.split('\n').map((l) => l.replace(/^#+\s*/, '').trim()).find(Boolean) ?? ''
     return {
-      ...base,
-      company: item.company || base.company,
-      role: item.role || base.role,
-      recipient: item.recipient || base.recipient,
-      greeting: `Dear ${item.recipient || base.recipient},`,
-      body: item.body0 ? [item.body0, ...base.body.slice(1)] : base.body,
+      id: d.documentId,
+      name: firstLine || `${type === 'resume' ? 'Resume' : 'Cover letter'} v${d.version}`,
+      kind: 'Base',
+      updated: d.createdAt,
+      size: formatBytes(d.text.length),
+      template: 'classic',
+      note: `Version ${d.version}`,
+      rawText: d.text,
+      documentId: d.documentId,
+      storagePath: d.storagePath,
+      version: d.version,
     }
   }
 
-  // Upload only STORES the file (with its extracted text) — it does NOT auto-parse
-  // or jump into the builder. Parsing into sections happens lazily, only when the
-  // user opens the Resume Builder (openInBuilder), so an upload never reformats
-  // their document behind their back.
+  /** Refreshes the real document list from Supabase (no-op without auth). */
+  const reload = () => {
+    if (!userId) return
+    listDocuments(userId, docType)
+      .then((docs) => setItems(docs.map(toItem)))
+      .catch(() => {})
+  }
+
+  // Initial load — setState only inside the promise callback (no synchronous
+  // setState in an effect); demo/no-auth resolves to an empty list (no seed).
+  useEffect(() => {
+    let active = true
+    const load = userId ? listDocuments(userId, docType) : Promise.resolve([] as LoadedDocument[])
+    load.then((docs) => { if (active) setItems(docs.map(toItem)) }).catch(() => {})
+    return () => {
+      active = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, docType])
+
+  // Opens a doc in the builder. Real docs are transcribed into sections HERE
+  // (lazily, on open) from their stored text — never on upload/preview.
+  const openInBuilder = (item: DocItem | null, autoAlign = false) => {
+    const content = item?.rawText
+      ? type === 'resume'
+        ? transcribeResume(item.rawText)
+        : transcribeLetter(item.rawText)
+      : undefined
+    setBuilder({ item, content, autoAlign })
+  }
+
+  // Upload STORES the real document (persisted to `documents`, which also feeds
+  // job-scoring) and refreshes the list — it never auto-parses into the builder.
   const upload = (result: UploadResult) => {
-    const now = new Date()
-    const stamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.toLocaleTimeString('en-US')}`
-    setItems((xs) => [
-      {
-        id: 'u' + Date.now(),
-        name: result.name,
-        kind: 'Base',
-        updated: stamp,
-        size: formatBytes(result.size),
-        template: 'classic',
-        note: 'Uploaded just now',
-        rawText: result.text || undefined,
-      },
-      ...xs,
-    ])
-    if (type === 'resume' && result.text) {
-      const label = result.kind ? KIND_LABEL[result.kind] : 'resume'
-      onToast(`Uploaded your ${label} — open the Resume Builder to parse it`, 'circle-check', 'var(--bkt-success)')
-      // Persist the extracted text as the master resume so job match-scoring uses
-      // it (BR-150/BR-162). Best-effort + non-blocking; demo mode (no userId) skips.
-      if (userId) {
-        void saveUploadedResumeText(userId, result.text).then((saved) => {
-          if (saved) onToast('Saved as your master resume for job scoring', 'sparkles', 'var(--bkt-blue-300)')
-        })
-      }
+    if (!result.text) {
+      onToast(result.error ?? `Couldn't read text from ${result.name} — paste your text below`, 'circle-alert', 'var(--bkt-blue-300)')
       return
     }
-    if (type === 'resume') {
-      // Extraction failed (scanned/image PDF, legacy .doc, unreadable file).
-      onToast(
-        result.error ?? `Couldn't read text from ${result.name} — paste your resume text below`,
-        'circle-alert',
-        'var(--bkt-blue-300)',
-      )
+    if (!userId) {
+      onToast('Sign in to save uploaded documents', 'circle-alert', 'var(--bkt-warning)')
       return
     }
-    onToast(`Uploaded ${result.name}`, 'circle-check', 'var(--bkt-success)')
+    const label = result.kind ? KIND_LABEL[result.kind] : type === 'resume' ? 'resume' : 'document'
+    const persist =
+      type === 'resume'
+        ? saveUploadedResumeText(userId, result.text).then((ok) => {
+            if (!ok) throw new Error('save failed')
+          })
+        : createDocumentVersion({ userId, documentType: 'cover_letter', content: result.text }).then(() => {})
+    persist
+      .then(() => {
+        reload()
+        onToast(`Uploaded your ${label} — open it to preview or edit`, 'circle-check', 'var(--bkt-success)')
+      })
+      .catch(() => onToast(`Couldn't save ${result.name}`, 'circle-x', 'var(--bkt-danger)'))
   }
 
-  // Opens an item in the builder. An uploaded resume is transcribed into sections
-  // HERE (lazily, on demand) from its stored raw text; seed items use their seed.
-  const openInBuilder = (item: DocItem) =>
-    setBuilder({ item, content: item.rawText ? transcribeResume(item.rawText) : undefined })
-
-  // Transcribe pasted resume text verbatim into the builder (reliable for the
-  // PDF / Word content a user copies in — no rewrite).
+  // Transcribe pasted text into a NEW builder doc (edits autosave durably).
   const transcribePasted = () => {
     const text = paste.text.trim()
     if (text.length < 30) {
@@ -396,11 +411,21 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
     }
     setBuilder({ item: null, content: transcribeResume(text) })
     setPaste({ open: false, text: '' })
-    onToast('Transcribed your resume into the builder', 'circle-check', 'var(--bkt-success)')
+    onToast('Transcribed into the builder — edits save automatically', 'circle-check', 'var(--bkt-success)')
   }
+
   const del = (item: DocItem) => {
+    if (userId && item.documentId && item.storagePath) {
+      deleteDocument({ userId, documentId: item.documentId, storagePath: item.storagePath })
+        .then(() => {
+          reload()
+          onToast(`Deleted ${item.name}`, 'trash-2', 'var(--bkt-zinc-300)')
+        })
+        .catch(() => onToast(`Couldn't delete ${item.name}`, 'circle-x', 'var(--bkt-danger)'))
+      return
+    }
     setItems((xs) => xs.filter((x) => x.id !== item.id))
-    onToast(`Deleted ${item.name}`, 'trash-2', 'var(--bkt-zinc-300)')
+    onToast(`Removed ${item.name}`, 'trash-2', 'var(--bkt-zinc-300)')
   }
 
   if (builder) {
@@ -410,11 +435,12 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
         docs={docs}
         item={builder.item}
         autoAlign={builder.autoAlign}
-        initialContent={builder.content ?? (builder.item ? contentOf(builder.item) : type === 'resume' ? docs.resumeContent : docs.letterContent)}
+        initialContent={builder.content ?? (type === 'resume' ? docs.resumeContent : docs.letterContent)}
         userId={userId}
         lastJob={lastJob}
         aiVariant={aiVariant}
         onToast={onToast}
+        onSaved={reload}
         onBack={() => setBuilder(null)}
       />
     )
@@ -433,7 +459,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
           variant="outline"
           size="md"
           iconLeft={<Icon name="wand-sparkles" size={15} color="var(--primary)" />}
-          onClick={() => setBuilder({ item: items.find((i) => i.isDefault) ?? items[0] ?? null, autoAlign: true })}
+          onClick={() => openInBuilder(items.find((i) => i.isDefault) ?? items[0] ?? null, true)}
         >
           Auto-Align to Last Job
         </BktButton>
@@ -522,8 +548,8 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
                 dateOrder={dateOrder}
                 builderLabel={type === 'resume' ? 'Open Resume Builder' : 'Open in Builder'}
                 onPreview={setPreviewItem}
-                onEdit={openInBuilder}
-                onAlign={(it) => setBuilder({ item: it, autoAlign: true })}
+                onEdit={(it) => openInBuilder(it)}
+                onAlign={(it) => openInBuilder(it, true)}
                 onDelete={del}
                 onToast={onToast}
               />
@@ -540,8 +566,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
       <PreviewModal
         item={previewItem}
         type={type}
-        content={previewItem ? contentOf(previewItem) : null}
-        template={previewItem ? templateOf(previewItem) : null}
+        text={previewItem?.rawText ?? ''}
         onClose={() => setPreviewItem(null)}
         onEdit={(it) => {
           setPreviewItem(null)

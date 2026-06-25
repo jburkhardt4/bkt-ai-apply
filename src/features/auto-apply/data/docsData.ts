@@ -26,88 +26,36 @@ export const DOCS_SEED: DocsData = {
       headCase: 'uppercase', rule: false, centerName: false, accent: '#3f3f46' },
   ],
 
-  /* ---- builder seed: the base resume ---- */
+  // Builder starts BLANK — real content comes from the user's uploaded/saved
+  // documents (loaded from the `documents` table), never demo data.
   resumeContent: {
-    name: 'John Burkhardt',
-    contact: 'Los Angeles, CA · john@bktadvisory.com · (213) 555-0188 · linkedin.com/in/jburkhardt',
-    headline: 'Salesforce Consulting Leader · Business Architect',
-    summary: 'Consulting leader with 12+ years designing and delivering Salesforce platforms for enterprise clients. Founder of BKT Advisory, where I lead discovery-to-go-live engagements across Sales, Service, and Revenue Cloud, translating business strategy into systems that ship. Known for pragmatic architecture, clean governance, and teams that deliver on time.',
-    experience: [
-      { role: 'Founder & Principal Consultant', org: 'BKT Advisory', when: '2021 - Present',
-        bullets: [
-          'Lead end-to-end Salesforce consulting engagements for 14 enterprise clients across financial services, healthcare, and SaaS.',
-          'Designed quote-to-cash architecture (CPQ + Billing) that cut quote turnaround 38% for a $200M software firm.',
-          'Built AI-assisted application pipeline (multi-model routing, Gmail/Calendar ingestion) powering real-time hiring-stage tracking.' ] },
-      { role: 'Senior Manager, Salesforce Practice', org: 'Meridian Consulting Group', when: '2016 - 2021',
-        bullets: [
-          'Grew the Salesforce practice from 6 to 31 consultants; owned delivery quality across 40+ concurrent projects.',
-          'Served as lead business architect on multi-cloud programs up to $4.5M, reporting to client steering committees.' ] },
-      { role: 'Business Systems Analyst', org: 'TruNorth Financial', when: '2012 - 2016',
-        bullets: [
-          'Owned Salesforce administration and process mapping for a 600-seat org; led migration off legacy CRM in 9 months.' ] },
-    ],
-    education: [
-      { degree: 'B.S. Business Administration', org: 'University of North Carolina at Charlotte', when: '2012' },
-    ],
-    skills: ['Salesforce Architecture', 'CPQ / Billing', 'Apex & Flows', 'Business Analysis', 'Process Mapping', 'Agile Delivery', 'Stakeholder Management', 'AI Workflow Automation', 'SQL', 'Jira / Confluence'],
-    certifications: [
-      'Salesforce Certified Platform Administrator',
-      'Salesforce Certified Business Analyst',
-      'Salesforce Certified Platform App Builder',
-      'Salesforce Certified AI Associate',
-      'Salesforce Certified Agentforce Specialist',
-    ],
+    name: '',
+    contact: '',
+    headline: '',
+    summary: '',
+    experience: [],
+    education: [],
+    skills: [],
+    certifications: [],
   },
 
-  /* ---- builder seed: the base cover letter ---- */
   letterContent: {
-    name: 'John Burkhardt',
-    contact: 'Los Angeles, CA · john@bktadvisory.com · (213) 555-0188',
-    date: '6/10/2026',
-    recipient: 'Hiring Team',
-    company: 'PwC',
-    role: 'Salesforce Consulting Manager',
-    greeting: 'Dear Hiring Team,',
-    body: [
-      'I am writing to apply for the Salesforce Consulting Manager role. Over the last twelve years I have led Salesforce delivery from both sides of the table, most recently as founder of BKT Advisory, where I run discovery-to-go-live engagements for enterprise clients across Sales, Service, and Revenue Cloud.',
-      'Your posting calls for end-to-end engagement ownership, customization depth, and integration management. That is the core of my practice: I served as lead business architect on multi-cloud programs up to $4.5M, designed CPQ architecture that cut quote turnaround 38%, and have kept delivery teams of 30+ consultants shipping on time.',
-      'I would welcome the chance to bring that operating discipline to your clients. Thank you for your consideration.',
-    ],
+    name: '',
+    contact: '',
+    date: '',
+    recipient: '',
+    company: '',
+    role: '',
+    greeting: '',
+    body: [''],
     closing: 'Sincerely,',
   },
 
-  /* ---- history: uploaded / generated resumes ---- */
-  resumes: [
-    { id: 'r1', name: 'John_Burkhardt_Resume_2026.pdf', kind: 'Base', isDefault: true,
-      updated: '6/2/2026 4:12:00 PM', size: '184 KB', template: 'classic',
-      note: 'Primary resume · used by Auto Apply' },
-    { id: 'r2', name: 'JB_Resume_Salesforce_Architect.pdf', kind: 'Customized',
-      target: 'Salesforce Architect · Tech Holding', updated: '6/8/2026 9:41:00 AM', size: '188 KB', template: 'modern',
-      summary: 'Salesforce architect with 12+ years designing scalable enterprise platforms: architecture strategy, governance, and hands-on Apex/SOQL/API integration across Sales and Service Cloud.' },
-    { id: 'r3', name: 'JB_Resume_Consulting_Manager.pdf', kind: 'Customized',
-      target: 'Salesforce Consulting Manager · PwC', updated: '6/7/2026 2:25:00 PM', size: '186 KB', template: 'classic',
-      summary: 'Consulting manager with 12+ years leading Salesforce engagements end-to-end: solution design, integration management, and client delivery teams of 30+ consultants.' },
-    { id: 'r4', name: 'JB_Resume_RevOps.pdf', kind: 'Customized',
-      target: 'RevOps Admin · Blackthorn', updated: '6/5/2026 11:03:00 AM', size: '181 KB', template: 'compact',
-      summary: 'Revenue-operations specialist focused on Salesforce hygiene, workflow automation, and GTM reporting for SaaS teams.' },
-    { id: 'r5', name: 'John_Burkhardt_Resume_2024.pdf', kind: 'Archived',
-      updated: '11/18/2024 3:30:00 PM', size: '176 KB', template: 'executive',
-      summary: 'Senior Salesforce practice manager with a decade of platform delivery, practice growth, and business-architecture experience.' },
-  ],
+  // History is loaded from the real `documents` table (DocsHome useEffect) — no
+  // seeded/demo resumes or cover letters.
+  resumes: [],
 
-  /* ---- history: cover letters ---- */
-  letters: [
-    { id: 'l1', name: 'CL_PwC_Consulting_Manager.pdf', kind: 'Customized', isDefault: true,
-      target: 'Salesforce Consulting Manager · PwC', updated: '6/8/2026 10:02:00 AM', size: '92 KB', template: 'classic' },
-    { id: 'l2', name: 'CL_Neocol_Solution_Architect.pdf', kind: 'Customized',
-      target: 'Solution Architect · Neocol', updated: '6/6/2026 4:47:00 PM', size: '90 KB', template: 'modern',
-      company: 'Neocol', role: 'Solution Architect, Financial Services', recipient: 'Neocol Talent Team',
-      body0: 'I am writing to apply for the Solution Architect role on your financial-services team. As founder of BKT Advisory I architect Salesforce-native solutions daily, most recently quote-to-cash designs spanning CPQ and Billing.' },
-    { id: 'l3', name: 'CL_Generic_Base.pdf', kind: 'Base',
-      updated: '5/28/2026 1:15:00 PM', size: '88 KB', template: 'classic',
-      company: '[Company]', role: '[Role]', recipient: 'Hiring Team',
-      body0: 'I am writing to apply for the [Role] position. Over the last twelve years I have led Salesforce delivery from both sides of the table, as a practice leader and as founder of BKT Advisory.' },
-  ],
+  letters: [],
 
   /* ---- canned AI Writer exchanges ---- */
   ai: {

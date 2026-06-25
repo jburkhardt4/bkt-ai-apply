@@ -8,7 +8,7 @@ import { strToU8, zipSync } from 'fflate'
 import MD from '../../../test-fixtures/john-burkhardt-resume.md?raw'
 import DOCX_XML from '../../../test-fixtures/john-burkhardt-document.xml?raw'
 import { extractResumeText } from './resumeFileExtractor'
-import { transcribeResume } from './docContentParser'
+import { serializeResume, transcribeResume } from './docContentParser'
 
 /** Re-zip the real document.xml into a minimal but valid .docx the extractor reads. */
 function docxFile(): File {
@@ -71,6 +71,23 @@ describe('transcribeResume — real resume (Markdown)', () => {
         'Salesforce Certified Agentforce Specialist',
       ]),
     )
+  })
+})
+
+describe('serializeResume round-trip (durable text persistence)', () => {
+  it('preserves the structured content through serialize → transcribe', () => {
+    const a = transcribeResume(MD)
+    const b = transcribeResume(serializeResume(a))
+    expect(b.name).toBe(a.name)
+    expect(b.summary).toBe(a.summary)
+    expect(b.skills).toEqual(a.skills)
+    expect(b.certifications).toEqual(a.certifications)
+    expect(b.experience.map((e) => e.org)).toEqual(a.experience.map((e) => e.org))
+    expect(b.experience.map((e) => e.role)).toEqual(a.experience.map((e) => e.role))
+    expect(b.experience.map((e) => e.when)).toEqual(a.experience.map((e) => e.when))
+    expect(b.experience.map((e) => e.bullets.length)).toEqual(a.experience.map((e) => e.bullets.length))
+    expect(b.education.map((e) => e.degree)).toEqual(a.education.map((e) => e.degree))
+    expect(b.education.map((e) => e.org)).toEqual(a.education.map((e) => e.org))
   })
 })
 

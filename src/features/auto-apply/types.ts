@@ -215,9 +215,14 @@ export interface DocItem {
   template: string
   note?: string
   summary?: string
-  /** Raw extracted text from an uploaded resume, parsed into the builder lazily
-   *  (only when the user clicks "Open Resume Builder") — not auto-parsed on drop. */
+  /** Raw stored text of the real document (uploaded extract or saved builder
+   *  output). Shown verbatim in preview; parsed into the builder only on open. */
   rawText?: string
+  /** Identity of the backing `documents` row (present for real, persisted docs)
+   *  — used for in-place save and delete. Absent for unsaved/demo items. */
+  documentId?: string
+  storagePath?: string
+  version?: number
   /** Cover-letter variants override pieces of the letter seed. */
   company?: string
   role?: string

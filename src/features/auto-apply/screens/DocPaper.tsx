@@ -169,20 +169,20 @@ export function DocPaper({
   )
 }
 
-/** Full-screen preview viewer: dimmed stage, floating toolbar, scrollable paper. */
+/** Full-screen preview viewer: shows the TRUE stored document text verbatim
+ *  (no parsing/formatting) — parsing into the structured builder happens only
+ *  when the user opens it via "Open in Builder". */
 export function PreviewModal({
   item,
   type,
-  content,
-  template,
+  text,
   onClose,
   onEdit,
   onToast,
 }: {
   item: DocItem | null
   type: DocType
-  content: DocContent | null
-  template: PaperTemplate | null
+  text: string
   onClose: () => void
   onEdit: (item: DocItem) => void
   onToast: ToastFn
@@ -194,7 +194,7 @@ export function PreviewModal({
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
-  if (!item || !content || !template) return null
+  if (!item) return null
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', flexDirection: 'column' }}>
       <div
@@ -233,24 +233,55 @@ export function PreviewModal({
           {item.name}
         </span>
         <BktBadge tone="neutral" appearance="soft">
-          {template.name} · {template.sub}
+          {item.note ?? 'Document'}
         </BktBadge>
         <span style={{ width: 1, height: 18, background: 'var(--border)' }}></span>
         <BktButton variant="ghost" size="sm" iconLeft={<Icon name="download" size={14} />} onClick={() => onToast(`Downloading ${item.name}`, 'download', 'var(--bkt-blue-300)')}>
           Download
         </BktButton>
         <BktButton variant="primary" size="sm" iconLeft={<Icon name="pencil" size={13} />} onClick={() => onEdit(item)}>
-          Open in Builder
+          {type === 'resume' ? 'Open Resume Builder' : 'Open in Builder'}
         </BktButton>
         <BktButton variant="ghost" size="icon" aria-label="Close preview" onClick={onClose}>
           <Icon name="x" size={16} />
         </BktButton>
       </div>
 
-      {/* paper stage */}
+      {/* paper stage — the TRUE document text, verbatim (not parsed/restyled) */}
       <div className="bkt-scroll" style={{ position: 'relative', flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '22px 24px 40px' }}>
-        <div className="bkt-enter" style={{ width: 'min(820px, 94vw)', flexShrink: 0, alignSelf: 'flex-start' }}>
-          <DocPaper type={type} content={content} template={template} />
+        <div
+          className="bkt-enter"
+          style={{
+            width: 'min(820px, 94vw)',
+            flexShrink: 0,
+            alignSelf: 'flex-start',
+            background: '#fff',
+            color: '#1c1c21',
+            borderRadius: 2,
+            boxShadow: 'var(--shadow-lg)',
+            padding: '52px 58px',
+            minHeight: 'calc((min(820px, 94vw)) * 11 / 8.5)',
+            boxSizing: 'border-box',
+          }}
+        >
+          {text.trim() ? (
+            <pre
+              style={{
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: 'var(--font-body)',
+                fontSize: 14,
+                lineHeight: 1.5,
+              }}
+            >
+              {text}
+            </pre>
+          ) : (
+            <span style={{ color: '#71717a', fontStyle: 'italic' }}>
+              This document has no extractable text. Open it in the builder to add content.
+            </span>
+          )}
         </div>
       </div>
     </div>

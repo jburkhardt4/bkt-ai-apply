@@ -4,7 +4,7 @@
 // (resume summary / cover-letter first paragraph). The canonical full-text
 // artifact is persisted separately to the `documents` table; this parser only
 // shapes the editable builder view. Pure + unit-tested.
-import type { ResumeContent } from '../types'
+import type { LetterContent, ResumeContent } from '../types'
 import { sanitizeDashes, sanitizeDashList } from './textSanitizer'
 
 export interface ResumeAlignPatch {
@@ -468,5 +468,100 @@ export function transcribeResume(text: string): ResumeContent {
     education: parseEducationBlock(eduLines),
     skills: parseSkillsBlock(buckets.skills),
     certifications: parseCertifications(certLines),
+  }
+}
+
+/* ─────────────────────── SERIALIZATION (builder → text) ─────────────────────── */
+// The inverse of transcribeResume: render the structured builder content back to
+// clean Markdown so it can be PERSISTED to the `documents` table as plain text
+// (the same store job-scoring reads). The format is exactly what transcribeResume
+// round-trips, so save → reload → re-parse preserves the standard sections.
+
+/** Serializes resume builder content to round-trippable Markdown. */
+export function serializeResume(c: ResumeContent): string {
+  const out: string[] = []
+  if (c.name.trim()) out.push(`# ${c.name.trim()}`)
+  if (c.headline.trim()) out.push('', c.headline.trim())
+  if (c.contact.trim()) out.push('', c.contact.trim())
+
+  if (c.summary.trim()) out.push('', '## Summary', '', c.summary.trim())
+
+  const roles = c.experience.filter((e) => e.role || e.org || e.bullets.some(Boolean))
+  if (roles.length) {
+    out.push('', '## Experience')
+    for (const e of roles) {
+      out.push('')
+      if (e.org.trim()) out.push(`### ${e.org.trim()}`)
+      const head = [e.role.trim() && `**${e.role.trim()}**`, e.when.trim()].filter(Boolean).join(' | ')
+      if (head) out.push(head)
+      for (const b of e.bullets.map((x) => x.trim()).filter(Boolean)) out.push(`- ${b}`)
+    }
+  }
+
+  const edu = c.education.filter((e) => e.degree || e.org || e.when)
+  if (edu.length) {
+    out.push('', '## Education', '')
+    for (const e of edu) {
+      const deg = e.degree.trim()
+      const org = e.org.trim()
+      const when = e.when.trim()
+      // Degree on its own bullet (kept verbatim, incl. any internal "|"), with the
+      // institution on the next line so transcribeResume re-attaches it as the org.
+      if (org) {
+        out.push(`- ${deg}`)
+        out.push(`${org}${when ? ` · (${when})` : ''}`)
+      } else {
+        out.push(`- ${deg}${when ? ` · (${when})` : ''}`)
+      }
+    }
+  }
+
+  const certs = c.certifications.map((x) => x.trim()).filter(Boolean)
+  if (certs.length) {
+    out.push('', '## Certifications', '')
+    for (const cert of certs) out.push(`- ${cert}`)
+  }
+
+  const skills = c.skills.map((x) => x.trim()).filter(Boolean)
+  if (skills.length) {
+    out.push('', '## Skills', '')
+    for (const s of skills) out.push(`- ${s}`)
+  }
+
+  return `${out.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`
+}
+
+/** Serializes cover-letter builder content to plain text. */
+export function serializeLetter(c: LetterContent): string {
+  const out = [c.name, c.contact, '', c.date, '', c.recipient, `${c.company} · ${c.role}`, '', c.greeting, '']
+  for (const p of c.body.map((x) => x.trim()).filter(Boolean)) out.push(p, '')
+  out.push(c.closing, c.name)
+  return `${out.map((l) => (l ?? '').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`
+}
+
+/**
+ * Best-effort transcription of a saved cover letter's text back into the
+ * structured builder fields (the letter counterpart of transcribeResume). Header
+ * lines yield name/contact; a leading salutation becomes the greeting; the
+ * remaining paragraphs become the body. Never throws.
+ */
+export function transcribeLetter(text: string): LetterContent {
+  const header = normalizeText(text)
+    .split('\n')
+    .map((l) => stripInlineMarkdown(l))
+    .filter(Boolean)
+  const name = header[0] ?? ''
+  const contact = header.find((l) => CONTACT_RE.test(l)) ?? ''
+  const patch = parseGeneratedLetter(text, { company: '', role: '' })
+  return {
+    name,
+    contact,
+    date: '',
+    recipient: patch.recipient,
+    company: patch.company,
+    role: patch.role,
+    greeting: patch.greeting,
+    body: patch.body,
+    closing: 'Sincerely,',
   }
 }

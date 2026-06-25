@@ -147,6 +147,116 @@ export async function createDocumentVersion(input: CreateDocumentVersionInput): 
   throw new Error('Failed to create a new document version after retries.')
 }
 
+export interface LoadedDocument {
+  documentId: string
+  documentType: StoredDocumentType
+  version: number
+  storagePath: string
+  createdAt: string
+  isLocked: boolean
+  text: string
+}
+
+/** Downloads a documents-bucket object as text, or null on any failure. */
+async function downloadDocumentText(path: string): Promise<string | null> {
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase.storage.from(DOCUMENTS_BUCKET).download(path)
+    if (error || !data) return null
+    return await data.text()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Lists the user's documents of a type (newest version first) WITH their stored
+ * text, so the Documents screen shows real, RLS-scoped documents instead of demo
+ * seed. Best-effort: returns [] on error. Capped to keep the initial load light.
+ */
+export async function listDocuments(
+  userId: string,
+  documentType: StoredDocumentType,
+  limit = 12,
+): Promise<LoadedDocument[]> {
+  if (!userId) return []
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from('documents')
+    .select('id, document_type, version, storage_path, created_at, is_locked')
+    .eq('user_id', userId)
+    .eq('document_type', documentType)
+    .order('version', { ascending: false })
+    .limit(limit)
+
+  if (error || !data) return []
+
+  const out: LoadedDocument[] = []
+  for (const row of data) {
+    const text = (await downloadDocumentText(row.storage_path)) ?? ''
+    out.push({
+      documentId: row.id,
+      documentType: row.document_type as StoredDocumentType,
+      version: row.version,
+      storagePath: row.storage_path,
+      createdAt: row.created_at,
+      isLocked: row.is_locked,
+      text,
+    })
+  }
+  return out
+}
+
+/**
+ * Overwrites an existing document version's content IN PLACE (same storage object
+ * + refreshed content_hash). Used for builder autosave so a single editing session
+ * does not spawn a new version on every keystroke. RLS-scoped to the caller.
+ */
+export async function updateDocumentContent(input: {
+  userId: string
+  documentId: string
+  storagePath: string
+  content: string
+}): Promise<{ contentHash: string }> {
+  const supabase = getSupabaseClient()
+  const contentHash = await sha256(input.content)
+
+  const { error: uploadError } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(input.storagePath, input.content, { upsert: true, contentType: 'text/plain' })
+  if (uploadError) {
+    throw new Error(`Failed to update document content: ${uploadError.message}`)
+  }
+
+  const { error } = await supabase
+    .from('documents')
+    .update({ content_hash: contentHash })
+    .eq('id', input.documentId)
+    .eq('user_id', input.userId)
+  if (error) {
+    throw new Error(`Failed to update document row: ${error.message}`)
+  }
+  return { contentHash }
+}
+
+/** Deletes a document (storage object + row), RLS-scoped to the caller. */
+export async function deleteDocument(input: {
+  userId: string
+  documentId: string
+  storagePath: string
+}): Promise<void> {
+  const supabase = getSupabaseClient()
+  await supabase.storage.from(DOCUMENTS_BUCKET).remove([input.storagePath])
+  const { error } = await supabase
+    .from('documents')
+    .delete()
+    .eq('id', input.documentId)
+    .eq('user_id', input.userId)
+  if (error) {
+    throw new Error(`Failed to delete document: ${error.message}`)
+  }
+}
+
 export async function linkDocumentsToApplication(input: LinkDocumentsInput): Promise<void> {
   const supabase = getSupabaseClient()
   const documentIds = [input.resumeDocumentId, input.coverLetterDocumentId]

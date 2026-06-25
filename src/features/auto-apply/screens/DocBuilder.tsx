@@ -13,7 +13,8 @@ import type { DocContent, DocType } from './DocPaper'
 import { DocAssistant } from './DocAssistant'
 import type { AiTargetJob } from './DocAssistant'
 import { alignDocumentToJob } from '../services/docWriterService'
-import { parseGeneratedLetter, parseGeneratedResume } from '../services/docContentParser'
+import { parseGeneratedLetter, parseGeneratedResume, serializeLetter, serializeResume } from '../services/docContentParser'
+import { createDocumentVersion, updateDocumentContent } from '../../applications/services/documentStorageService'
 
 type Patch = Partial<ResumeContent> & Partial<LetterContent>
 
@@ -195,26 +196,85 @@ export interface DocBuilderProps {
   aiVariant: 'rail' | 'floating'
   onBack: () => void
   onToast: ToastFn
+  /** Called after a successful durable save so the home list can refresh. */
+  onSaved?: () => void
 }
 
-export function DocBuilder({ type, docs, item, initialContent, autoAlign = false, userId, lastJob, aiVariant, onBack, onToast }: DocBuilderProps) {
+/** Serializes the builder content to the round-trippable text we persist. */
+function serializeDoc(type: DocType, content: DocContent): string {
+  return type === 'resume' ? serializeResume(content as ResumeContent) : serializeLetter(content as LetterContent)
+}
+
+export function DocBuilder({ type, docs, item, initialContent, autoAlign = false, userId, lastJob, aiVariant, onBack, onToast, onSaved }: DocBuilderProps) {
   const [content, setContent] = useState<DocContent>(initialContent)
   const [tplId, setTplId] = useState(item?.template ?? 'classic')
   const [fmt, setFmt] = useState({ fontSize: 11, lineHeight: 1.45 })
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
   const [aligning, setAligning] = useState(false)
   const [aligned, setAligned] = useState(false)
   const tpl = docs.templates.find((t) => t.id === tplId) ?? docs.templates[0]!
-  const saveT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // Durable autosave state: the backing documents row (if the doc is already
+  // persisted), the last text we wrote (to skip no-op saves), and a mount guard.
+  const docRef = useRef<{ documentId: string; storagePath: string } | null>(
+    item?.documentId && item?.storagePath
+      ? { documentId: item.documentId, storagePath: item.storagePath }
+      : null,
+  )
+  const lastSavedText = useRef(serializeDoc(type, initialContent))
+  const mounted = useRef(true)
+  useEffect(() => () => { mounted.current = false }, [])
 
   const rc = content as ResumeContent
   const lc = content as LetterContent
 
   const set = (patch: Patch) => {
     setContent((c) => ({ ...c, ...patch }) as DocContent)
+    setDirty(true)
+  }
+
+  // Persists the current text durably: in-place update when the doc already
+  // exists, else a first createDocumentVersion. Drives the real Saving/Saved
+  // state and surfaces errors. Skipped in demo (no userId).
+  const persist = async (text: string): Promise<void> => {
+    if (!userId || text === lastSavedText.current) return
     setSaving(true)
-    clearTimeout(saveT.current)
-    saveT.current = setTimeout(() => setSaving(false), 900)
+    try {
+      if (docRef.current) {
+        await updateDocumentContent({ userId, ...docRef.current, content: text })
+      } else {
+        const stored = await createDocumentVersion({
+          userId,
+          documentType: type === 'resume' ? 'resume' : 'cover_letter',
+          content: text,
+        })
+        docRef.current = { documentId: stored.documentId, storagePath: stored.storagePath }
+      }
+      lastSavedText.current = text
+      if (mounted.current) setDirty(false)
+      onSaved?.()
+    } catch (e: unknown) {
+      if (mounted.current) onToast(e instanceof Error ? e.message : 'Save failed', 'circle-x', 'var(--bkt-danger)')
+    } finally {
+      if (mounted.current) setSaving(false)
+    }
+  }
+
+  // Debounced durable autosave: 1.2 s after the last edit, persist if changed.
+  useEffect(() => {
+    if (!userId) return
+    const text = serializeDoc(type, content)
+    if (text === lastSavedText.current) return
+    const t = setTimeout(() => void persist(text), 1200)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, userId])
+
+  // Flush any pending edit before leaving so the last change is not lost.
+  const handleBack = () => {
+    if (userId && dirty) void persist(serializeDoc(type, content))
+    onBack()
   }
 
   // --- structured-section mutators (resume) ---
@@ -317,7 +377,7 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderBottom: '1px solid var(--border)' }}>
-        <BktButton variant="ghost" size="sm" iconLeft={<Icon name="arrow-left" size={15} />} onClick={onBack}>
+        <BktButton variant="ghost" size="sm" iconLeft={<Icon name="arrow-left" size={15} />} onClick={handleBack}>
           {type === 'resume' ? 'Resumes' : 'Cover Letters'}
         </BktButton>
         <span style={{ width: 1, height: 20, background: 'var(--border)' }}></span>
@@ -333,9 +393,9 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
         >
           {title}
         </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: '500 var(--text-xs)/1 var(--font-body)', color: saving ? 'var(--bkt-warning)' : 'var(--bkt-success)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: '500 var(--text-xs)/1 var(--font-body)', color: !userId ? 'var(--bkt-zinc-400)' : saving || dirty ? 'var(--bkt-warning)' : 'var(--bkt-success)' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'currentColor' }}></span>
-          {saving ? 'Saving…' : 'Saved'}
+          {!userId ? 'Preview' : saving || dirty ? 'Saving…' : 'Saved'}
         </span>
         <div style={{ flex: 1 }}></div>
         <BktButton variant="outline" size="md" loading={aligning} iconLeft={!aligning ? <Icon name="wand-sparkles" size={15} color="var(--primary)" /> : null} onClick={runAlign}>

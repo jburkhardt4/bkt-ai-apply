@@ -79,14 +79,20 @@ Salesforce-certified, consulting manager with over 7 years of experience turning
 - Increased adoption to 87% with SOPs, AI-driven training, and dynamic, in-app guidance.
 - Bolstered marketing response rates 35% with Salesforce Marketing Cloud rollout and optimized API website integration.
 
-## Education & Certifications
+## Education
 
-- **B.S.B.A. Entrepreneurship | Concentration in Technology**  
-  High Point University | High Point, NC | (May 2018)
-- **B.S.B.A. Business Administration & Management | Finance**  
-  High Point University | High Point, NC | (May 2018)
-- **Licensed FL Real Estate Sales Associate** | (March 2019)
-- **Salesforce Certified Platform Administrator**
-- **Salesforce Certified Business Analyst**
-- **Salesforce Certified AI Associate**
-- **Salesforce Certified Agentforce Specialist**
+**B.S.B.A. Entrepreneurship | Concentration in Technology**
+- High Point University | High Point, NC | (May 2018)
+
+</br>
+
+**B.S.B.A. Business Administration & Management | Finance**
+- High Point University | High Point, NC | (May 2018)
+
+## Certifications
+
+- Licensed FL Real Estate Sales Associate | (March 2019)
+- Salesforce Certified Platform Administrator
+- Salesforce Certified Business Analyst
+- Salesforce Certified AI Associate
+- Salesforce Certified Agentforce Specialist

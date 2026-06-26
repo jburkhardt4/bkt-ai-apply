@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { ToastFn } from '@/components/bkt/toast'
 import type { BuilderConfig, DocItem, LetterContent, PaperTemplate, ResumeContent } from '../types'
 import { getSignedUrl } from '../../applications/services/documentStorageService'
@@ -292,6 +293,7 @@ export function PreviewModal({
   onEdit: (item: DocItem) => void
   onToast: ToastFn
 }) {
+  const isMobile = useIsMobile()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -346,11 +348,14 @@ export function PreviewModal({
           zIndex: 2,
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '8px 10px 8px 16px',
+          gap: isMobile ? 6 : 10,
+          padding: isMobile ? '8px 8px' : '8px 10px 8px 16px',
           background: 'var(--surface)',
-          borderRadius: 'var(--radius-pill)',
+          borderRadius: isMobile ? 'var(--radius-xl)' : 'var(--radius-pill)',
           boxShadow: 'var(--shadow-xl)',
+          flexWrap: isMobile ? 'wrap' : undefined,
+          justifyContent: isMobile ? 'center' : undefined,
+          maxWidth: isMobile ? 'calc(100vw - 24px)' : undefined,
         }}
       >
         <Icon name={type === 'resume' ? 'file-text' : 'pen-line'} size={16} color="var(--primary)" />
@@ -358,7 +363,7 @@ export function PreviewModal({
           style={{
             font: '600 var(--text-sm)/1 var(--font-body)',
             color: 'var(--text-strong)',
-            maxWidth: 320,
+            maxWidth: isMobile ? 140 : 320,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -366,9 +371,11 @@ export function PreviewModal({
         >
           {item.name}
         </span>
-        <BktBadge tone="neutral" appearance="soft">
-          {item.note ?? 'Document'}
-        </BktBadge>
+        {!isMobile && (
+          <BktBadge tone="neutral" appearance="soft">
+            {item.note ?? 'Document'}
+          </BktBadge>
+        )}
         <span style={{ width: 1, height: 18, background: 'var(--border)' }}></span>
         {item.originalPath && (
           <BktButton variant="ghost" size="sm" iconLeft={<Icon name="download" size={14} />} onClick={download}>
@@ -391,7 +398,7 @@ export function PreviewModal({
               title={displayName}
               src={signedUrl}
               className="bkt-enter"
-              style={{ width: 'min(1215px, 95vw)', height: '82vh', flexShrink: 0, border: 'none', borderRadius: 4, boxShadow: 'var(--shadow-lg)', background: '#fff' }}
+              style={{ width: 'min(1215px, 95vw)', height: isMobile ? '78vh' : '82vh', flexShrink: 0, border: 'none', borderRadius: 4, boxShadow: 'var(--shadow-lg)', background: '#fff' }}
             />
           ) : (
             <span style={{ alignSelf: 'center', color: '#fff', font: '500 14px/1 var(--font-body)' }}>Loading PDF…</span>
@@ -407,7 +414,7 @@ export function PreviewModal({
               color: '#1c1c21',
               borderRadius: 2,
               boxShadow: 'var(--shadow-lg)',
-              padding: '52px 58px',
+              padding: isMobile ? '28px 20px' : '52px 58px',
               minHeight: 'calc((min(1107px, 95vw)) * 11 / 8.5)',
               boxSizing: 'border-box',
             }}

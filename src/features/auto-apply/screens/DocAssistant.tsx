@@ -296,6 +296,7 @@ export function DocAssistant({
   userId,
   lastJob,
   onPatch,
+  widthOverride = 332,
 }: {
   type: DocType
   variant: 'rail' | 'floating'
@@ -303,12 +304,14 @@ export function DocAssistant({
   userId: string | null
   lastJob: AiTargetJob
   onPatch: (target: string | undefined, text: string) => void
+  /** Rail width — full-width on mobile (AppShell/DocBuilder pass '100%'); 332 desktop. */
+  widthOverride?: number | string
 }) {
   const [open, setOpen] = useState(false)
 
   if (variant === 'rail') {
     return (
-      <aside style={{ width: 332, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: '1px solid var(--border)', background: 'var(--surface)' }}>
+      <aside style={{ width: widthOverride, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: widthOverride === 332 ? '1px solid var(--border)' : 'none', background: 'var(--surface)' }}>
         <style>{DA_CSS}</style>
         <DAHeader type={type} />
         <DAChat type={type} ai={ai} userId={userId} lastJob={lastJob} onPatch={onPatch} />

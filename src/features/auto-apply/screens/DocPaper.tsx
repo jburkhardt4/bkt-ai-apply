@@ -7,8 +7,9 @@ import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import type { ToastFn } from '@/components/bkt/toast'
-import type { DocItem, LetterContent, PaperTemplate, ResumeContent } from '../types'
+import type { BuilderConfig, DocItem, LetterContent, PaperTemplate, ResumeContent } from '../types'
 import { getSignedUrl } from '../../applications/services/documentStorageService'
+import { customSectionItems, customSectionRows, defaultBuilderConfig } from '../services/builderConfig'
 
 export type DocType = 'resume' | 'letter'
 export type DocContent = ResumeContent | LetterContent
@@ -44,13 +45,18 @@ export function DocPaper({
   template: t,
   fmt = {},
   style = {},
+  config,
 }: {
   type: DocType
   content: DocContent
   template: PaperTemplate
   fmt?: PaperFmt
   style?: CSSProperties
+  /** Per-section bullet toggles + custom sections (defaults match prior render). */
+  config?: BuilderConfig
 }) {
+  const cfg = config ?? defaultBuilderConfig()
+  const sb = cfg.sectionBullets
   const fs = fmt.fontSize || 11
   const lh = fmt.lineHeight || 1.45
   const px = (pt: number) => pt * 1.45 // rough pt→px for screen
@@ -122,13 +128,23 @@ export function DocPaper({
               </span>
               <span style={{ fontWeight: 400, color: '#52525b', whiteSpace: 'nowrap' }}>{e.when}</span>
             </div>
-            <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-              {e.bullets.filter(Boolean).map((b, j) => (
-                <li key={j} style={{ marginBottom: 2 }}>
-                  {b}
-                </li>
-              ))}
-            </ul>
+            {sb.experience ? (
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                {e.bullets.filter(Boolean).map((b, j) => (
+                  <li key={j} style={{ marginBottom: 2 }}>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div style={{ marginTop: 4 }}>
+                {e.bullets.filter(Boolean).map((b, j) => (
+                  <p key={j} style={{ margin: '0 0 3px' }}>
+                    {b}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -136,36 +152,96 @@ export function DocPaper({
         <PaperHead t={t} size={px(fs)}>
           Education
         </PaperHead>
-        {c.education.map((e, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <span>
-              <strong>{e.degree}</strong>
-              {e.org ? <span> · {e.org}</span> : null}
-            </span>
-            <span style={{ color: '#52525b' }}>{e.when}</span>
-          </div>
-        ))}
+        {sb.education ? (
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {c.education.map((e, i) => (
+              <li key={i} style={{ marginBottom: 2 }}>
+                <strong>{e.degree}</strong>
+                {e.org ? ` · ${e.org}` : ''}
+                {e.when ? ` (${e.when})` : ''}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          c.education.map((e, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <span>
+                <strong>{e.degree}</strong>
+                {e.org ? <span> · {e.org}</span> : null}
+              </span>
+              <span style={{ color: '#52525b' }}>{e.when}</span>
+            </div>
+          ))
+        )}
       </div>
       {c.certifications.filter(Boolean).length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <PaperHead t={t} size={px(fs)}>
             Certifications
           </PaperHead>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {c.certifications.filter(Boolean).map((cert, i) => (
-              <li key={i} style={{ marginBottom: 2 }}>
-                {cert}
-              </li>
-            ))}
-          </ul>
+          {sb.certifications ? (
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {c.certifications.filter(Boolean).map((cert, i) => (
+                <li key={i} style={{ marginBottom: 2 }}>
+                  {cert}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div>{c.certifications.filter(Boolean).join('  ·  ')}</div>
+          )}
         </div>
       )}
-      <div>
+      <div style={{ marginBottom: cfg.customSections.length ? 16 : 0 }}>
         <PaperHead t={t} size={px(fs)}>
           Skills
         </PaperHead>
-        <div>{c.skills.join('  ·  ')}</div>
+        {sb.skills ? (
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {c.skills.filter(Boolean).map((s, i) => (
+              <li key={i} style={{ marginBottom: 2 }}>
+                {s}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div>{c.skills.join('  ·  ')}</div>
+        )}
       </div>
+      {cfg.customSections
+        .filter((s) => s.title.trim() || s.body.trim())
+        .map((s, idx, arr) => (
+          <div key={s.id} style={{ marginBottom: idx === arr.length - 1 ? 0 : 16 }}>
+            <PaperHead t={t} size={px(fs)}>
+              {s.title.trim() || 'Section'}
+            </PaperHead>
+            {s.format === 'table' ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  {customSectionRows(s.body).map((row, ri) => (
+                    <tr key={ri}>
+                      {row.map((cell, ci) => (
+                        <td key={ci} style={{ border: '1px solid #d4d4d8', padding: '3px 8px', verticalAlign: 'top' }}>
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : s.format === 'text' ? (
+              <div style={{ whiteSpace: 'pre-wrap' }}>{s.body}</div>
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {customSectionItems(s.body).map((it, i) => (
+                  <li key={i} style={{ marginBottom: 2 }}>
+                    {it}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
     </div>
   )
 }

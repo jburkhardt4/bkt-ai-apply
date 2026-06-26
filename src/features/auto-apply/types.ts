@@ -3,6 +3,7 @@
 // Live Supabase rows (applications/jobs/emails/documents) are mapped
 // into these shapes in services/autoApplyService.ts; the same shapes
 // are used by the demo seed data in ./data.
+import type { Json } from '@/types/db.types'
 
 // 'In progress' is a view-model-only overlay status: the application row stays
 // at stage 'discovery' while JB completes a manual apply (opened via the
@@ -192,6 +193,26 @@ export interface ResumeContent {
   certifications: string[]
 }
 
+/** Resume sections whose bullet-vs-inline rendering the user can toggle. */
+export type SectionBulletKey = 'experience' | 'skills' | 'education' | 'certifications'
+export type CustomSectionFormat = 'bullets' | 'table' | 'text'
+
+/** A user-defined extra resume section (≤4). `body` is raw multiline text,
+ *  interpreted by `format`: bullets = one per line; text = paragraphs; table =
+ *  one row per line with `|`-separated cells. */
+export interface CustomSection {
+  id: string
+  title: string
+  format: CustomSectionFormat
+  body: string
+}
+
+/** Per-resume builder formatting config, persisted to `documents.builder_config`. */
+export interface BuilderConfig {
+  sectionBullets: Record<SectionBulletKey, boolean>
+  customSections: CustomSection[]
+}
+
 export interface LetterContent {
   name: string
   contact: string
@@ -228,6 +249,8 @@ export interface DocItem {
   fileName?: string
   mimeType?: string
   originalPath?: string
+  /** Persisted builder formatting config (bullet toggles + custom sections). */
+  builderConfig?: Json | null
   /** Cover-letter variants override pieces of the letter seed. */
   company?: string
   role?: string

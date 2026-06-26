@@ -182,6 +182,32 @@ describe('documentStorageService', () => {
     expect(upload).toHaveBeenCalledWith('user-1/resume/v2.txt', 'edited body', { upsert: true, contentType: 'text/plain' })
     expect(eqId).toHaveBeenCalledWith('id', 'doc-2')
     expect(eqUser).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ content_hash: expect.any(String) }))
+    // builder_config is only written when provided (not on this call).
+    expect(update.mock.calls[0]?.[0]).not.toHaveProperty('builder_config')
+  })
+
+  it('updateDocumentContent persists builder_config when provided', async () => {
+    const upload = vi.fn().mockResolvedValue({ error: null })
+    const storageFrom = vi.fn(() => ({ upload }))
+    const eqUser = vi.fn().mockResolvedValue({ error: null })
+    const eqId = vi.fn(() => ({ eq: eqUser }))
+    const update = vi.fn(() => ({ eq: eqId }))
+    const from = vi.fn(() => ({ update }))
+    mockGetSupabaseClient.mockReturnValue({
+      from,
+      storage: { from: storageFrom },
+    } as unknown as ReturnType<typeof getSupabaseClient>)
+
+    const cfg = { sectionBullets: { skills: true }, customSections: [] }
+    await updateDocumentContent({
+      userId: 'user-1',
+      documentId: 'doc-2',
+      storagePath: 'user-1/resume/v2.txt',
+      content: 'edited body',
+      builderConfig: cfg,
+    })
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ builder_config: cfg }))
   })
 
   it('deleteDocument removes the storage object and the row (RLS-scoped)', async () => {

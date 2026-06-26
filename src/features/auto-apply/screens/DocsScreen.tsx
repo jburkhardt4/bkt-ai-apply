@@ -339,6 +339,7 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
       fileName: d.fileName ?? undefined,
       mimeType: d.mimeType ?? undefined,
       originalPath: d.originalPath ?? undefined,
+      builderConfig: d.builderConfig,
     }
   }
 

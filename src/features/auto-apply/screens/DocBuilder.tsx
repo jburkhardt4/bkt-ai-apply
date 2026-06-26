@@ -7,13 +7,24 @@ import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import { BktInput } from '@/components/bkt/BktInput'
 import type { ToastFn } from '@/components/bkt/toast'
-import type { DocItem, DocsData, LetterContent, ResumeContent, ResumeExperience } from '../types'
+import type {
+  BuilderConfig,
+  CustomSection,
+  CustomSectionFormat,
+  DocItem,
+  DocsData,
+  LetterContent,
+  ResumeContent,
+  ResumeExperience,
+  SectionBulletKey,
+} from '../types'
 import { DocPaper } from './DocPaper'
 import type { DocContent, DocType } from './DocPaper'
 import { DocAssistant } from './DocAssistant'
 import type { AiTargetJob } from './DocAssistant'
 import { alignDocumentToJob } from '../services/docWriterService'
 import { parseGeneratedLetter, parseGeneratedResume, serializeLetter, serializeResume } from '../services/docContentParser'
+import { builderConfigToJson, MAX_CUSTOM_SECTIONS, parseBuilderConfig } from '../services/builderConfig'
 import { createDocumentVersion, updateDocumentContent } from '../../applications/services/documentStorageService'
 
 type Patch = Partial<ResumeContent> & Partial<LetterContent>
@@ -73,11 +84,54 @@ function DBItemHeader({ label, onRemove }: { label: string; onRemove?: () => voi
 }
 
 /** Full-width dashed "add another item" button for a repeatable section. */
-function DBAddButton({ label, onClick }: { label: string; onClick: () => void }) {
+function DBAddButton({ label, onClick, disabled = false }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <BktButton variant="outline" size="sm" iconLeft={<Icon name="plus" size={14} color="var(--primary)" />} onClick={onClick} style={{ alignSelf: 'flex-start' }}>
+    <BktButton variant="outline" size="sm" disabled={disabled} iconLeft={<Icon name="plus" size={14} color="var(--primary)" />} onClick={onClick} style={{ alignSelf: 'flex-start' }}>
       {label}
     </BktButton>
+  )
+}
+
+/** A labeled on/off switch for a formatting option. */
+function DBToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className="bkt-press"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, width: '100%', padding: '7px 2px', background: 'none', border: 'none', cursor: 'pointer', font: '500 var(--text-sm)/1 var(--font-body)', color: 'var(--text-strong)' }}
+    >
+      <span>{label}</span>
+      <span style={{ position: 'relative', width: 34, height: 20, flexShrink: 0, borderRadius: 'var(--radius-pill)', background: checked ? 'var(--primary)' : 'var(--bkt-zinc-300)', transition: 'background var(--dur-fast) var(--ease-standard)' }}>
+        <span style={{ position: 'absolute', top: 2, left: checked ? 16 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: 'var(--shadow-sm)', transition: 'left var(--dur-fast) var(--ease-standard)' }} />
+      </span>
+    </button>
+  )
+}
+
+/** Segmented format selector for a custom section (bullets / table / text). */
+function DBFormatPicker({ value, onChange }: { value: CustomSectionFormat; onChange: (f: CustomSectionFormat) => void }) {
+  const opts: { id: CustomSectionFormat; label: string }[] = [
+    { id: 'bullets', label: 'Bullets' },
+    { id: 'table', label: 'Table' },
+    { id: 'text', label: 'Text' },
+  ]
+  return (
+    <div style={{ display: 'flex', gap: 4, padding: 3, background: 'var(--bkt-zinc-100)', borderRadius: 'var(--radius-md)' }}>
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => onChange(o.id)}
+          className="bkt-press"
+          style={{ flex: 1, padding: '5px 0', borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', font: '600 var(--text-xs)/1 var(--font-body)', background: value === o.id ? 'var(--surface)' : 'transparent', color: value === o.id ? 'var(--primary)' : 'var(--text-muted)', boxShadow: value === o.id ? 'var(--shadow-sm)' : 'none' }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -213,16 +267,20 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
   const [dirty, setDirty] = useState(false)
   const [aligning, setAligning] = useState(false)
   const [aligned, setAligned] = useState(false)
+  // Per-resume formatting config (bullet toggles + custom sections), Phase 2.
+  const [config, setConfig] = useState<BuilderConfig>(() => parseBuilderConfig(item?.builderConfig ?? null))
   const tpl = docs.templates.find((t) => t.id === tplId) ?? docs.templates[0]!
 
   // Durable autosave state: the backing documents row (if the doc is already
-  // persisted), the last text we wrote (to skip no-op saves), and a mount guard.
+  // persisted), the last saved signature (text + config, to skip no-op saves),
+  // and a mount guard.
   const docRef = useRef<{ documentId: string; storagePath: string } | null>(
     item?.documentId && item?.storagePath
       ? { documentId: item.documentId, storagePath: item.storagePath }
       : null,
   )
-  const lastSavedText = useRef(serializeDoc(type, initialContent))
+  const sigOf = (text: string, cfg: BuilderConfig) => `${text} ${JSON.stringify(builderConfigToJson(cfg))}`
+  const lastSavedSig = useRef(sigOf(serializeDoc(type, initialContent), config))
   const mounted = useRef(true)
   useEffect(() => () => { mounted.current = false }, [])
 
@@ -234,24 +292,27 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     setDirty(true)
   }
 
-  // Persists the current text durably: in-place update when the doc already
-  // exists, else a first createDocumentVersion. Drives the real Saving/Saved
-  // state and surfaces errors. Skipped in demo (no userId).
-  const persist = async (text: string): Promise<void> => {
-    if (!userId || text === lastSavedText.current) return
+  // Persists the current text + formatting config durably: in-place update when
+  // the doc already exists, else a first createDocumentVersion. Drives the real
+  // Saving/Saved state and surfaces errors. Skipped in demo (no userId).
+  const persist = async (text: string, cfg: BuilderConfig): Promise<void> => {
+    const sig = sigOf(text, cfg)
+    if (!userId || sig === lastSavedSig.current) return
+    const builderConfig = builderConfigToJson(cfg)
     setSaving(true)
     try {
       if (docRef.current) {
-        await updateDocumentContent({ userId, ...docRef.current, content: text })
+        await updateDocumentContent({ userId, ...docRef.current, content: text, builderConfig })
       } else {
         const stored = await createDocumentVersion({
           userId,
           documentType: type === 'resume' ? 'resume' : 'cover_letter',
           content: text,
+          builderConfig,
         })
         docRef.current = { documentId: stored.documentId, storagePath: stored.storagePath }
       }
-      lastSavedText.current = text
+      lastSavedSig.current = sig
       if (mounted.current) setDirty(false)
       onSaved?.()
     } catch (e: unknown) {
@@ -261,21 +322,43 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
     }
   }
 
-  // Debounced durable autosave: 1.2 s after the last edit, persist if changed.
+  // Debounced durable autosave: 1.2 s after the last edit (content OR config).
   useEffect(() => {
     if (!userId) return
     const text = serializeDoc(type, content)
-    if (text === lastSavedText.current) return
-    const t = setTimeout(() => void persist(text), 1200)
+    if (sigOf(text, config) === lastSavedSig.current) return
+    const t = setTimeout(() => void persist(text, config), 1200)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content, userId])
+  }, [content, config, userId])
 
   // Flush any pending edit before leaving so the last change is not lost.
   const handleBack = () => {
-    if (userId && dirty) void persist(serializeDoc(type, content))
+    if (userId && dirty) void persist(serializeDoc(type, content), config)
     onBack()
   }
+
+  // --- formatting config mutators (Phase 2) ---
+  const updateConfig = (next: BuilderConfig) => {
+    setConfig(next)
+    setDirty(true)
+  }
+  const toggleBullets = (key: SectionBulletKey) =>
+    updateConfig({ ...config, sectionBullets: { ...config.sectionBullets, [key]: !config.sectionBullets[key] } })
+  const addCustomSection = () => {
+    if (config.customSections.length >= MAX_CUSTOM_SECTIONS) return
+    updateConfig({
+      ...config,
+      customSections: [
+        ...config.customSections,
+        { id: `cs-${Date.now().toString(36)}`, title: '', format: 'bullets', body: '' },
+      ],
+    })
+  }
+  const removeCustomSection = (id: string) =>
+    updateConfig({ ...config, customSections: config.customSections.filter((s) => s.id !== id) })
+  const patchCustomSection = (id: string, patch: Partial<CustomSection>) =>
+    updateConfig({ ...config, customSections: config.customSections.map((s) => (s.id === id ? { ...s, ...patch } : s)) })
 
   // --- structured-section mutators (resume) ---
   // Each section is fully editable: roles, education entries, and bullet lines
@@ -498,6 +581,34 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
                   }
                 />
               </DBGroup>
+              <DBGroup icon="sliders-horizontal" label="Section formatting">
+                <span style={{ font: '400 var(--text-xs)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+                  Show each section as bullet points or inline text.
+                </span>
+                <DBToggle label="Experience bullets" checked={config.sectionBullets.experience} onChange={() => toggleBullets('experience')} />
+                <DBToggle label="Skills bullets" checked={config.sectionBullets.skills} onChange={() => toggleBullets('skills')} />
+                <DBToggle label="Education bullets" checked={config.sectionBullets.education} onChange={() => toggleBullets('education')} />
+                <DBToggle label="Certifications bullets" checked={config.sectionBullets.certifications} onChange={() => toggleBullets('certifications')} />
+              </DBGroup>
+              <DBGroup icon="layout-list" label={`Custom sections (${config.customSections.length}/${MAX_CUSTOM_SECTIONS})`}>
+                {config.customSections.map((s, i) => (
+                  <div
+                    key={s.id}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < config.customSections.length - 1 ? '1px dashed var(--border)' : 'none' }}
+                  >
+                    <DBItemHeader label={`Section ${i + 1}`} onRemove={() => removeCustomSection(s.id)} />
+                    <BktInput label="Title" value={s.title} onChange={(ev) => patchCustomSection(s.id, { title: ev.target.value })} />
+                    <DBFormatPicker value={s.format} onChange={(f) => patchCustomSection(s.id, { format: f })} />
+                    <DBArea
+                      label={s.format === 'table' ? 'One row per line · cells separated by |' : s.format === 'text' ? 'Paragraph text' : 'One item per line'}
+                      rows={s.format === 'text' ? 4 : 3}
+                      value={s.body}
+                      onChange={(v) => patchCustomSection(s.id, { body: v })}
+                    />
+                  </div>
+                ))}
+                <DBAddButton label="Add custom section" onClick={addCustomSection} disabled={config.customSections.length >= MAX_CUSTOM_SECTIONS} />
+              </DBGroup>
             </>
           ) : (
             <>
@@ -550,7 +661,7 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
               filter: aligning ? 'blur(2px) saturate(0.9)' : 'none',
             }}
           >
-            <DocPaper type={type} content={content} template={tpl} fmt={fmt} />
+            <DocPaper type={type} content={content} template={tpl} fmt={fmt} config={config} />
             {aligning && (
               <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span

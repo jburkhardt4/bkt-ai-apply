@@ -12,6 +12,8 @@ export interface CreateDocumentVersionInput {
   userId: string
   documentType: StoredDocumentType
   content: string
+  /** Optional builder formatting config (bullet toggles + custom sections). */
+  builderConfig?: Json | null
 }
 
 export interface StoredDocumentVersion {
@@ -127,6 +129,7 @@ export async function createDocumentVersion(input: CreateDocumentVersionInput): 
         document_type: input.documentType,
         version: nextVersion,
         content_hash: contentHash,
+        builder_config: input.builderConfig ?? null,
       })
       .select('*')
       .single()
@@ -230,6 +233,7 @@ export async function updateDocumentContent(input: {
   documentId: string
   storagePath: string
   content: string
+  builderConfig?: Json | null
 }): Promise<{ contentHash: string }> {
   const supabase = getSupabaseClient()
   const contentHash = await sha256(input.content)
@@ -241,9 +245,12 @@ export async function updateDocumentContent(input: {
     throw new Error(`Failed to update document content: ${uploadError.message}`)
   }
 
+  const patch: Database['public']['Tables']['documents']['Update'] = { content_hash: contentHash }
+  if (input.builderConfig !== undefined) patch.builder_config = input.builderConfig
+
   const { error } = await supabase
     .from('documents')
-    .update({ content_hash: contentHash })
+    .update(patch)
     .eq('id', input.documentId)
     .eq('user_id', input.userId)
   if (error) {

@@ -36,7 +36,7 @@
 
 - Ui-Ux applies the **mandatory dual-skill binding** (`design-taste-frontend` + `emil-design-eng`)
   plus exactly one direction skill, and returns `skills_applied`.
-- UI-affecting changes pass the **visual validation gate** (ADR-017) before push.
+- UI-affecting changes pass the **visual validation gate** (ADR-020) before push.
 
 ## When uncertain
 

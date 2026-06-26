@@ -4,7 +4,7 @@ title: Four-state component contract
 portability: portable
 status: confirmed
 tags: [ui, react, state-coverage, ux]
-related: [ADR-017]
+related: [ADR-020]
 ---
 
 # PAT-001 — Four-state component contract

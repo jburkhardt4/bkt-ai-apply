@@ -34,7 +34,7 @@ title: Four-state component contract
 portability: portable  # portable | hub-only | repo-scoped   (REQUIRED)
 status: confirmed       # confirmed | draft
 tags: [ui, react, state-coverage]
-related: [BR-007, ADR-017]   # optional cross-links
+related: [BR-007, ADR-020]   # optional cross-links
 ---
 ```
 

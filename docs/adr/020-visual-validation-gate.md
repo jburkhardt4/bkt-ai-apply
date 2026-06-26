@@ -1,4 +1,4 @@
-# ADR-017 — Visual Validation Gate for UI Changes
+# ADR-020 — Visual Validation Gate for UI Changes
 
 - **Status:** Accepted
 - **Date:** 2026-06-24

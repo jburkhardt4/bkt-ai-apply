@@ -9,7 +9,7 @@
 --            service-role stored procedure (not client-accessible).
 -- ============================================================
 
--- ── RESOLVED NOTE (ADR-018 — Option A approved by JB, 2026-06-03) ──
+-- ── RESOLVED NOTE (ADR-021 — Option A approved by JB, 2026-06-03) ──
 -- PRIV-001 requires full purge of application_events on user deletion.
 -- BR-003 requires application_events rows to NEVER be deleted.
 -- Approved resolution: MVP anonymize-only.
@@ -22,7 +22,7 @@
 --     history is preserved (BR-003 / SEC-007).
 --   * Full erasure (true row delete) is deferred to a Post-MVP ADR
 --     before any multi-user launch.
--- See: docs/adr/018-gdpr-vs-event-immutability.md
+-- See: docs/adr/021-gdpr-vs-event-immutability.md
 -- ─────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.application_events (

@@ -9,6 +9,7 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { BktCard } from '@/components/bkt/BktCard'
 import { ChipPill, QualLine } from '@/components/bkt/bits'
 import { companyLogo } from '@/components/bkt/format'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { JobMatch } from '../types'
 
 function QRMatchBanner({ score }: { score: number }) {
@@ -50,6 +51,7 @@ export interface QuickReviewProps {
 }
 
 export function QuickReview({ jobs, onApply, onDecline }: QuickReviewProps) {
+  const isMobile = useIsMobile()
   const queue = jobs.filter((j) => j.status === 'Review')
   const [idx, setIdx] = useState(0)
   const [intent, setIntent] = useState<Intent>(null)
@@ -149,7 +151,7 @@ export function QuickReview({ jobs, onApply, onDecline }: QuickReviewProps) {
         alignItems: 'center',
         background: wash,
         transition: 'background var(--dur-medium) var(--ease-standard)',
-        padding: '30px 40px 24px',
+        padding: isMobile ? '16px 14px 20px' : '30px 40px 24px',
         gap: 22,
         minHeight: 0,
         overflowY: 'auto',
@@ -208,7 +210,7 @@ export function QuickReview({ jobs, onApply, onDecline }: QuickReviewProps) {
             }}
           ></div>
 
-          <div key={String(job.id)} className="bkt-stagger" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30, padding: 24 }}>
+          <div key={String(job.id)} className="bkt-stagger" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 16 : 30, padding: isMobile ? 16 : 24 }}>
             {/* LEFT — identity, chips, summary */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>

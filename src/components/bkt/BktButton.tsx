@@ -50,6 +50,7 @@ export function BktButton({
   disabled = false,
   fullWidth = false,
   style = {},
+  className = '',
   ...rest
 }: BktButtonProps) {
   const base: CSSProperties = {
@@ -95,6 +96,8 @@ export function BktButton({
       }}
       onMouseDown={onDown}
       onMouseUp={onUp}
+      className={['bkt-touch', className].filter(Boolean).join(' ')}
+      data-bkt-icon={size === 'icon' ? '' : undefined}
       style={{ ...base, ...SIZES[size], ...VARIANTS[variant], ...style }}
       {...rest}
     >

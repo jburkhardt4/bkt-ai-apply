@@ -10,6 +10,7 @@ import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import { ChipPill, QualLine, SkillTag } from '@/components/bkt/bits'
 import { companyLogo } from '@/components/bkt/format'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { PreparedApplicationReview } from '@/features/applications/components/PreparedApplicationReview'
 import { JobDescriptionMarkdown } from '@/features/jobs/components/JobDescriptionMarkdown'
 import { openSourceUrl } from '../openSourceUrl'
@@ -94,6 +95,7 @@ export function JDSidebar({
   preparedApplicationId = null,
 }: JDSidebarProps) {
   const showPrepare = onPrepare != null
+  const isMobile = useIsMobile()
   const [tab, setTab] = useState<'overview' | 'application' | 'fit' | 'prepare'>('overview')
   // Reset to Overview when a different job opens (adjust-state-during-render).
   const jobId = job?.id
@@ -135,7 +137,7 @@ export function JDSidebar({
         }}
       >
         {/* header */}
-        <div style={{ padding: '22px 26px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ padding: isMobile ? '16px 16px 12px' : '22px 26px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div
             style={{
               display: 'flex',
@@ -201,7 +203,7 @@ export function JDSidebar({
               </BktBadge>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 8, background: 'var(--bkt-slate-100)', borderRadius: 'var(--radius-pill)', padding: 4, alignSelf: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 8, background: 'var(--bkt-slate-100)', borderRadius: 'var(--radius-pill)', padding: 4, alignSelf: isMobile ? 'stretch' : 'flex-start', overflowX: isMobile ? 'auto' : undefined, maxWidth: isMobile ? '100%' : undefined }}>
             <JDTab label="Overview" active={tab === 'overview'} onClick={() => setTab('overview')} />
             <JDTab label="Application" active={tab === 'application'} onClick={() => setTab('application')} />
             <JDTab label="Job Fit" badge={job.score} active={tab === 'fit'} onClick={() => setTab('fit')} />

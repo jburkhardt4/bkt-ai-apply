@@ -11,7 +11,7 @@
 --
 -- These are operational (non-user, non-PII) tables: RLS ENABLED, authenticated
 -- read-all for observability, writes service-role only (same posture as the
--- ADR-014 corpus tables). Depends on ats_boards (20260622000001).
+-- ADR-019 corpus tables). Depends on ats_boards (20260622000001).
 --
 -- Additive only. Applied to the hosted project via MCP apply_migration; this file
 -- is the repo record (do NOT `supabase db push`).

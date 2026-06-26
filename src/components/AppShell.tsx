@@ -13,6 +13,8 @@ import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import { AutoApplySidebar } from '@/features/auto-apply/components/AutoApplySidebar'
 import { AutoApplySettingsProvider } from '@/features/auto-apply/components/AutoApplySettingsProvider'
+import { MobileTopBar } from '@/components/MobileTopBar'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { navigate, useNavKey } from '@/features/auto-apply/router'
 import { fetchActionRequiredCount } from '@/features/applications/services/actionRequiredService'
 import type { NavKey } from '@/features/auto-apply/types'
@@ -24,7 +26,9 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { loading, user, signOut } = useAuth()
   const navKey = useNavKey()
+  const isMobile = useIsMobile()
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
   const [badges, setBadges] = useState<Partial<Record<NavKey, number>>>({})
 
@@ -81,19 +85,66 @@ export function AppShell({ children }: AppShellProps) {
     <SelectedApplicationContext.Provider value={{ selectedApplicationId, setSelectedApplicationId }}>
       <BktToastProvider>
         <div style={{ display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', background: 'var(--background)' }}>
-          <AutoApplySidebar
-            active={navKey}
-            onNavigate={navigate}
-            userName={userName}
-            userEmail={user.email}
-            badges={badges}
-            onSignOut={() => void handleSignOut()}
-            onOpenAssistant={() => setAssistantOpen(true)}
-          />
+          {!isMobile && (
+            <AutoApplySidebar
+              active={navKey}
+              onNavigate={navigate}
+              userName={userName}
+              userEmail={user.email}
+              badges={badges}
+              onSignOut={() => void handleSignOut()}
+              onOpenAssistant={() => setAssistantOpen(true)}
+            />
+          )}
           <main className="bkt-scroll" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            {isMobile && (
+              <MobileTopBar
+                onMenu={() => setNavOpen(true)}
+                onAssistant={() => setAssistantOpen(true)}
+                onNotifications={() => navigate('notifications')}
+                notifCount={(badges.dashboard ?? 0) + (badges.inbox ?? 0)}
+              />
+            )}
             <AutoApplySettingsProvider>{children}</AutoApplySettingsProvider>
           </main>
         </div>
+
+        {/* Mobile nav drawer — sidebar as a left slide-in overlay (reuses the
+            AI-assistant slide-over pattern; left-origin animation). Selecting a
+            nav item closes the drawer before navigating. */}
+        {isMobile && navOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 95, display: 'flex', justifyContent: 'flex-start' }}>
+            <div
+              onClick={() => setNavOpen(false)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0, 24, 72, 0.30)', animation: 'bkt-fade-up 0.2s var(--ease-out) both' }}
+            ></div>
+            <div
+              style={{
+                position: 'relative',
+                height: '100%',
+                display: 'flex',
+                animation: 'bkt-drawer-slide-in var(--dur-medium) var(--ease-out) both',
+                boxShadow: 'var(--shadow-xl)',
+              }}
+            >
+              <AutoApplySidebar
+                active={navKey}
+                onNavigate={(k) => {
+                  setNavOpen(false)
+                  navigate(k)
+                }}
+                userName={userName}
+                userEmail={user.email}
+                badges={badges}
+                onSignOut={() => void handleSignOut()}
+                onOpenAssistant={() => {
+                  setNavOpen(false)
+                  setAssistantOpen(true)
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* AI assistant slide-over (platform chat agent) */}
         {assistantOpen && (

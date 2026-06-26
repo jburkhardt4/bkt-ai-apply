@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktButton } from '@/components/bkt/BktButton'
 import { BktInput } from '@/components/bkt/BktInput'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { ToastFn } from '@/components/bkt/toast'
 import type {
   BuilderConfig,
@@ -264,6 +265,10 @@ function serializeDoc(type: DocType, content: DocContent): string {
 }
 
 export function DocBuilder({ type, docs, item, initialContent, autoAlign = false, userId, lastJob, aiVariant, onBack, onToast, onSaved }: DocBuilderProps) {
+  const isMobile = useIsMobile()
+  // On phones the 3-pane editor (editor · paper · AI) can't sit side-by-side;
+  // a segmented switcher shows one full-width pane at a time. Desktop unchanged.
+  const [docTab, setDocTab] = useState<'edit' | 'preview' | 'ai'>('preview')
   const [content, setContent] = useState<DocContent>(initialContent)
   const [tplId, setTplId] = useState(item?.template ?? 'classic')
   const [fmt, setFmt] = useState({ fontSize: 11, lineHeight: 1.45 })
@@ -582,7 +587,7 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10, padding: isMobile ? '10px 12px' : '14px 28px', borderBottom: '1px solid var(--border)', flexWrap: isMobile ? 'wrap' : undefined }}>
         <BktButton variant="ghost" size="sm" iconLeft={<Icon name="arrow-left" size={15} />} onClick={handleBack}>
           {type === 'resume' ? 'Resumes' : 'Cover Letters'}
         </BktButton>
@@ -612,9 +617,36 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
         </BktButton>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: 0 }}>
+        {/* mobile pane switcher — one of editor / paper / AI at a time */}
+        {isMobile && (
+          <div style={{ display: 'flex', gap: 4, margin: '12px 16px 2px', padding: 4, background: 'var(--bkt-zinc-100)', borderRadius: 'var(--radius-pill)', flexShrink: 0 }}>
+            {(['edit', 'preview', 'ai'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setDocTab(t)}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  border: 'none',
+                  background: docTab === t ? 'var(--surface)' : 'transparent',
+                  color: docTab === t ? 'var(--primary)' : 'var(--text-muted)',
+                  boxShadow: docTab === t ? 'var(--shadow-sm)' : 'none',
+                  borderRadius: 'var(--radius-pill)',
+                  font: '600 var(--text-sm)/1 var(--font-body)',
+                  textTransform: 'capitalize',
+                  cursor: 'pointer',
+                  transition: 'all var(--dur-fast) var(--ease-standard)',
+                }}
+              >
+                {t === 'ai' ? 'AI' : t}
+              </button>
+            ))}
+          </div>
+        )}
         {/* editor column */}
-        <div className="bkt-scroll" style={{ width: 360, flexShrink: 0, overflowY: 'auto', borderRight: '1px solid var(--border)', padding: '8px 20px 24px' }}>
+        {(!isMobile || docTab === 'edit') && (
+        <div className="bkt-scroll" style={{ width: isMobile ? '100%' : 360, flexShrink: 0, overflowY: 'auto', borderRight: isMobile ? 'none' : '1px solid var(--border)', padding: '8px 20px 24px' }}>
           <DBGroup icon="palette" label="Format" defaultOpen>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {docs.templates.map((t) => (
@@ -688,11 +720,13 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
             </>
           )}
         </div>
+        )}
 
         {/* paper preview */}
+        {(!isMobile || docTab === 'preview') && (
         <div
           className="bkt-scroll"
-          style={{ flex: 1, minWidth: 0, overflowY: 'auto', background: 'var(--bkt-slate-100)', display: 'flex', justifyContent: 'center', padding: '26px 28px 44px' }}
+          style={{ flex: 1, minWidth: 0, overflowY: 'auto', background: 'var(--bkt-slate-100)', display: 'flex', justifyContent: 'center', padding: isMobile ? '14px 12px 28px' : '26px 28px 44px' }}
         >
           <div
             style={{
@@ -730,11 +764,14 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
             )}
           </div>
         </div>
+        )}
 
         {/* AI Writer */}
+        {(!isMobile || docTab === 'ai') && (
         <DocAssistant
           type={type}
           variant={aiVariant}
+          widthOverride={isMobile ? '100%' : 332}
           ai={docs.ai}
           userId={userId}
           lastJob={lastJob}
@@ -744,6 +781,7 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
             onToast('Suggestion applied', 'circle-check', 'var(--bkt-success)')
           }}
         />
+        )}
       </div>
     </div>
   )

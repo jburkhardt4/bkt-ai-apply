@@ -1,0 +1,34 @@
+/* ============================================================
+   BKT AI-Apply — mobile-only responsive layer (additive).
+   Loaded once via src/index.css. This file defines NO design
+   tokens — it only adds a mobile drawer animation and a touch-
+   target floor, both inert on desktop. Every layout/visual rule
+   here is scoped to the mobile breakpoint (max-width: 767px) so
+   viewports >= 768px render byte-identically to before.
+   ============================================================ */
+
+/* Left nav-drawer entrance for the mobile shell. Mirrors the
+   bkt-jd-slide-in keyframe used by the AI-assistant slide-over,
+   but originates from the left edge instead of the right. */
+@keyframes bkt-drawer-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Minimum 44x44 touch targets on phones (WCAG 2.5.5). BKT controls
+   set explicit pixel heights via inline styles, so these overrides
+   use !important — but ONLY inside the mobile media query, so dense
+   desktop toolbars keep their exact current sizing. Opt-in markers:
+   `bkt-touch` on the control, `data-bkt-icon` on square icon buttons. */
+@media (max-width: 767px) {
+  .bkt-touch {
+    min-height: 44px !important;
+  }
+  .bkt-touch[data-bkt-icon] {
+    min-width: 44px !important;
+  }
+}

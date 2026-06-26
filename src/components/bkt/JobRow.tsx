@@ -37,6 +37,9 @@ export interface JobRowProps {
   selected?: boolean
   /** Success-button label. Becomes "Mark as applied" for in-progress manual rows. */
   applyLabel?: string
+  /** Under 768px the row renders as a stacked, full-width card instead of a
+   *  table grid (the desktop grid is ~800px wide). Desktop unchanged. */
+  isMobile?: boolean
   style?: CSSProperties
 }
 
@@ -65,6 +68,7 @@ export function JobRow({
   onClick,
   selected = false,
   applyLabel = 'Apply',
+  isMobile = false,
   style = {},
 }: JobRowProps) {
   const [hover, setHover] = useState(false)
@@ -76,14 +80,16 @@ export function JobRow({
       onMouseLeave={() => setHover(false)}
       onClick={onClick}
       style={{
-        display: 'grid',
-        gridTemplateColumns:
-          comp != null
+        display: isMobile ? 'flex' : 'grid',
+        flexDirection: isMobile ? 'column' : undefined,
+        gridTemplateColumns: isMobile
+          ? undefined
+          : comp != null
             ? 'minmax(200px, 1fr) minmax(230px, 1.4fr) 122px 110px 170px'
             : 'minmax(220px, 1.1fr) minmax(260px, 1.6fr) 110px 170px',
-        alignItems: 'center',
-        gap: 16,
-        padding: '12px 18px',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? 10 : 16,
+        padding: isMobile ? '14px 16px' : '12px 18px',
         background: selected ? 'var(--accent)' : hover ? 'var(--bkt-slate-50)' : 'var(--surface)',
         borderBottom: '1px solid var(--border)',
         cursor: onClick ? 'pointer' : 'default',
@@ -91,7 +97,7 @@ export function JobRow({
         ...style,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: isMobile ? 'wrap' : undefined }}>
         <BktAvatar name={company} src={logoSrc} size={30} square />
         <span
           style={{
@@ -119,14 +125,14 @@ export function JobRow({
         ) : null}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexWrap: isMobile ? 'wrap' : undefined }}>
         <span
           style={{
             color: 'var(--text-body)',
             fontSize: 'var(--text-base)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            overflow: isMobile ? undefined : 'hidden',
+            textOverflow: isMobile ? undefined : 'ellipsis',
+            whiteSpace: isMobile ? 'normal' : 'nowrap',
           }}
         >
           {title}
@@ -147,12 +153,13 @@ export function JobRow({
 
       <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>{updatedAt}</span>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end', gap: isMobile ? 10 : 8 }}>
         {status === 'Applied' ? (
           <BktButton
             variant="outline"
             size="sm"
-            style={{ borderRadius: 'var(--radius-pill)' }}
+            className={isMobile ? 'bkt-touch' : undefined}
+            style={{ borderRadius: 'var(--radius-pill)', ...(isMobile ? { flex: 1 } : {}) }}
             iconLeft={<Icon name="external-link" size={14} />}
             disabled={!onViewApplication}
             onClick={(e) => {
@@ -167,11 +174,13 @@ export function JobRow({
             <BktButton
               variant="secondary"
               size="sm"
+              className={isMobile ? 'bkt-touch' : undefined}
               style={{
                 color: 'var(--bkt-danger-ink)',
                 background: 'var(--bkt-danger-soft)',
                 borderColor: 'transparent',
                 borderRadius: 'var(--radius-pill)',
+                ...(isMobile ? { flex: 1 } : {}),
               }}
               onClick={(e) => {
                 e.stopPropagation()
@@ -183,7 +192,8 @@ export function JobRow({
             <BktButton
               variant="success"
               size="sm"
-              style={{ borderRadius: 'var(--radius-pill)' }}
+              className={isMobile ? 'bkt-touch' : undefined}
+              style={{ borderRadius: 'var(--radius-pill)', ...(isMobile ? { flex: 1 } : {}) }}
               onClick={(e) => {
                 e.stopPropagation()
                 onApply?.()

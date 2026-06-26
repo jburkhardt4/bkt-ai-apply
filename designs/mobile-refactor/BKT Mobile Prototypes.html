@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en" data-screen-label="BKT Mobile Prototypes">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BKT AI-Apply — Mobile Prototypes (iPhone 17 Pro Max)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ===== BKT design tokens (ported verbatim from src/styles/bkt.css) ===== */
+  :root{
+    --bkt-blue-50:#eef3fc;--bkt-blue-100:#dbe5f8;--bkt-blue-200:#b9caee;--bkt-blue-300:#8da7e0;
+    --bkt-blue-400:#5b7ed0;--bkt-blue-500:#2f59be;--bkt-blue-600:#1a47a8;--bkt-blue-700:#163a89;
+    --bkt-blue-800:#122d68;--bkt-blue-900:#0d2049;--bkt-navy-950:#001848;--bkt-navy-980:#000f30;
+    --bkt-zinc-50:#fafafa;--bkt-zinc-100:#f4f4f5;--bkt-zinc-200:#e4e4e7;--bkt-zinc-300:#d4d4d8;
+    --bkt-zinc-400:#a1a1aa;--bkt-zinc-500:#71717a;--bkt-zinc-600:#52525b;--bkt-zinc-700:#3f3f46;
+    --bkt-zinc-800:#27272a;--bkt-zinc-900:#18181b;--bkt-zinc-950:#101013;--bkt-white:#fff;
+    --bkt-slate-100:var(--bkt-zinc-100);
+
+    --bkt-success:#16a34a;--bkt-success-soft:#e3f6ea;--bkt-success-ink:#15803d;
+    --bkt-danger:#e5484d;--bkt-danger-soft:#fdeaea;--bkt-danger-ink:#c0383c;
+    --bkt-warning:#d97706;--bkt-warning-soft:#fdf0dc;--bkt-warning-ink:#b45309;
+    --bkt-info:#2563eb;--bkt-info-soft:#e3edfe;
+
+    --background:var(--bkt-zinc-50);--foreground:var(--bkt-zinc-950);--surface:var(--bkt-white);
+    --surface-muted:var(--bkt-zinc-100);--card:var(--bkt-white);
+    --primary:var(--bkt-blue-600);--primary-hover:var(--bkt-blue-700);--primary-foreground:var(--bkt-white);
+    --secondary:var(--bkt-zinc-100);--secondary-foreground:var(--bkt-zinc-800);
+    --muted:var(--bkt-zinc-100);--muted-foreground:var(--bkt-zinc-500);
+    --accent:var(--bkt-blue-50);--accent-foreground:var(--bkt-blue-700);
+    --border:var(--bkt-zinc-200);--border-strong:var(--bkt-zinc-300);--ring:var(--bkt-blue-600);
+    --text-strong:var(--bkt-zinc-950);--text-body:var(--bkt-zinc-700);--text-muted:var(--bkt-zinc-500);--text-subtle:var(--bkt-zinc-400);
+    --sidebar:var(--bkt-white);--sidebar-foreground:var(--bkt-zinc-600);--sidebar-accent:var(--bkt-blue-50);
+    --sidebar-accent-foreground:var(--bkt-blue-700);--sidebar-border:var(--bkt-zinc-200);
+    --bkt-gradient-shield:linear-gradient(145deg,#2f59be 0%,#1a47a8 42%,#0d2049 100%);
+
+    --font-display:'Geist','Avenir Next','Segoe UI',system-ui,sans-serif;
+    --font-body:'Geist','Avenir Next','Segoe UI',system-ui,sans-serif;
+    --font-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+    --text-2xs:.6875rem;--text-xs:.75rem;--text-sm:.8125rem;--text-base:.875rem;--text-md:1rem;
+    --text-lg:1.125rem;--text-xl:1.375rem;--text-2xl:1.625rem;
+    --tracking-tight:-.01em;--tracking-widest:.12em;
+
+    --radius:.625rem;--radius-sm:6px;--radius-md:8px;--radius-lg:10px;--radius-xl:16px;--radius-2xl:24px;--radius-pill:999px;
+    --shadow-xs:0 1px 2px rgba(16,16,19,.05);
+    --shadow-sm:0 1px 3px rgba(16,16,19,.06),0 1px 2px rgba(16,16,19,.04);
+    --shadow-md:0 4px 12px rgba(16,16,19,.07),0 2px 4px rgba(16,16,19,.04);
+    --shadow-lg:0 12px 28px rgba(16,16,19,.09),0 4px 10px rgba(16,16,19,.05);
+    --shadow-xl:0 24px 56px rgba(16,16,19,.13),0 8px 20px rgba(16,16,19,.06);
+    --shadow-brand:0 6px 16px rgba(26,71,168,.26);
+    --ease-out:cubic-bezier(.16,1,.3,1);--ease-standard:cubic-bezier(.2,0,0,1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 20% -10%, #eef3fc 0%, transparent 60%),
+      var(--bkt-zinc-100);
+    font-family:var(--font-body);color:var(--text-strong);-webkit-font-smoothing:antialiased;
+    padding:40px 48px 80px;
+  }
+  .pagehead{max-width:1100px;margin:0 auto 8px}
+  .pagehead h1{font:600 var(--text-2xl)/1.15 var(--font-display);letter-spacing:var(--tracking-tight);margin:0 0 6px}
+  .pagehead h1 b{color:var(--primary);font-weight:600}
+  .pagehead p{font:400 var(--text-base)/1.5 var(--font-body);color:var(--text-muted);margin:0;max-width:62ch}
+  .pagehead .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .pagehead .meta span{font:500 var(--text-xs)/1 var(--font-mono);color:var(--text-body);
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:7px 12px}
+
+  .gallery{display:flex;gap:56px;flex-wrap:nowrap;overflow-x:auto;padding:36px 8px 24px;align-items:flex-start}
+  .frameWrap{flex:0 0 auto;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .frameWrap .cap{text-align:center;max-width:430px}
+  .frameWrap .cap b{display:block;font:600 var(--text-md)/1.2 var(--font-display);letter-spacing:var(--tracking-tight)}
+  .frameWrap .cap span{display:block;font:400 var(--text-sm)/1.45 var(--font-body);color:var(--text-muted);margin-top:3px}
+
+  /* ===== iPhone 17 Pro Max frame — 430 x 932 content ===== */
+  .phone{width:454px;height:956px;background:#0b0b0d;border-radius:62px;padding:12px;
+    box-shadow:var(--shadow-xl),0 0 0 2px #232327, inset 0 0 0 2px #000;position:relative}
+  .screen{width:430px;height:932px;border-radius:50px;overflow:hidden;background:var(--background);
+    position:relative;display:flex;flex-direction:column}
+  .island{position:absolute;top:13px;left:50%;transform:translateX(-50%);width:122px;height:34px;
+    background:#000;border-radius:var(--radius-pill);z-index:60}
+  .statusbar{height:54px;flex:0 0 54px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 30px 8px;font:600 var(--text-sm)/1 var(--font-body);color:var(--text-strong)}
+  .statusbar .r{display:flex;gap:7px;align-items:center;color:var(--text-strong)}
+  .viewport{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;overflow:hidden}
+  .scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .scroll::-webkit-scrollbar{width:0}
+  .homebar{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:140px;height:5px;
+    background:var(--bkt-zinc-950);opacity:.85;border-radius:var(--radius-pill);z-index:55}
+
+  /* ===== Mobile top bar (shared, < md) ===== */
+  .topbar{flex:0 0 auto;height:56px;display:flex;align-items:center;gap:10px;padding:0 12px;
+    background:var(--surface);border-bottom:1px solid var(--border);position:relative;z-index:20}
+  .iconbtn{width:44px;height:44px;border-radius:var(--radius-md);border:none;background:transparent;
+    display:inline-flex;align-items:center;justify-content:center;color:var(--text-body);cursor:pointer;
+    transition:background var(--ease-standard) .12s}
+  .iconbtn:hover{background:var(--bkt-zinc-100)}
+  .topbar .brand{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
+  .logo{width:30px;height:30px;border-radius:7px;background:var(--bkt-gradient-shield);flex:0 0 auto;
+    display:inline-flex;align-items:center;justify-content:center;color:#fff;font:700 13px/1 var(--font-display);
+    box-shadow:var(--shadow-sm)}
+  .wordmark{font:700 var(--text-md)/1 var(--font-display);letter-spacing:var(--tracking-tight);color:var(--text-strong);white-space:nowrap}
+  .wordmark b{color:var(--primary);font-weight:700}
+  .topbar .right{display:flex;align-items:center;gap:2px}
+  .dotbadge{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--bkt-danger);border:2px solid var(--surface)}
+
+  .pagetitle{padding:20px 18px 8px}
+  .pagetitle h2{margin:0;font:600 var(--text-2xl)/1.15 var(--font-display);letter-spacing:var(--tracking-tight);color:var(--text-strong)}
+  .pagetitle p{margin:4px 0 0;font:400 var(--text-sm)/1.5 var(--font-body);color:var(--text-muted)}
+  .eyebrow{font:600 var(--text-2xs)/1 var(--font-body);letter-spacing:var(--tracking-widest);text-transform:uppercase;color:var(--text-subtle)}
+
+  /* ===== generic UI atoms ===== */
+  .btn{height:44px;min-height:44px;padding:0 18px;border-radius:var(--radius-md);border:1px solid transparent;
+    font:600 var(--text-base)/1 var(--font-body);display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    cursor:pointer;transition:transform var(--ease-standard) .12s,box-shadow var(--ease-standard) .12s}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:var(--shadow-brand)}
+  .btn-outline{background:var(--surface);color:var(--text-strong);border-color:var(--border-strong)}
+  .btn-ghost{background:transparent;color:var(--text-body)}
+  .btn-danger{background:var(--surface);color:var(--bkt-danger-ink);border-color:var(--bkt-danger-soft)}
+  .btn-block{width:100%}
+  .input{width:100%;height:46px;min-height:44px;border-radius:var(--radius-md);border:1px solid var(--border-strong);
+    background:var(--surface);padding:0 14px;font:400 var(--text-base)/1 var(--font-body);color:var(--text-strong);outline:none}
+  .input:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(26,71,168,.16)}
+  .field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+  .field label{font:600 var(--text-sm)/1 var(--font-body);color:var(--text-body)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-sm)}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 13px;border-radius:var(--radius-pill);
+    font:600 var(--text-xs)/1 var(--font-body);border:1px solid var(--border);background:var(--surface);color:var(--text-body);white-space:nowrap}
+  .chip.on{background:var(--accent);border-color:var(--bkt-blue-200);color:var(--accent-foreground)}
+  .score{display:inline-flex;align-items:center;justify-content:center;min-width:46px;height:30px;padding:0 10px;border-radius:var(--radius-pill);
+    font:700 var(--text-sm)/1 var(--font-mono);font-feature-settings:'tnum' 1}
+  .score.high{background:var(--bkt-success-soft);color:var(--bkt-success-ink)}
+  .score.good{background:var(--bkt-blue-50);color:var(--bkt-blue-700)}
+  .score.mid{background:var(--bkt-warning-soft);color:var(--bkt-warning-ink)}
+  .savedot{display:inline-flex;align-items:center;gap:6px;font:500 var(--text-xs)/1 var(--font-body);color:var(--bkt-success-ink)}
+  .savedot i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+
+  svg.ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  svg.ic.sm{width:16px;height:16px}
+
+  /* ===== nav drawer (shell) ===== */
+  .drawerScrim{position:absolute;inset:0;background:rgba(0,24,72,.30);z-index:40;opacity:0;pointer-events:none;
+    transition:opacity var(--ease-standard) .2s}
+  .drawerScrim.open{opacity:1;pointer-events:auto}
+  .drawer{position:absolute;top:0;left:0;height:100%;width:284px;max-width:86%;background:var(--sidebar);
+    border-right:1px solid var(--sidebar-border);z-index:41;transform:translateX(-101%);
+    transition:transform var(--ease-out) .26s;display:flex;flex-direction:column;padding:16px 12px 14px;
+    box-shadow:var(--shadow-xl)}
+  .drawer.open{transform:translateX(0)}
+  .drawer .dhead{display:flex;align-items:center;gap:9px;padding:6px 8px 16px}
+  .navgroup{display:flex;flex-direction:column;gap:2px;margin-bottom:12px}
+  .navgroup .glabel{font:600 var(--text-2xs)/1 var(--font-body);letter-spacing:var(--tracking-widest);
+    text-transform:uppercase;color:var(--text-subtle);padding:0 12px 7px}
+  .navitem{display:flex;align-items:center;gap:11px;min-height:46px;padding:0 12px;border-radius:var(--radius-md);
+    color:var(--sidebar-foreground);font:500 var(--text-base)/1 var(--font-body);cursor:pointer}
+  .navitem:hover{background:var(--bkt-zinc-100)}
+  .navitem.active{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground);font-weight:600}
+  .navitem .cnt{margin-left:auto;background:#cb112d;color:#fff;font:700 var(--text-2xs)/1 var(--font-mono);
+    min-width:18px;height:18px;border-radius:var(--radius-pill);display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+  .drawer .dfoot{margin-top:auto;display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--border);padding-top:8px}
+  .userchip{display:flex;align-items:center;gap:9px;padding:8px}
+  .userchip .av{width:34px;height:34px;border-radius:50%;background:var(--bkt-gradient-shield);border:2.5px solid var(--bkt-blue-700);flex:0 0 auto}
+  .userchip .nm{font:600 var(--text-sm)/1.2 var(--font-body);color:var(--text-strong)}
+  .userchip .badge{margin-left:auto;font:600 var(--text-2xs)/1 var(--font-body);color:var(--text-muted);
+    border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 8px}
+
+  /* ===== job cards (Job Search) ===== */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;padding:8px 18px 4px}
+  .searchrow{display:flex;gap:8px;padding:8px 18px 6px}
+  .chiprow{display:flex;gap:8px;overflow-x:auto;padding:6px 18px 12px}
+  .chiprow::-webkit-scrollbar{height:0}
+  .jobs{display:flex;flex-direction:column;gap:12px;padding:4px 18px 26px}
+  .jobcard{padding:16px;display:flex;flex-direction:column;gap:12px}
+  .jobcard .top{display:flex;align-items:flex-start;gap:12px}
+  .jobcard .co{width:44px;height:44px;border-radius:var(--radius-md);background:var(--bkt-zinc-100);
+    border:1px solid var(--border);flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    font:700 var(--text-md)/1 var(--font-display);color:var(--text-body)}
+  .jobcard h3{margin:0;font:600 var(--text-md)/1.25 var(--font-display);letter-spacing:var(--tracking-tight);color:var(--text-strong)}
+  .jobcard .co2{margin:2px 0 0;font:500 var(--text-sm)/1.3 var(--font-body);color:var(--text-body)}
+  .jobcard .meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+  .jobcard .meta span{display:inline-flex;align-items:center;gap:5px;font:400 var(--text-xs)/1 var(--font-body);color:var(--text-muted)}
+  .jobcard .acts{display:flex;gap:10px}
+  .jobcard .acts .btn{flex:1}
+
+  /* ===== segmented control (DocBuilder) ===== */
+  .docbar{display:flex;align-items:center;gap:8px;padding:0 8px 0 4px;height:56px;border-bottom:1px solid var(--border);background:var(--surface)}
+  .docbar .title{font:600 var(--text-md)/1.2 var(--font-display);letter-spacing:var(--tracking-tight);
+    color:var(--text-strong);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .segment{display:flex;gap:4px;margin:12px 18px 2px;padding:4px;background:var(--bkt-zinc-100);border-radius:var(--radius-pill)}
+  .segment button{flex:1;min-height:44px;border:none;background:transparent;border-radius:var(--radius-pill);
+    font:600 var(--text-sm)/1 var(--font-body);color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    transition:all var(--ease-standard) .15s}
+  .segment button.on{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
+  .pane{display:none}
+  .pane.on{display:block}
+  .paperwrap{background:var(--bkt-zinc-100);padding:16px 12px 30px;min-height:100%}
+  .paper{background:#fff;border-radius:3px;box-shadow:var(--shadow-lg);padding:26px 22px;color:#1c1c21;font-size:13px;line-height:1.5}
+  .paper h1{font:700 23px/1.1 var(--font-display);color:var(--primary);margin:0}
+  .paper .role{font:600 14px/1.3;margin:3px 0 0}
+  .paper .contact{font:400 11px/1.3;color:#52525b;margin:5px 0 0}
+  .paper h2{font:700 12px/1 var(--font-display);color:var(--primary);text-transform:uppercase;letter-spacing:.06em;
+    border-bottom:1px solid #d4d4d8;padding-bottom:4px;margin:16px 0 7px}
+  .paper p{margin:0 0 6px}
+  .paper ul{margin:4px 0 0;padding-left:16px}
+  .paper li{margin-bottom:3px}
+  .accordion{padding:8px 18px 24px}
+  .accordion .grp{border-bottom:1px solid var(--border);padding:14px 2px}
+  .accordion .grp .gh{display:flex;align-items:center;gap:9px;font:600 var(--text-sm)/1 var(--font-body);color:var(--text-strong)}
+  .accordion .grp .gh .ic{color:var(--primary)}
+  .templates{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .tcard{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px;font:500 var(--text-xs)/1.2 var(--font-body);color:var(--text-body);background:var(--surface)}
+  .tcard.on{border-color:var(--primary);box-shadow:0 0 0 2px var(--bkt-blue-100)}
+  .aichat{padding:14px 18px 24px;display:flex;flex-direction:column;gap:12px}
+  .aimsg{padding:13px 15px;border-radius:var(--radius-lg);font:400 var(--text-sm)/1.5 var(--font-body)}
+  .aimsg.bot{background:var(--bkt-blue-50);color:var(--bkt-blue-900);border:1px solid var(--bkt-blue-100)}
+  .aimsg.me{background:var(--surface-muted);color:var(--text-body);align-self:flex-end;max-width:82%}
+  .aiform{display:flex;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface)}
+
+  /* ===== inbox ===== */
+  .mailrow{display:flex;gap:12px;padding:15px 18px;border-bottom:1px solid var(--border);cursor:pointer;align-items:flex-start}
+  .mailrow:hover{background:var(--bkt-zinc-50)}
+  .mailrow .av{width:40px;height:40px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    font:700 var(--text-sm)/1 var(--font-display);color:#fff;background:var(--bkt-blue-500)}
+  .mailrow .body{flex:1;min-width:0}
+  .mailrow .l1{display:flex;align-items:baseline;gap:8px}
+  .mailrow .from{font:600 var(--text-base)/1.2 var(--font-body);color:var(--text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mailrow .when{margin-left:auto;font:400 var(--text-xs)/1 var(--font-body);color:var(--text-subtle);white-space:nowrap}
+  .mailrow .subj{font:500 var(--text-sm)/1.35 var(--font-body);color:var(--text-body);margin-top:2px}
+  .mailrow .prev{font:400 var(--text-sm)/1.4 var(--font-body);color:var(--text-muted);margin-top:2px;
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .mailrow .unread{width:9px;height:9px;border-radius:50%;background:var(--primary);flex:0 0 auto;margin-top:6px}
+  .detail{display:flex;flex-direction:column;height:100%}
+  .detailhead{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface)}
+  .detailbody{padding:18px;overflow-y:auto}
+  .detailbody h3{margin:0 0 4px;font:600 var(--text-lg)/1.3 var(--font-display);letter-spacing:var(--tracking-tight)}
+  .detailbody .pa{font:400 var(--text-base)/1.65 var(--font-body);color:var(--text-body);margin:0 0 14px}
+
+  /* ===== preferences ===== */
+  .tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 18px;border-bottom:1px solid var(--border)}
+  .tabs::-webkit-scrollbar{height:0}
+  .tabs button{min-height:42px;padding:0 14px;border:none;background:transparent;white-space:nowrap;cursor:pointer;
+    font:600 var(--text-sm)/1 var(--font-body);color:var(--text-muted);border-bottom:2px solid transparent;border-radius:0}
+  .tabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
+  .prefform{padding:16px 18px 28px;display:flex;flex-direction:column;gap:18px}
+  .prefcard{padding:16px}
+  .prefcard .ch{display:flex;align-items:center;gap:8px;margin-bottom:14px;font:600 var(--text-md)/1 var(--font-display);color:var(--text-strong)}
+  .prefcard .ch .ic{color:var(--primary)}
+  .single{display:grid;grid-template-columns:1fr;gap:0}
+  .switchrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}
+  .switch{width:48px;height:28px;border-radius:var(--radius-pill);background:var(--primary);position:relative;flex:0 0 auto}
+  .switch::after{content:"";position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm)}
+  .note{font:400 var(--text-xs)/1.45 var(--font-body);color:var(--text-subtle)}
+
+  .desknote{max-width:1100px;margin:30px auto 0;padding:16px 18px;border:1px dashed var(--border-strong);
+    border-radius:var(--radius-lg);background:var(--surface);font:400 var(--text-sm)/1.6 var(--font-body);color:var(--text-body)}
+  .desknote b{color:var(--text-strong)}
+  @media (max-width:560px){body{padding:24px 14px 60px}}
+</style>
+</head>
+<body>
+<div class="pagehead">
+  <h1>BKT <b>AI-Apply</b> — Mobile Prototypes</h1>
+  <p>High-fidelity reference for the mobile refactor, optimized for the iPhone 17 Pro Max (430 × 932). Faithful to the live BKT design system — Geist type, royal-blue accent, zinc neutrals, existing radii &amp; shadow scale. Only the <b>layout</b> adapts; desktop (≥768px) is untouched. Drawer, segmented tabs, and the inbox list⇄detail are live — click them.</p>
+  <div class="meta">
+    <span>iPhone 17 Pro Max · 430×932</span><span>breakpoint &lt; 768px</span><span>touch targets ≥ 44px</span><span>tokens: src/styles/bkt.css</span>
+  </div>
+</div>
+
+<div class="gallery">
+
+  <!-- ============ 1. SHELL + NAV DRAWER ============ -->
+  <div class="frameWrap">
+    <div class="phone"><div class="island"></div>
+      <div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">5G ▤▤▤ 87%</span></div>
+        <div class="viewport">
+          <div class="topbar">
+            <button class="iconbtn" onclick="toggleDrawer(true)" aria-label="Open menu">
+              <svg class="ic" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="brand"><span class="logo">B</span><span class="wordmark">BKT <b>AI-Apply</b></span></div>
+            <div class="right">
+              <button class="iconbtn" style="position:relative" aria-label="AI assistant">
+                <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 8V5"/><circle cx="8.5" cy="14" r="1"/><circle cx="15.5" cy="14" r="1"/></svg>
+              </button>
+              <button class="iconbtn" style="position:relative" aria-label="Notifications">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                <span class="dotbadge"></span>
+              </button>
+            </div>
+          </div>
+          <div class="scroll" style="background:var(--background)">
+            <div class="pagetitle"><div class="eyebrow">Auto Apply</div><h2 style="margin-top:6px">Dashboard</h2><p>3 matches need your review</p></div>
+            <div class="jobs" style="padding-top:6px">
+              <div class="card jobcard">
+                <div class="top"><span class="co">A</span><div style="flex:1"><h3>Senior Product Manager</h3><div class="co2">Acme Corp · Remote</div></div><span class="score high">92</span></div>
+                <div class="acts"><button class="btn btn-danger btn-block">Decline</button><button class="btn btn-primary btn-block">Apply</button></div>
+              </div>
+              <div class="card jobcard">
+                <div class="top"><span class="co">β</span><div style="flex:1"><h3>Product Lead</h3><div class="co2">Beta Inc · Hybrid · NYC</div></div><span class="score good">78</span></div>
+                <div class="acts"><button class="btn btn-danger btn-block">Decline</button><button class="btn btn-primary btn-block">Apply</button></div>
+              </div>
+            </div>
+          </div>
+          <!-- drawer -->
+          <div class="drawerScrim" id="scrim" onclick="toggleDrawer(false)"></div>
+          <aside class="drawer" id="drawer">
+            <div class="dhead"><span class="logo">B</span><span class="wordmark">BKT <b>AI-Apply</b></span></div>
+            <div class="navgroup"><div class="glabel">Auto Apply</div>
+              <div class="navitem active"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard<span class="cnt">3</span></div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Inbox<span class="cnt">2</span></div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Job Search</div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Saved Jobs</div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="14" x2="20" y2="14"/><circle cx="15" cy="14" r="2"/></svg>Preferences</div>
+            </div>
+            <div class="navgroup"><div class="glabel">Documents</div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/></svg>Resumes</div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Cover Letters</div>
+            </div>
+            <div class="navgroup"><div class="glabel">Platform</div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="6" cy="18" r="3"/><path d="M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M18 9v3a6 6 0 0 1-6 6"/></svg>Pipeline</div>
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5-5 5 5"/><path d="M12 5v10"/></svg>Ingestion</div>
+            </div>
+            <div class="dfoot">
+              <div class="navitem"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 8V5"/></svg>AI Assistant</div>
+              <div class="userchip"><span class="av"></span><span class="nm">John Burkhardt</span><span class="badge">Auto Apply</span></div>
+            </div>
+          </aside>
+        </div>
+        <div class="homebar"></div>
+      </div>
+    </div>
+    <div class="cap"><b>1 · App shell + nav drawer</b><span>Hamburger top bar replaces the fixed 224px sidebar; nav slides in as an overlay (reuses the existing slide-over pattern). Tap ☰.</span></div>
+  </div>
+
+  <!-- ============ 2. JOB SEARCH — STACKED CARDS ============ -->
+  <div class="frameWrap">
+    <div class="phone"><div class="island"></div>
+      <div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">5G ▤▤▤ 87%</span></div>
+        <div class="viewport">
+          <div class="topbar">
+            <button class="iconbtn" aria-label="Open menu"><svg class="ic" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+            <div class="brand"><span class="wordmark">Job Search</span></div>
+            <div class="right"><button class="iconbtn" aria-label="Notifications"><svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button></div>
+          </div>
+          <div class="scroll">
+            <div class="searchrow">
+              <input class="input" placeholder="Search roles, companies…" />
+              <button class="iconbtn btn-outline" style="border:1px solid var(--border-strong);width:46px;border-radius:var(--radius-md)" aria-label="Filters"><svg class="ic" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="14" x2="20" y2="14"/><circle cx="15" cy="14" r="2"/></svg></button>
+            </div>
+            <div class="chiprow">
+              <span class="chip on">All</span><span class="chip">Remote</span><span class="chip">80+ match</span><span class="chip">Full-time</span><span class="chip">$150k+</span>
+            </div>
+            <div class="jobs">
+              <div class="card jobcard">
+                <div class="top"><span class="co">A</span><div style="flex:1"><h3>Senior Product Manager</h3><div class="co2">Acme Corp</div>
+                  <div class="meta"><span>◴ Remote</span><span>$160k–185k</span><span>Full-time</span></div></div><span class="score high">92</span></div>
+                <div class="acts"><button class="btn btn-danger btn-block">Decline</button><button class="btn btn-primary btn-block">Apply</button></div>
+              </div>
+              <div class="card jobcard">
+                <div class="top"><span class="co">β</span><div style="flex:1"><h3>Product Lead, Growth</h3><div class="co2">Beta Inc</div>
+                  <div class="meta"><span>◴ Hybrid · NYC</span><span>$150k–170k</span></div></div><span class="score good">78</span></div>
+                <div class="acts"><button class="btn btn-danger btn-block">Decline</button><button class="btn btn-primary btn-block">Apply</button></div>
+              </div>
+              <div class="card jobcard">
+                <div class="top"><span class="co">Γ</span><div style="flex:1"><h3>Program Manager</h3><div class="co2">Gamma LLC</div>
+                  <div class="meta"><span>◴ Remote</span><span>$140k–160k</span></div></div><span class="score mid">63</span></div>
+                <div class="acts"><button class="btn btn-danger btn-block">Decline</button><button class="btn btn-primary btn-block">Apply</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="homebar"></div>
+      </div>
+    </div>
+    <div class="cap"><b>2 · Job Search — stacked cards</b><span>The desktop ~800px 5-column grid becomes full-width cards; search goes full-width, filters scroll horizontally as chips.</span></div>
+  </div>
+
+  <!-- ============ 3. DOCBUILDER — SEGMENTED TABS ============ -->
+  <div class="frameWrap">
+    <div class="phone"><div class="island"></div>
+      <div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">5G ▤▤▤ 87%</span></div>
+        <div class="viewport">
+          <div class="docbar">
+            <button class="iconbtn" aria-label="Back to resumes"><svg class="ic" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+            <span class="title">Senior PM Resume</span>
+            <span class="savedot"><i></i>Saved</span>
+            <button class="iconbtn" aria-label="Download PDF"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></button>
+          </div>
+          <div class="segment" id="seg">
+            <button class="" data-pane="edit" onclick="setDocTab('edit')">Edit</button>
+            <button class="on" data-pane="preview" onclick="setDocTab('preview')">Preview</button>
+            <button class="" data-pane="ai" onclick="setDocTab('ai')">AI</button>
+          </div>
+          <div class="scroll" id="docscroll">
+            <!-- EDIT -->
+            <div class="pane" data-pane="edit">
+              <div class="accordion">
+                <div class="grp"><div class="gh"><svg class="ic sm" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20"/></svg>Format</div>
+                  <div class="templates"><span class="tcard on">Classic</span><span class="tcard">Modern</span><span class="tcard">Compact</span><span class="tcard">Mono</span></div>
+                </div>
+                <div class="grp"><div class="gh"><svg class="ic sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Identity</div>
+                  <div class="field" style="margin-top:12px"><label>Name</label><input class="input" value="John Burkhardt" /></div>
+                  <div class="field"><label>Headline</label><input class="input" value="Senior Product Manager" /></div>
+                </div>
+                <div class="grp"><div class="gh"><svg class="ic sm" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="16" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>Summary</div>
+                  <div class="field" style="margin-top:12px"><textarea class="input" style="height:96px;padding:10px 14px;resize:none">Product leader with 8+ years driving 0→1 SaaS launches…</textarea></div>
+                </div>
+              </div>
+            </div>
+            <!-- PREVIEW -->
+            <div class="pane on" data-pane="preview">
+              <div class="paperwrap">
+                <div class="paper">
+                  <h1>John Burkhardt</h1>
+                  <div class="role">Senior Product Manager</div>
+                  <div class="contact">john@bktadvisory.com · linkedin.com/in/jb · San Francisco, CA</div>
+                  <h2>Summary</h2>
+                  <p>Product leader with 8+ years driving 0→1 SaaS launches, multi-model AI routing, and pipeline automation that compounds.</p>
+                  <h2>Experience</h2>
+                  <p style="font-weight:700">Principal PM · BKT Advisory <span style="font-weight:400;color:#52525b">2021–Present</span></p>
+                  <ul><li>Shipped an autonomous job-application pipeline end-to-end.</li><li>Led multi-model AI routing cutting cost-per-task 40%.</li></ul>
+                  <h2>Skills</h2>
+                  <p>Product Strategy · Roadmapping · SQL · Supabase · LLM Orchestration</p>
+                </div>
+              </div>
+            </div>
+            <!-- AI -->
+            <div class="pane" data-pane="ai">
+              <div class="aichat">
+                <div class="aimsg bot">I can tailor this résumé to a posting. Want me to align your Summary to the <b>Acme Corp · Senior PM</b> match?</div>
+                <div class="aimsg me">Yes — emphasize AI pipeline work.</div>
+                <div class="aimsg bot">Drafted a sharper Summary leading with AI pipeline automation and quantified impact. Apply it to the paper?</div>
+              </div>
+            </div>
+          </div>
+          <div class="aiform" id="aiform" style="display:none"><input class="input" placeholder="Ask the AI writer…" /><button class="btn btn-primary">Send</button></div>
+        </div>
+        <div class="homebar"></div>
+      </div>
+    </div>
+    <div class="cap"><b>3 · DocBuilder — segmented tabs</b><span>The 3-pane desktop editor (Editor · Paper · AI) collapses to a [Edit · Preview · AI] switcher; one full-width pane at a time. Tap the segments.</span></div>
+  </div>
+
+  <!-- ============ 4. INBOX — LIST ⇄ DETAIL ============ -->
+  <div class="frameWrap">
+    <div class="phone"><div class="island"></div>
+      <div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">5G ▤▤▤ 87%</span></div>
+        <div class="viewport" id="inbox">
+          <!-- LIST -->
+          <div class="pane on" data-ipane="list" style="display:flex;flex-direction:column;height:100%">
+            <div class="topbar">
+              <button class="iconbtn" aria-label="Open menu"><svg class="ic" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+              <div class="brand"><span class="wordmark">Inbox</span></div>
+              <div class="right"><button class="iconbtn" aria-label="Refresh"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/></svg></button></div>
+            </div>
+            <div class="scroll">
+              <div class="mailrow" onclick="openMail()"><span class="av">A</span><div class="body"><div class="l1"><span class="from">Acme Recruiting</span><span class="when">9:12a</span></div><div class="subj">Your application — next steps</div><div class="prev">Hi John, thanks for applying to the Senior PM role. We'd love to schedule…</div></div><span class="unread"></span></div>
+              <div class="mailrow" onclick="openMail()"><span class="av" style="background:var(--bkt-blue-700)">β</span><div class="body"><div class="l1"><span class="from">Beta Inc Talent</span><span class="when">8:40a</span></div><div class="subj">Re: Product Lead, Growth</div><div class="prev">Following up on your profile — are you available for a quick intro call?</div></div><span class="unread"></span></div>
+              <div class="mailrow" onclick="openMail()"><span class="av" style="background:var(--bkt-zinc-400)">Γ</span><div class="body"><div class="l1"><span class="from">Gamma LLC</span><span class="when">Yest</span></div><div class="subj">Application received</div><div class="prev">This is an automated confirmation that we received your application…</div></div></div>
+            </div>
+          </div>
+          <!-- DETAIL -->
+          <div class="pane detail" data-ipane="detail" style="display:none">
+            <div class="detailhead">
+              <button class="iconbtn" onclick="closeMail()" aria-label="Back to inbox"><svg class="ic" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+              <div style="flex:1;min-width:0"><div style="font:600 var(--text-base)/1.2 var(--font-body);color:var(--text-strong)">Acme Recruiting</div><div style="font:400 var(--text-xs)/1 var(--font-body);color:var(--text-muted);margin-top:2px">to john@bktadvisory.com</div></div>
+              <button class="iconbtn" aria-label="Archive"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
+            </div>
+            <div class="detailbody scroll">
+              <h3>Your application — next steps</h3>
+              <div class="note" style="margin-bottom:14px">Screening · matched to <b>Senior PM @ Acme Corp</b></div>
+              <p class="pa">Hi John,</p>
+              <p class="pa">Thanks for applying to the Senior Product Manager role. Your background in AI pipeline automation stood out to the hiring team.</p>
+              <p class="pa">We'd love to schedule a 30-minute intro call this week. Are you free Thursday or Friday afternoon?</p>
+              <p class="pa">Best,<br/>The Acme Recruiting Team</p>
+              <div style="display:flex;gap:10px;margin-top:8px"><button class="btn btn-outline btn-block">Archive</button><button class="btn btn-primary btn-block">Reply</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="homebar"></div>
+      </div>
+    </div>
+    <div class="cap"><b>4 · Inbox — list ⇄ detail</b><span>The 440px master + detail split becomes one pane at a time; tapping a message swaps to a full-width reader with a back button. Tap a row.</span></div>
+  </div>
+
+  <!-- ============ 5. PREFERENCES — STACKED FORMS ============ -->
+  <div class="frameWrap">
+    <div class="phone"><div class="island"></div>
+      <div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">5G ▤▤▤ 87%</span></div>
+        <div class="viewport">
+          <div class="topbar">
+            <button class="iconbtn" aria-label="Open menu"><svg class="ic" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+            <div class="brand"><span class="wordmark">Preferences</span></div>
+            <div class="right"><button class="btn btn-primary" style="height:40px;min-height:40px;padding:0 16px">Save</button></div>
+          </div>
+          <div class="tabs">
+            <button class="on">Role</button><button>Location</button><button>Compensation</button><button>Eligibility</button><button>Answers</button>
+          </div>
+          <div class="scroll">
+            <div class="prefform">
+              <div class="card prefcard">
+                <div class="ch"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Role &amp; Search</div>
+                <div class="single">
+                  <div class="field"><label>Job Title</label><input class="input" value="Senior Product Manager" /></div>
+                  <div class="field"><label>Experience (years)</label><input class="input" value="8" /></div>
+                  <div class="field"><label>Job Type</label><input class="input" value="Full-time" /></div>
+                  <div class="field" style="margin-bottom:0"><label>Environment</label><input class="input" value="Remote" /></div>
+                </div>
+              </div>
+              <div class="card prefcard">
+                <div class="ch"><svg class="ic sm" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>Location</div>
+                <div class="single">
+                  <div class="field"><label>Primary Location</label><input class="input" value="San Francisco, CA" /></div>
+                  <div class="field" style="margin-bottom:0"><label>Willing to relocate</label>
+                    <div class="switchrow" style="padding-top:4px"><span class="note" style="font-size:var(--text-sm);color:var(--text-body)">Open to relocation</span><span class="switch"></span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card prefcard">
+                <div class="ch"><svg class="ic sm" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Compensation</div>
+                <div class="single">
+                  <div class="field"><label>Minimum salary</label><input class="input" value="$150,000" /></div>
+                  <div class="field" style="margin-bottom:0"><label>Target salary</label><input class="input" value="$185,000" /></div>
+                </div>
+                <p class="note" style="margin-top:10px">Salary answers above $150k are review-gated before auto-submit.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="homebar"></div>
+      </div>
+    </div>
+    <div class="cap"><b>5 · Preferences — stacked forms</b><span>Every desktop <code>1fr 1fr</code> form grid collapses to a single column; tabs scroll horizontally; inputs are full-width and ≥44px tall.</span></div>
+  </div>
+
+</div>
+
+<div class="desknote">
+  <b>Desktop is untouched.</b> Every adaptation here is gated on <code>useIsMobile()</code> (<code>max-width:767px</code>) or a media query — at ≥768px the app renders the exact current layout (224px sidebar, multi-column grids, 3-pane DocBuilder). No global design tokens are modified; this prototype reuses <code>src/styles/bkt.css</code> values verbatim.
+</div>
+
+<script>
+  function toggleDrawer(open){
+    document.getElementById('drawer').classList.toggle('open', open);
+    document.getElementById('scrim').classList.toggle('open', open);
+  }
+  function setDocTab(name){
+    document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on', b.dataset.pane===name));
+    document.querySelectorAll('#docscroll .pane').forEach(p=>p.classList.toggle('on', p.dataset.pane===name));
+    document.getElementById('aiform').style.display = name==='ai' ? 'flex' : 'none';
+  }
+  function openMail(){
+    document.querySelector('#inbox [data-ipane="list"]').style.display='none';
+    document.querySelector('#inbox [data-ipane="detail"]').style.display='flex';
+  }
+  function closeMail(){
+    document.querySelector('#inbox [data-ipane="detail"]').style.display='none';
+    document.querySelector('#inbox [data-ipane="list"]').style.display='flex';
+  }
+</script>
+</body>
+</html>

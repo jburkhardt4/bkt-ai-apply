@@ -38,6 +38,7 @@ export function BktInput({
         </label>
       )}
       <div
+        className="bkt-touch"
         style={{
           display: 'flex',
           alignItems: 'center',

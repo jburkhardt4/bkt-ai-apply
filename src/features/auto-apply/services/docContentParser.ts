@@ -444,10 +444,12 @@ export function transcribeResume(text: string): ResumeContent {
   const headerRemainder = header
     .filter((l) => l !== name && l !== headline && l !== contact && !CONTACT_RE.test(l))
     .join(' ')
+  // Summary is forced to a SINGLE continuous paragraph — PDF/DOCX extraction
+  // injects hard line breaks mid-sentence, so all whitespace (incl. newlines) is
+  // collapsed to single spaces (no premature wrapping in the rendered summary).
   const summary = sanitizeDashes(
-    (buckets.summary.map((l) => stripInlineMarkdown(l)).join('\n').trim() || headerRemainder)
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n{2,}/g, '\n')
+    (buckets.summary.map((l) => stripInlineMarkdown(l)).join(' ').trim() || headerRemainder)
+      .replace(/\s+/g, ' ')
       .trim(),
   )
 

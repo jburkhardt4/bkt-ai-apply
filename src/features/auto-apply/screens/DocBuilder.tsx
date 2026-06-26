@@ -553,13 +553,13 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
               </DBGroup>
               <DBGroup icon="list-checks" label="Skills">
                 <DBArea
-                  label="Comma separated"
-                  rows={3}
-                  value={rc.skills.join(', ')}
+                  label="One per line"
+                  rows={4}
+                  value={rc.skills.join('\n')}
                   onChange={(v) =>
                     set({
                       skills: v
-                        .split(',')
+                        .split('\n')
                         .map((s) => s.trim())
                         .filter(Boolean),
                     })

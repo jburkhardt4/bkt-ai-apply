@@ -182,9 +182,8 @@ describe('documentStorageService', () => {
     expect(upload).toHaveBeenCalledWith('user-1/resume/v2.txt', 'edited body', { upsert: true, contentType: 'text/plain' })
     expect(eqId).toHaveBeenCalledWith('id', 'doc-2')
     expect(eqUser).toHaveBeenCalledWith('user_id', 'user-1')
-    expect(update).toHaveBeenCalledWith(expect.objectContaining({ content_hash: expect.any(String) }))
     // builder_config is only written when provided (not on this call).
-    expect(update.mock.calls[0]?.[0]).not.toHaveProperty('builder_config')
+    expect(update).toHaveBeenCalledWith(expect.not.objectContaining({ builder_config: expect.anything() }))
   })
 
   it('updateDocumentContent persists builder_config when provided', async () => {

@@ -100,6 +100,20 @@ describe('transcribeResume', () => {
     expect(r.education[0]?.when).toBe('2015')
   })
 
+  it('collapses hard line breaks in the summary into a single paragraph', () => {
+    const text = [
+      'Jane Q. Candidate',
+      '',
+      'SUMMARY',
+      'Salesforce architect with 8 years',
+      'delivering enterprise CRM across',
+      'Sales and Service Cloud.',
+    ].join('\n')
+    const r = transcribeResume(text)
+    expect(r.summary).toBe('Salesforce architect with 8 years delivering enterprise CRM across Sales and Service Cloud.')
+    expect(r.summary).not.toMatch(/\n/)
+  })
+
   it('splits experience into roles with verbatim bullets', () => {
     const r = transcribeResume(RESUME)
     expect(r.experience).toHaveLength(2)

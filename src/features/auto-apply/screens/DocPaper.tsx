@@ -129,7 +129,7 @@ export function DocPaper({
               <span style={{ fontWeight: 400, color: '#52525b', whiteSpace: 'nowrap' }}>{e.when}</span>
             </div>
             {sb.experience ? (
-              <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
                 {e.bullets.filter(Boolean).map((b, j) => (
                   <li key={j} style={{ marginBottom: 2 }}>
                     {b}
@@ -153,7 +153,7 @@ export function DocPaper({
           Education
         </PaperHead>
         {sb.education ? (
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
             {c.education.map((e, i) => (
               <li key={i} style={{ marginBottom: 2 }}>
                 <strong>{e.degree}</strong>
@@ -180,7 +180,7 @@ export function DocPaper({
             Certifications
           </PaperHead>
           {sb.certifications ? (
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
               {c.certifications.filter(Boolean).map((cert, i) => (
                 <li key={i} style={{ marginBottom: 2 }}>
                   {cert}
@@ -197,7 +197,7 @@ export function DocPaper({
           Skills
         </PaperHead>
         {sb.skills ? (
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
+          <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
             {c.skills.filter(Boolean).map((s, i) => (
               <li key={i} style={{ marginBottom: 2 }}>
                 {s}
@@ -232,7 +232,7 @@ export function DocPaper({
             ) : s.format === 'text' ? (
               <div style={{ whiteSpace: 'pre-wrap' }}>{s.body}</div>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
                 {customSectionItems(s.body).map((it, i) => (
                   <li key={i} style={{ marginBottom: 2 }}>
                     {it}

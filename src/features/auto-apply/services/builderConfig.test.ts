@@ -4,6 +4,7 @@ import {
   customSectionItems,
   customSectionRows,
   defaultBuilderConfig,
+  effectiveSectionOrder,
   MAX_CUSTOM_SECTIONS,
   parseBuilderConfig,
 } from './builderConfig'
@@ -44,6 +45,26 @@ describe('parseBuilderConfig', () => {
       customSections: [{ id: 'x', title: 'Awards', format: 'bullets', body: '- Best' }],
     })
     expect(parseBuilderConfig(builderConfigToJson(c))).toEqual(c)
+  })
+})
+
+describe('effectiveSectionOrder', () => {
+  it('defaults to the four standard sections', () => {
+    expect(effectiveSectionOrder(defaultBuilderConfig())).toEqual([
+      'experience',
+      'education',
+      'skills',
+      'certifications',
+    ])
+  })
+
+  it('keeps the stored order, drops stale keys, and appends any missing', () => {
+    const c = parseBuilderConfig({
+      customSections: [{ id: 'a', title: 'A', format: 'text', body: 'x' }],
+      sectionOrder: ['skills', 'stale-key', 'experience', 'a'],
+    })
+    // 'stale-key' dropped; 'education' + 'certifications' appended; order kept.
+    expect(c.sectionOrder).toEqual(['skills', 'experience', 'a', 'education', 'certifications'])
   })
 })
 

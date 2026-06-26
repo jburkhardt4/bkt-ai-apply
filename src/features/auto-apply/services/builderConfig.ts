@@ -14,6 +14,8 @@ export const MAX_CUSTOM_SECTIONS = 4
 
 const BULLET_KEYS: SectionBulletKey[] = ['experience', 'skills', 'education', 'certifications']
 const FORMATS: CustomSectionFormat[] = ['bullets', 'table', 'text']
+/** The reorderable standard content sections, in their default order. */
+export const STANDARD_SECTION_ORDER = ['experience', 'education', 'skills', 'certifications']
 
 /** Defaults match the EXISTING rendering, so a resume looks identical until the
  *  user actually toggles something (experience/certs already render as bullets). */
@@ -21,7 +23,27 @@ export function defaultBuilderConfig(): BuilderConfig {
   return {
     sectionBullets: { experience: true, skills: false, education: false, certifications: true },
     customSections: [],
+    sectionOrder: [...STANDARD_SECTION_ORDER],
   }
+}
+
+/**
+ * The effective render/edit order of the resume's content sections: the stored
+ * order, but always containing exactly the 4 standard keys + every current custom
+ * section id (stale ids dropped, missing ones appended). Resilient to config drift.
+ */
+export function effectiveSectionOrder(config: BuilderConfig): string[] {
+  const valid = new Set<string>([...STANDARD_SECTION_ORDER, ...config.customSections.map((s) => s.id)])
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const key of config.sectionOrder) {
+    if (valid.has(key) && !seen.has(key)) {
+      seen.add(key)
+      out.push(key)
+    }
+  }
+  for (const key of valid) if (!seen.has(key)) out.push(key)
+  return out
 }
 
 /** Coerces the untyped `builder_config` jsonb into a complete, valid BuilderConfig. */
@@ -48,6 +70,12 @@ export function parseBuilderConfig(raw: Json | null | undefined): BuilderConfig 
       body: typeof c.body === 'string' ? c.body : '',
     }
   })
+
+  if (Array.isArray(obj.sectionOrder)) {
+    config.sectionOrder = obj.sectionOrder.filter((k): k is string => typeof k === 'string')
+  }
+  // Normalize against the actual sections so the order is always complete/valid.
+  config.sectionOrder = effectiveSectionOrder(config)
   return config
 }
 
@@ -61,6 +89,7 @@ export function builderConfigToJson(config: BuilderConfig): Json {
       format: c.format,
       body: c.body,
     })),
+    sectionOrder: [...config.sectionOrder],
   } as Json
 }
 

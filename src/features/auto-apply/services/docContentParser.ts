@@ -465,7 +465,10 @@ export function transcribeResume(text: string): ResumeContent {
     summary,
     experience: parseExperienceBlock(buckets.experience).map((r) => ({
       ...r,
-      bullets: sanitizeDashList(r.bullets),
+      // Each bullet is one continuous sentence: collapse the hard line breaks
+      // PDF/DOCX extraction injects mid-sentence into single spaces (no premature
+      // wrapping), then dedash. Empty fragments are dropped.
+      bullets: sanitizeDashList(r.bullets.map((b) => b.replace(/\s+/g, ' ').trim()).filter(Boolean)),
     })),
     education: parseEducationBlock(eduLines),
     skills: parseSkillsBlock(buckets.skills),

@@ -24,7 +24,7 @@ import { DocAssistant } from './DocAssistant'
 import type { AiTargetJob } from './DocAssistant'
 import { alignDocumentToJob } from '../services/docWriterService'
 import { parseGeneratedLetter, parseGeneratedResume, serializeLetter, serializeResume } from '../services/docContentParser'
-import { builderConfigToJson, MAX_CUSTOM_SECTIONS, parseBuilderConfig } from '../services/builderConfig'
+import { builderConfigToJson, effectiveSectionOrder, MAX_CUSTOM_SECTIONS, parseBuilderConfig } from '../services/builderConfig'
 import { createDocumentVersion, updateDocumentContent } from '../../applications/services/documentStorageService'
 
 type Patch = Partial<ResumeContent> & Partial<LetterContent>
@@ -135,36 +135,40 @@ function DBFormatPicker({ value, onChange }: { value: CustomSectionFormat; onCha
   )
 }
 
-function DBGroup({ icon, label, children, defaultOpen = false }: { icon: string; label: string; children: ReactNode; defaultOpen?: boolean }) {
+function DBGroup({ icon, label, children, defaultOpen = false, grip }: { icon: string; label: string; children: ReactNode; defaultOpen?: boolean; grip?: ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
     <div style={{ borderBottom: '1px solid var(--border)' }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="bkt-press"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 9,
-          width: '100%',
-          padding: '12px 4px',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          textAlign: 'left',
-          font: '600 var(--text-sm)/1 var(--font-body)',
-          color: 'var(--text-strong)',
-        }}
-      >
-        <Icon name={icon} size={15} color="var(--primary)" />
-        <span style={{ flex: 1 }}>{label}</span>
-        <Icon
-          name="chevron-down"
-          size={14}
-          color="var(--bkt-zinc-400)"
-          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
-        />
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {grip}
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="bkt-press"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 9,
+            flex: 1,
+            minWidth: 0,
+            padding: '12px 4px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+            font: '600 var(--text-sm)/1 var(--font-body)',
+            color: 'var(--text-strong)',
+          }}
+        >
+          <Icon name={icon} size={15} color="var(--primary)" />
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+          <Icon
+            name="chevron-down"
+            size={14}
+            color="var(--bkt-zinc-400)"
+            style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
+          />
+        </button>
+      </div>
       {open && (
         <div className="bkt-enter" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '2px 4px 16px' }}>
           {children}
@@ -376,6 +380,125 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
   const patchEducation = (idx: number, patch: Partial<ResumeContent['education'][number]>) =>
     setEducation(rc.education.map((e, j) => (j === idx ? { ...e, ...patch } : e)))
 
+  // --- section drag-and-drop reordering (Phase 2) ---
+  // The content sections (Experience/Education/Skills/Certifications + custom)
+  // render in config.sectionOrder; the grip handle drags a section, dropping it
+  // onto another reorders. Summary is rendered separately and stays locked first.
+  const [dragKey, setDragKey] = useState<string | null>(null)
+  const sectionOrder = effectiveSectionOrder(config)
+  const moveSection = (from: string, to: string) => {
+    if (from === to) return
+    const next = [...sectionOrder]
+    const fi = next.indexOf(from)
+    const ti = next.indexOf(to)
+    if (fi < 0 || ti < 0) return
+    next.splice(fi, 1)
+    next.splice(ti, 0, from)
+    updateConfig({ ...config, sectionOrder: next })
+  }
+  const sectionGrip = (key: string) => (
+    <span
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        setDragKey(key)
+      }}
+      onDragEnd={() => setDragKey(null)}
+      title="Drag to reorder"
+      aria-label="Drag to reorder"
+      style={{ cursor: 'grab', display: 'inline-flex', alignItems: 'center', padding: '0 1px 0 6px', color: 'var(--bkt-zinc-400)' }}
+    >
+      <Icon name="grip-vertical" size={15} />
+    </span>
+  )
+  const sectionWrap = (key: string, group: ReactNode) => (
+    <div
+      key={key}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault()
+        if (dragKey) moveSection(dragKey, key)
+        setDragKey(null)
+      }}
+      style={{ background: dragKey === key ? 'var(--bkt-blue-50)' : 'transparent', transition: 'background var(--dur-fast) var(--ease-standard)' }}
+    >
+      {group}
+    </div>
+  )
+  const renderSectionEditor = (key: string): ReactNode => {
+    const grip = sectionGrip(key)
+    if (key === 'experience') {
+      return sectionWrap(
+        key,
+        <DBGroup icon="briefcase-business" label="Experience" grip={grip}>
+          {rc.experience.map((e, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < rc.experience.length - 1 ? '1px dashed var(--border)' : 'none' }}>
+              <DBItemHeader label={`Role ${i + 1}`} onRemove={() => removeRole(i)} />
+              <BktInput label="Title" value={e.role} onChange={(ev) => patchRole(i, { role: ev.target.value })} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8 }}>
+                <BktInput label="Organization" value={e.org} onChange={(ev) => patchRole(i, { org: ev.target.value })} />
+                <BktInput label="When" value={e.when} onChange={(ev) => patchRole(i, { when: ev.target.value })} />
+              </div>
+              <DBArea label="Bullets (one per line)" rows={3} value={e.bullets.join('\n')} onChange={(v) => patchRole(i, { bullets: v.split('\n') })} />
+            </div>
+          ))}
+          <DBAddButton label="Add role" onClick={addRole} />
+        </DBGroup>,
+      )
+    }
+    if (key === 'education') {
+      return sectionWrap(
+        key,
+        <DBGroup icon="graduation-cap" label="Education" grip={grip}>
+          {rc.education.map((e, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < rc.education.length - 1 ? '1px dashed var(--border)' : 'none' }}>
+              <DBItemHeader label={`Entry ${i + 1}`} onRemove={() => removeEducation(i)} />
+              <BktInput label="Degree" value={e.degree} onChange={(ev) => patchEducation(i, { degree: ev.target.value })} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8 }}>
+                <BktInput label="Institution" value={e.org} onChange={(ev) => patchEducation(i, { org: ev.target.value })} />
+                <BktInput label="Year" value={e.when} onChange={(ev) => patchEducation(i, { when: ev.target.value })} />
+              </div>
+            </div>
+          ))}
+          <DBAddButton label="Add education" onClick={addEducation} />
+        </DBGroup>,
+      )
+    }
+    if (key === 'skills') {
+      return sectionWrap(
+        key,
+        <DBGroup icon="list-checks" label="Skills" grip={grip}>
+          <DBArea label="One per line" rows={4} value={rc.skills.join('\n')} onChange={(v) => set({ skills: v.split('\n').map((s) => s.trim()).filter(Boolean) })} />
+        </DBGroup>,
+      )
+    }
+    if (key === 'certifications') {
+      return sectionWrap(
+        key,
+        <DBGroup icon="award" label="Certifications" grip={grip}>
+          <DBArea label="One per line" rows={3} value={rc.certifications.join('\n')} onChange={(v) => set({ certifications: v.split('\n').map((s) => s.trim()).filter(Boolean) })} />
+        </DBGroup>,
+      )
+    }
+    const s = config.customSections.find((x) => x.id === key)
+    if (!s) return null
+    const idx = config.customSections.indexOf(s)
+    return sectionWrap(
+      key,
+      <DBGroup icon="layout-list" label={s.title.trim() || `Custom section ${idx + 1}`} grip={grip}>
+        <DBItemHeader label={`Custom section ${idx + 1}`} onRemove={() => removeCustomSection(s.id)} />
+        <BktInput label="Title" value={s.title} onChange={(ev) => patchCustomSection(s.id, { title: ev.target.value })} />
+        <DBFormatPicker value={s.format} onChange={(f) => patchCustomSection(s.id, { format: f })} />
+        <DBArea
+          label={s.format === 'table' ? 'One row per line · cells separated by |' : s.format === 'text' ? 'Paragraph text' : 'One item per line'}
+          rows={s.format === 'text' ? 4 : 3}
+          value={s.body}
+          onChange={(v) => patchCustomSection(s.id, { body: v })}
+        />
+      </DBGroup>,
+    )
+  }
+
   // --- letter body paragraph mutators ---
   const setBody = (next: string[]) => set({ body: next })
   const addParagraph = () => setBody([...lc.body, ''])
@@ -513,74 +636,8 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
               <DBGroup icon="align-left" label="Summary" defaultOpen>
                 <DBArea value={rc.summary} rows={5} onChange={(v) => set({ summary: v })} />
               </DBGroup>
-              <DBGroup icon="briefcase-business" label="Experience">
-                {rc.experience.map((e, i) => (
-                  <div
-                    key={i}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < rc.experience.length - 1 ? '1px dashed var(--border)' : 'none' }}
-                  >
-                    <DBItemHeader label={`Role ${i + 1}`} onRemove={() => removeRole(i)} />
-                    <BktInput label="Title" value={e.role} onChange={(ev) => patchRole(i, { role: ev.target.value })} />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8 }}>
-                      <BktInput label="Organization" value={e.org} onChange={(ev) => patchRole(i, { org: ev.target.value })} />
-                      <BktInput label="When" value={e.when} onChange={(ev) => patchRole(i, { when: ev.target.value })} />
-                    </div>
-                    <DBArea
-                      label="Bullets (one per line)"
-                      rows={3}
-                      value={e.bullets.join('\n')}
-                      onChange={(v) => patchRole(i, { bullets: v.split('\n') })}
-                    />
-                  </div>
-                ))}
-                <DBAddButton label="Add role" onClick={addRole} />
-              </DBGroup>
-              <DBGroup icon="graduation-cap" label="Education">
-                {rc.education.map((e, i) => (
-                  <div
-                    key={i}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < rc.education.length - 1 ? '1px dashed var(--border)' : 'none' }}
-                  >
-                    <DBItemHeader label={`Entry ${i + 1}`} onRemove={() => removeEducation(i)} />
-                    <BktInput label="Degree" value={e.degree} onChange={(ev) => patchEducation(i, { degree: ev.target.value })} />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8 }}>
-                      <BktInput label="Institution" value={e.org} onChange={(ev) => patchEducation(i, { org: ev.target.value })} />
-                      <BktInput label="Year" value={e.when} onChange={(ev) => patchEducation(i, { when: ev.target.value })} />
-                    </div>
-                  </div>
-                ))}
-                <DBAddButton label="Add education" onClick={addEducation} />
-              </DBGroup>
-              <DBGroup icon="list-checks" label="Skills">
-                <DBArea
-                  label="One per line"
-                  rows={4}
-                  value={rc.skills.join('\n')}
-                  onChange={(v) =>
-                    set({
-                      skills: v
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
-              </DBGroup>
-              <DBGroup icon="award" label="Certifications">
-                <DBArea
-                  label="One per line"
-                  rows={3}
-                  value={rc.certifications.join('\n')}
-                  onChange={(v) =>
-                    set({
-                      certifications: v
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
-              </DBGroup>
+              {/* Reorderable content sections (Summary stays locked above). */}
+              {sectionOrder.map(renderSectionEditor)}
               <DBGroup icon="sliders-horizontal" label="Section formatting">
                 <span style={{ font: '400 var(--text-xs)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
                   Show each section as bullet points or inline text.
@@ -590,25 +647,13 @@ export function DocBuilder({ type, docs, item, initialContent, autoAlign = false
                 <DBToggle label="Education bullets" checked={config.sectionBullets.education} onChange={() => toggleBullets('education')} />
                 <DBToggle label="Certifications bullets" checked={config.sectionBullets.certifications} onChange={() => toggleBullets('certifications')} />
               </DBGroup>
-              <DBGroup icon="layout-list" label={`Custom sections (${config.customSections.length}/${MAX_CUSTOM_SECTIONS})`}>
-                {config.customSections.map((s, i) => (
-                  <div
-                    key={s.id}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 10, borderBottom: i < config.customSections.length - 1 ? '1px dashed var(--border)' : 'none' }}
-                  >
-                    <DBItemHeader label={`Section ${i + 1}`} onRemove={() => removeCustomSection(s.id)} />
-                    <BktInput label="Title" value={s.title} onChange={(ev) => patchCustomSection(s.id, { title: ev.target.value })} />
-                    <DBFormatPicker value={s.format} onChange={(f) => patchCustomSection(s.id, { format: f })} />
-                    <DBArea
-                      label={s.format === 'table' ? 'One row per line · cells separated by |' : s.format === 'text' ? 'Paragraph text' : 'One item per line'}
-                      rows={s.format === 'text' ? 4 : 3}
-                      value={s.body}
-                      onChange={(v) => patchCustomSection(s.id, { body: v })}
-                    />
-                  </div>
-                ))}
-                <DBAddButton label="Add custom section" onClick={addCustomSection} disabled={config.customSections.length >= MAX_CUSTOM_SECTIONS} />
-              </DBGroup>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 4px', borderBottom: '1px solid var(--border)' }}>
+                <Icon name="layout-list" size={15} color="var(--primary)" />
+                <span style={{ flex: 1, font: '600 var(--text-sm)/1 var(--font-body)', color: 'var(--text-strong)' }}>
+                  Custom sections {config.customSections.length}/{MAX_CUSTOM_SECTIONS}
+                </span>
+                <DBAddButton label="Add" onClick={addCustomSection} disabled={config.customSections.length >= MAX_CUSTOM_SECTIONS} />
+              </div>
             </>
           ) : (
             <>

@@ -9,7 +9,7 @@ import { BktButton } from '@/components/bkt/BktButton'
 import type { ToastFn } from '@/components/bkt/toast'
 import type { BuilderConfig, DocItem, LetterContent, PaperTemplate, ResumeContent } from '../types'
 import { getSignedUrl } from '../../applications/services/documentStorageService'
-import { customSectionItems, customSectionRows, defaultBuilderConfig } from '../services/builderConfig'
+import { customSectionItems, customSectionRows, defaultBuilderConfig, effectiveSectionOrder } from '../services/builderConfig'
 
 export type DocType = 'resume' | 'letter'
 export type DocContent = ResumeContent | LetterContent
@@ -102,85 +102,89 @@ export function DocPaper({
   }
 
   const c = content as ResumeContent
-  return (
-    <div style={{ ...base, ...style }} data-screen-label="Resume paper">
-      <div style={{ textAlign: t.centerName ? 'center' : 'left', marginBottom: 18 }}>
-        <div style={{ fontFamily: t.headFont, fontWeight: 700, fontSize: px(fs) * 1.9, letterSpacing: '0.01em', color: t.accent }}>{c.name}</div>
-        <div style={{ fontWeight: 600, fontSize: px(fs) * 1.05, marginTop: 2 }}>{c.headline}</div>
-        <div style={{ fontSize: px(fs) * 0.86, color: '#52525b', marginTop: 4 }}>{c.contact}</div>
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <PaperHead t={t} size={px(fs)}>
-          Summary
-        </PaperHead>
-        <p style={{ margin: 0 }}>{c.summary}</p>
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <PaperHead t={t} size={px(fs)}>
-          Experience
-        </PaperHead>
-        {c.experience.map((e, i) => (
-          <div key={i} style={{ marginBottom: i === c.experience.length - 1 ? 0 : 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontWeight: 700 }}>
-              <span>
-                {e.role}
-                {e.org ? <span style={{ fontWeight: 400 }}> · {e.org}</span> : null}
-              </span>
-              <span style={{ fontWeight: 400, color: '#52525b', whiteSpace: 'nowrap' }}>{e.when}</span>
-            </div>
-            {sb.experience ? (
-              <ul style={{ margin: '4px 0 0', paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
-                {e.bullets.filter(Boolean).map((b, j) => (
-                  <li key={j} style={{ marginBottom: 2 }}>
-                    {b}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div style={{ marginTop: 4 }}>
-                {e.bullets.filter(Boolean).map((b, j) => (
-                  <p key={j} style={{ margin: '0 0 3px' }}>
-                    {b}
-                  </p>
-                ))}
+  const bulletUl: CSSProperties = { margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }
+
+  // Renders one resume content section by key (standard or custom id). Returns
+  // null for empty sections so reordering never leaves dangling headings.
+  const renderSection = (key: string): ReactNode => {
+    if (key === 'experience') {
+      if (!c.experience.length) return null
+      return (
+        <div key="experience" style={{ marginBottom: 16 }}>
+          <PaperHead t={t} size={px(fs)}>
+            Experience
+          </PaperHead>
+          {c.experience.map((e, i) => (
+            <div key={i} style={{ marginBottom: i === c.experience.length - 1 ? 0 : 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontWeight: 700 }}>
+                <span>
+                  {e.role}
+                  {e.org ? <span style={{ fontWeight: 400 }}> · {e.org}</span> : null}
+                </span>
+                <span style={{ fontWeight: 400, color: '#52525b', whiteSpace: 'nowrap' }}>{e.when}</span>
               </div>
-            )}
-          </div>
-        ))}
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <PaperHead t={t} size={px(fs)}>
-          Education
-        </PaperHead>
-        {sb.education ? (
-          <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
-            {c.education.map((e, i) => (
-              <li key={i} style={{ marginBottom: 2 }}>
-                <strong>{e.degree}</strong>
-                {e.org ? ` · ${e.org}` : ''}
-                {e.when ? ` (${e.when})` : ''}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          c.education.map((e, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <span>
-                <strong>{e.degree}</strong>
-                {e.org ? <span> · {e.org}</span> : null}
-              </span>
-              <span style={{ color: '#52525b' }}>{e.when}</span>
+              {sb.experience ? (
+                <ul style={{ ...bulletUl, margin: '4px 0 0' }}>
+                  {e.bullets.filter(Boolean).map((b, j) => (
+                    <li key={j} style={{ marginBottom: 2 }}>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div style={{ marginTop: 4 }}>
+                  {e.bullets.filter(Boolean).map((b, j) => (
+                    <p key={j} style={{ margin: '0 0 3px' }}>
+                      {b}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
-          ))
-        )}
-      </div>
-      {c.certifications.filter(Boolean).length > 0 && (
-        <div style={{ marginBottom: 16 }}>
+          ))}
+        </div>
+      )
+    }
+    if (key === 'education') {
+      if (!c.education.length) return null
+      return (
+        <div key="education" style={{ marginBottom: 16 }}>
+          <PaperHead t={t} size={px(fs)}>
+            Education
+          </PaperHead>
+          {sb.education ? (
+            <ul style={bulletUl}>
+              {c.education.map((e, i) => (
+                <li key={i} style={{ marginBottom: 2 }}>
+                  <strong>{e.degree}</strong>
+                  {e.org ? ` · ${e.org}` : ''}
+                  {e.when ? ` (${e.when})` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            c.education.map((e, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <span>
+                  <strong>{e.degree}</strong>
+                  {e.org ? <span> · {e.org}</span> : null}
+                </span>
+                <span style={{ color: '#52525b' }}>{e.when}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )
+    }
+    if (key === 'certifications') {
+      if (!c.certifications.filter(Boolean).length) return null
+      return (
+        <div key="certifications" style={{ marginBottom: 16 }}>
           <PaperHead t={t} size={px(fs)}>
             Certifications
           </PaperHead>
           {sb.certifications ? (
-            <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
+            <ul style={bulletUl}>
               {c.certifications.filter(Boolean).map((cert, i) => (
                 <li key={i} style={{ marginBottom: 2 }}>
                   {cert}
@@ -191,57 +195,81 @@ export function DocPaper({
             <div>{c.certifications.filter(Boolean).join('  ·  ')}</div>
           )}
         </div>
-      )}
-      <div style={{ marginBottom: cfg.customSections.length ? 16 : 0 }}>
+      )
+    }
+    if (key === 'skills') {
+      if (!c.skills.length) return null
+      return (
+        <div key="skills" style={{ marginBottom: 16 }}>
+          <PaperHead t={t} size={px(fs)}>
+            Skills
+          </PaperHead>
+          {sb.skills ? (
+            <ul style={bulletUl}>
+              {c.skills.filter(Boolean).map((s, i) => (
+                <li key={i} style={{ marginBottom: 2 }}>
+                  {s}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div>{c.skills.join('  ·  ')}</div>
+          )}
+        </div>
+      )
+    }
+    // Custom section (keyed by id).
+    const s = cfg.customSections.find((x) => x.id === key)
+    if (!s || !(s.title.trim() || s.body.trim())) return null
+    return (
+      <div key={s.id} style={{ marginBottom: 16 }}>
         <PaperHead t={t} size={px(fs)}>
-          Skills
+          {s.title.trim() || 'Section'}
         </PaperHead>
-        {sb.skills ? (
-          <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
-            {c.skills.filter(Boolean).map((s, i) => (
+        {s.format === 'table' ? (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              {customSectionRows(s.body).map((row, ri) => (
+                <tr key={ri}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} style={{ border: '1px solid #d4d4d8', padding: '3px 8px', verticalAlign: 'top' }}>
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : s.format === 'text' ? (
+          <div style={{ whiteSpace: 'pre-wrap' }}>{s.body}</div>
+        ) : (
+          <ul style={bulletUl}>
+            {customSectionItems(s.body).map((it, i) => (
               <li key={i} style={{ marginBottom: 2 }}>
-                {s}
+                {it}
               </li>
             ))}
           </ul>
-        ) : (
-          <div>{c.skills.join('  ·  ')}</div>
         )}
       </div>
-      {cfg.customSections
-        .filter((s) => s.title.trim() || s.body.trim())
-        .map((s, idx, arr) => (
-          <div key={s.id} style={{ marginBottom: idx === arr.length - 1 ? 0 : 16 }}>
-            <PaperHead t={t} size={px(fs)}>
-              {s.title.trim() || 'Section'}
-            </PaperHead>
-            {s.format === 'table' ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <tbody>
-                  {customSectionRows(s.body).map((row, ri) => (
-                    <tr key={ri}>
-                      {row.map((cell, ci) => (
-                        <td key={ci} style={{ border: '1px solid #d4d4d8', padding: '3px 8px', verticalAlign: 'top' }}>
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : s.format === 'text' ? (
-              <div style={{ whiteSpace: 'pre-wrap' }}>{s.body}</div>
-            ) : (
-              <ul style={{ margin: 0, paddingLeft: 18, listStyleType: 'disc', listStylePosition: 'outside' }}>
-                {customSectionItems(s.body).map((it, i) => (
-                  <li key={i} style={{ marginBottom: 2 }}>
-                    {it}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
+    )
+  }
+
+  return (
+    <div style={{ ...base, ...style }} data-screen-label="Resume paper">
+      <div style={{ textAlign: t.centerName ? 'center' : 'left', marginBottom: 18 }}>
+        <div style={{ fontFamily: t.headFont, fontWeight: 700, fontSize: px(fs) * 1.9, letterSpacing: '0.01em', color: t.accent }}>{c.name}</div>
+        <div style={{ fontWeight: 600, fontSize: px(fs) * 1.05, marginTop: 2 }}>{c.headline}</div>
+        <div style={{ fontSize: px(fs) * 0.86, color: '#52525b', marginTop: 4 }}>{c.contact}</div>
+      </div>
+      {/* Summary is always first and is not reorderable. */}
+      <div style={{ marginBottom: 16 }}>
+        <PaperHead t={t} size={px(fs)}>
+          Summary
+        </PaperHead>
+        <p style={{ margin: 0 }}>{c.summary}</p>
+      </div>
+      {effectiveSectionOrder(cfg).map(renderSection)}
     </div>
   )
 }

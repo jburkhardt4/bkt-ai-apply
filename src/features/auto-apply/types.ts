@@ -211,6 +211,10 @@ export interface CustomSection {
 export interface BuilderConfig {
   sectionBullets: Record<SectionBulletKey, boolean>
   customSections: CustomSection[]
+  /** Drag-to-reorder order of the resume's content sections — standard keys
+   *  ('experience'|'education'|'skills'|'certifications') interleaved with custom
+   *  section ids. Summary is always first and is not included here. */
+  sectionOrder: string[]
 }
 
 export interface LetterContent {

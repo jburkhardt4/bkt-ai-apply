@@ -1,11 +1,11 @@
 -- ============================================================
 -- Migration: 20260622000005_corpus_projector
--- Feature:   Phase 5 — project the shared corpus into per-user jobs (ADR-014 #5)
+-- Feature:   Phase 5 — project the shared corpus into per-user jobs (ADR-019 #5)
 -- RPCs (service-role only):
 --   * project_corpus_for_profile(profile_id, limit) -> int
 --   * project_corpus_all(limit_per_profile)          -> jsonb
 --
--- Reads the SHARED job_postings corpus (ADR-014) and inserts the best FTS matches
+-- Reads the SHARED job_postings corpus (ADR-019) and inserts the best FTS matches
 -- for a prospecting_profile into that profile owner's USER-SCOPED jobs table with
 -- source='corpus'. The user-scoped jobs table and its RLS are UNTOUCHED; these run
 -- as service role and set user_id = profile.user_id, satisfying the jobs RLS
@@ -104,7 +104,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.project_corpus_for_profile(uuid, integer) IS
-  'ADR-014 #5: service-role-only. Projects the best FTS matches from the shared job_postings corpus into the profile owner''s user-scoped jobs (source=corpus, dedup on source_url). Returns count inserted.';
+  'ADR-019 #5: service-role-only. Projects the best FTS matches from the shared job_postings corpus into the profile owner''s user-scoped jobs (source=corpus, dedup on source_url). Returns count inserted.';
 
 REVOKE EXECUTE ON FUNCTION public.project_corpus_for_profile(uuid, integer) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.project_corpus_for_profile(uuid, integer) TO service_role;
@@ -131,7 +131,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.project_corpus_all(integer) IS
-  'ADR-014 #5: service-role-only. Runs project_corpus_for_profile for every active prospecting_profile. Returns per-profile insert counts.';
+  'ADR-019 #5: service-role-only. Runs project_corpus_for_profile for every active prospecting_profile. Returns per-profile insert counts.';
 
 REVOKE EXECUTE ON FUNCTION public.project_corpus_all(integer) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.project_corpus_all(integer) TO service_role;

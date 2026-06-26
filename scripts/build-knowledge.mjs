@@ -25,16 +25,29 @@ function hubSha() {
   try { return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: HUB }).toString().trim() } catch { return 'unknown' }
 }
 
-// tiny frontmatter parser (no deps)
+// tiny frontmatter parser (no deps). Handles inline scalars, [..] arrays, and
+// YAML block scalars (>, >-, |, |- ...) whose value spans indented lines.
 function frontmatter(text) {
   const m = text.match(/^---\n([\s\S]*?)\n---/)
   if (!m) return {}
   const fm = {}
-  for (const line of m[1].split('\n')) {
-    const mm = line.match(/^([a-zA-Z_]+):\s*(.*)$/)
+  const lines = m[1].split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const mm = lines[i].match(/^([a-zA-Z_]+):\s*(.*)$/)
     if (!mm) continue
     let v = mm[2].trim()
-    if (v.startsWith('[') && v.endsWith(']')) v = v.slice(1, -1).split(',').map((s) => s.trim()).filter(Boolean)
+    const block = v.match(/^([|>])[-+]?$/)
+    if (block) {
+      // gather following blank/more-indented lines as the scalar's body
+      const body = []
+      while (i + 1 < lines.length && (lines[i + 1].trim() === '' || /^\s/.test(lines[i + 1]))) {
+        body.push(lines[++i].replace(/^\s+/, ''))
+      }
+      // folded (>) joins with spaces; literal (|) preserves newlines
+      v = body.join(block[1] === '>' ? ' ' : '\n').trim()
+    } else if (v.startsWith('[') && v.endsWith(']')) {
+      v = v.slice(1, -1).split(',').map((s) => s.trim()).filter(Boolean)
+    }
     fm[mm[1]] = v
   }
   return fm

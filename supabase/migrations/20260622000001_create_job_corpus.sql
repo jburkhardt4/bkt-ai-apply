@@ -1,9 +1,9 @@
 -- ============================================================
 -- Migration: 20260622000001_create_job_corpus
--- Feature:   Shared ATS job-posting search & indexing engine (ADR-014, ADR-015)
+-- Feature:   Shared ATS job-posting search & indexing engine (ADR-019, ADR-015)
 -- Tables:    ats_boards, job_posting_snapshots, job_postings
 --
--- SHARED, NOT user-scoped corpus of PUBLIC job postings (ADR-014). These tables
+-- SHARED, NOT user-scoped corpus of PUBLIC job postings (ADR-019). These tables
 -- carry NO user_id and NO PII — they hold only data already published on public
 -- ATS boards. RLS stays ENABLED on every table; the posture is:
 --   * SELECT  → TO authenticated USING (true)   (read the whole corpus)
@@ -11,7 +11,7 @@
 --                                                 service_role bypasses RLS, the
 --                                                 same boundary the submission
 --                                                 worker / prep cron already use)
--- HARD INVARIANT (ADR-014 Decision 4): never add a user_id / PII column here.
+-- HARD INVARIANT (ADR-019 Decision 4): never add a user_id / PII column here.
 -- Per-user concerns live in the existing user-scoped tables; the service-role
 -- projector copies matches into the user-scoped `jobs` table (left UNCHANGED).
 --

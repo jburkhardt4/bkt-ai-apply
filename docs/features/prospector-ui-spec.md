@@ -106,6 +106,7 @@ On mobile (below `md` breakpoint), the page is a single scrollable column. All t
 ### 4.2 `ProspectorDashboard` (src/features/jobs/ProspectorDashboard.tsx)
 
 Container component. Owns the page-level layout. Responsibilities:
+
 - Fetches `prospecting_profiles` row for `auth.uid()` via `src/lib/supabase.ts`
 - Fetches `prospecting_runs` most-recent row for `last_run_at`
 - Passes data to child components as props
@@ -114,6 +115,7 @@ Container component. Owns the page-level layout. Responsibilities:
 ### 4.3 `ProspectorProfileForm` (src/features/jobs/components/ProspectorProfileForm.tsx)
 
 Presentational form component. Props:
+
 ```typescript
 interface ProspectorProfileFormProps {
   profile: ProspectingProfile | null    // null = no profile yet
@@ -127,6 +129,7 @@ Contains all search parameter inputs (see §5 for input specifications).
 ### 4.4 `ProspectorToggle` (src/features/jobs/components/ProspectorToggle.tsx)
 
 Presentational toggle. Props:
+
 ```typescript
 interface ProspectorToggleProps {
   isActive: boolean
@@ -140,6 +143,7 @@ Renders a labeled `Switch` (from `@/components/ui/switch`) with text "Automated 
 ### 4.5 `ProspectorRunStatus` (src/features/jobs/components/ProspectorRunStatus.tsx)
 
 Presentational run status card. Props:
+
 ```typescript
 interface ProspectorRunStatusProps {
   lastRunAt: string | null     // ISO timestamptz
@@ -154,6 +158,7 @@ Displays formatted dates (locale-aware). "Run Now" button is always available re
 ### 4.6 `ProspectorReadyQueue` (src/features/jobs/components/ProspectorReadyQueue.tsx)
 
 Presentational list of matched jobs. Props:
+
 ```typescript
 interface ProspectorReadyQueueProps {
   jobs: ProspectorJobMatch[]   // match_score >= 60, source = 'prospector'
@@ -176,30 +181,35 @@ Each row shows: job title, company name, score badge, and a navigate-to-applicat
 ## 5. Input Specifications
 
 ### Job Title
+
 - Input type: `<input type="text">`
 - Placeholder: "e.g. Product Manager"
 - Required. Shows inline validation error if empty on save attempt.
 - Max length: 200 characters.
 
 ### Location
+
 - Input type: `<input type="text">`
 - Placeholder: "e.g. San Francisco, CA or Remote"
 - Optional.
 - Max length: 200 characters.
 
 ### Job Type
+
 - Input type: `<select>` (shadcn/ui `Select` component)
 - Options: `Full-time`, `Contract`, `Part-time`
 - Maps to DB values: `full-time`, `contract`, `part-time`
 - Required. Default: `Full-time`.
 
 ### Environment
+
 - Input type: `<select>` (shadcn/ui `Select` component)
 - Options: `Remote`, `Hybrid`, `In-office`
 - Maps to DB values: `remote`, `hybrid`, `in-office`
 - Required. Default: `Remote`.
 
 ### Salary Range
+
 - Two `<input type="number">` fields: Min and Max.
 - Optional. When both are populated, validate `salary_min <= salary_max` client-side.
 - Inline error: "Minimum salary must be less than or equal to maximum salary."
@@ -207,6 +217,7 @@ Each row shows: job title, company name, score badge, and a navigate-to-applicat
 - Min value: 0.
 
 ### Skills / Keywords
+
 - Multi-tag input component.
 - Pattern: text input with Enter/comma to commit a tag; X button to remove.
 - Max 20 tags (BR-105 / AC-016-03). When 20 tags are present, input is disabled with tooltip: "Maximum 20 skills reached."
@@ -250,22 +261,27 @@ All DB reads go through `src/lib/supabase.ts`. No data fetching inside presentat
 All classes use Tailwind v4 design tokens. No arbitrary values are used (per CLAUDE.md non-negotiable for Tailwind v4).
 
 ### Section Cards
-```
+
+```text
 rounded-xl border border-border bg-card p-6 shadow-sm
 ```
 
 ### Page Header
-```
+
+```text
 flex items-center justify-between mb-6
 ```
 
 ### Page Title
-```
+
+```text
 text-2xl font-semibold tracking-tight text-foreground
 ```
+
 with `font-family: var(--font-display)` inline style (matching existing AppShell pattern).
 
 ### Score Badge (Ready to Apply queue)
+
 - score >= 80: `bg-green-500/15 text-green-700 dark:text-green-400`
 - score 60–79: `bg-amber-500/15 text-amber-700 dark:text-amber-400`
 - score < 60: never shown in this queue (filtered by BR-105)
@@ -273,21 +289,25 @@ with `font-family: var(--font-display)` inline style (matching existing AppShell
 Badge class base: `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold`
 
 ### Form Labels
-```
+
+```text
 text-sm font-medium text-foreground mb-1.5 block
 ```
 
 ### Save Button
-```
+
+```text
 variant="default" — maps to bg-primary text-primary-foreground
 ```
 
 ### Run Now Button
-```
+
+```text
 variant="outline" size="sm"
 ```
 
 ### Enable Toggle label states
+
 - Active: `text-sm font-medium text-foreground`
 - Inactive: `text-sm font-medium text-muted-foreground`
 
@@ -309,19 +329,25 @@ The `ProspectorReadyQueue` job list uses a stacked card layout on mobile (full-w
 ## 9. Empty States
 
 ### No Profile Configured
+
 When `profile === null`, the `ProspectorProfileForm` renders with empty/default field values and a helper text: "Set up your search profile to start discovering jobs automatically."
 
 ### No Queue Results
+
 When `queuedJobs.length === 0` and the profile has run at least once, render:
-```
+
+```text
 No matches yet. Your next run is scheduled for [nextRunAt].
 ```
+
 When `queuedJobs.length === 0` and no run has occurred:
-```
+
+```text
 Your prospector hasn't run yet. Save your profile and enable automated search to get started.
 ```
 
 ### Profile Never Saved
+
 The Save button is labeled "Save Profile" on first save and "Update Profile" on subsequent saves (determined by whether `profile` is null).
 
 ---

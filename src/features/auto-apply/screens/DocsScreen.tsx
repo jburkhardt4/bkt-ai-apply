@@ -17,29 +17,22 @@ import type { AiTargetJob } from './DocAssistant'
 import { transcribeLetter, transcribeResume } from '../services/docContentParser'
 import { extractResumeText } from '../services/resumeFileExtractor'
 import type { ResumeFileKind } from '../services/resumeFileExtractor'
-import { saveUploadedResumeText } from '../../applications/services/candidateProfileService'
 import {
-  createDocumentVersion,
   deleteDocument,
   listDocuments,
+  uploadDocumentFile,
 } from '../../applications/services/documentStorageService'
 import type { LoadedDocument } from '../../applications/services/documentStorageService'
 
-/** Result of reading an uploaded file: the real byte size plus either the
- *  extracted text (with its detected kind) or a user-facing error message. */
+/** Result of reading an uploaded file: the original File (stored verbatim) plus
+ *  the extracted text (with its detected kind) or a user-facing error message. */
 interface UploadResult {
+  file: File
   name: string
   size: number
   text: string
   kind: ResumeFileKind | null
   error?: string
-}
-
-/** Friendly label for a successfully extracted file kind. */
-const KIND_LABEL: Record<ResumeFileKind, string> = {
-  pdf: 'PDF',
-  docx: 'Word document',
-  text: 'resume',
 }
 
 const DOC_COPY: Record<DocType, { title: string; newLabel: string; desc: string; drop: string; hint: string }> = {
@@ -78,8 +71,9 @@ function UploadZone({ copy, onUploaded }: { copy: (typeof DOC_COPY)['resume']; o
     const t0 = performance.now()
     const [extraction] = await Promise.all([
       extractResumeText(file).then(
-        (r): UploadResult => ({ name: file.name, size: file.size, text: r.text, kind: r.kind }),
+        (r): UploadResult => ({ file, name: file.name, size: file.size, text: r.text, kind: r.kind }),
         (e: unknown): UploadResult => ({
+          file,
           name: file.name,
           size: file.size,
           text: '',
@@ -326,22 +320,25 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
   const [builder, setBuilder] = useState<{ item: DocItem | null; autoAlign?: boolean; content?: DocContent } | null>(null)
   const [paste, setPaste] = useState<{ open: boolean; text: string }>({ open: false, text: '' })
 
-  /** Maps a real stored document to a history row. Display name = first non-empty
-   *  line of the stored text (the person's name / heading), else a version label. */
+  /** Maps a real stored document to a history row. Display name = the actual
+   *  uploaded filename; falls back to the first text line / a version label. */
   const toItem = (d: LoadedDocument): DocItem => {
     const firstLine = d.text.split('\n').map((l) => l.replace(/^#+\s*/, '').trim()).find(Boolean) ?? ''
     return {
       id: d.documentId,
-      name: firstLine || `${type === 'resume' ? 'Resume' : 'Cover letter'} v${d.version}`,
+      name: d.fileName || firstLine || `${type === 'resume' ? 'Resume' : 'Cover letter'} v${d.version}`,
       kind: 'Base',
       updated: d.createdAt,
       size: formatBytes(d.text.length),
       template: 'classic',
-      note: `Version ${d.version}`,
+      note: d.fileName ? 'Uploaded file' : `Version ${d.version}`,
       rawText: d.text,
       documentId: d.documentId,
       storagePath: d.storagePath,
       version: d.version,
+      fileName: d.fileName ?? undefined,
+      mimeType: d.mimeType ?? undefined,
+      originalPath: d.originalPath ?? undefined,
     }
   }
 
@@ -376,28 +373,19 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
     setBuilder({ item, content, autoAlign })
   }
 
-  // Upload STORES the real document (persisted to `documents`, which also feeds
-  // job-scoring) and refreshes the list — it never auto-parses into the builder.
+  // Upload STORES THE ACTUAL FILE (original binary + extracted text) to the
+  // `documents` table and refreshes the list — the file is viewable as-is and its
+  // text feeds job-scoring. It never auto-parses into the builder.
   const upload = (result: UploadResult) => {
-    if (!result.text) {
-      onToast(result.error ?? `Couldn't read text from ${result.name} — paste your text below`, 'circle-alert', 'var(--bkt-blue-300)')
-      return
-    }
     if (!userId) {
       onToast('Sign in to save uploaded documents', 'circle-alert', 'var(--bkt-warning)')
       return
     }
-    const label = result.kind ? KIND_LABEL[result.kind] : type === 'resume' ? 'resume' : 'document'
-    const persist =
-      type === 'resume'
-        ? saveUploadedResumeText(userId, result.text).then((ok) => {
-            if (!ok) throw new Error('save failed')
-          })
-        : createDocumentVersion({ userId, documentType: 'cover_letter', content: result.text }).then(() => {})
-    persist
+    uploadDocumentFile({ userId, documentType: docType, file: result.file, extractedText: result.text })
       .then(() => {
         reload()
-        onToast(`Uploaded your ${label} — open it to preview or edit`, 'circle-check', 'var(--bkt-success)')
+        const note = result.text ? 'open it to preview or edit' : 'preview it (text could not be extracted)'
+        onToast(`Uploaded ${result.name} — ${note}`, 'circle-check', 'var(--bkt-success)')
       })
       .catch(() => onToast(`Couldn't save ${result.name}`, 'circle-x', 'var(--bkt-danger)'))
   }
@@ -416,7 +404,12 @@ export function DocsHome({ type, docs, userId, lastJob, dateOrder = 'mdy', aiVar
 
   const del = (item: DocItem) => {
     if (userId && item.documentId && item.storagePath) {
-      deleteDocument({ userId, documentId: item.documentId, storagePath: item.storagePath })
+      deleteDocument({
+        userId,
+        documentId: item.documentId,
+        storagePath: item.storagePath,
+        originalPath: item.originalPath,
+      })
         .then(() => {
           reload()
           onToast(`Deleted ${item.name}`, 'trash-2', 'var(--bkt-zinc-300)')

@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '../../../lib/supabase'
-import type { Database } from '../../../types/db.types'
+import type { Database, Json } from '../../../types/db.types'
 
 export type StoredDocumentType = 'resume' | 'cover_letter'
 
@@ -155,6 +155,12 @@ export interface LoadedDocument {
   createdAt: string
   isLocked: boolean
   text: string
+  /** Original uploaded filename, e.g. "John Burkhardt - Resume - 6.2026.pdf". */
+  fileName: string | null
+  mimeType: string | null
+  /** Storage path of the ACTUAL uploaded file (binary) for the real viewer. */
+  originalPath: string | null
+  builderConfig: Json | null
 }
 
 /** Downloads a documents-bucket object as text, or null on any failure. */
@@ -183,9 +189,12 @@ export async function listDocuments(
   const supabase = getSupabaseClient()
   const { data, error } = await supabase
     .from('documents')
-    .select('id, document_type, version, storage_path, created_at, is_locked')
+    .select('id, document_type, version, storage_path, created_at, is_locked, file_name, mime_type, original_path, builder_config')
     .eq('user_id', userId)
     .eq('document_type', documentType)
+    // Locked rows are submission artifacts (linked to an application) — not part
+    // of the editable resume library, so they never appear here.
+    .eq('is_locked', false)
     .order('version', { ascending: false })
     .limit(limit)
 
@@ -202,6 +211,10 @@ export async function listDocuments(
       createdAt: row.created_at,
       isLocked: row.is_locked,
       text,
+      fileName: row.file_name,
+      mimeType: row.mime_type,
+      originalPath: row.original_path,
+      builderConfig: row.builder_config,
     })
   }
   return out
@@ -239,14 +252,18 @@ export async function updateDocumentContent(input: {
   return { contentHash }
 }
 
-/** Deletes a document (storage object + row), RLS-scoped to the caller. */
+/** Deletes a document (both storage objects + row), RLS-scoped to the caller. */
 export async function deleteDocument(input: {
   userId: string
   documentId: string
   storagePath: string
+  originalPath?: string | null
 }): Promise<void> {
   const supabase = getSupabaseClient()
-  await supabase.storage.from(DOCUMENTS_BUCKET).remove([input.storagePath])
+  const paths = [input.storagePath, input.originalPath].filter(
+    (p): p is string => typeof p === 'string' && p.length > 0,
+  )
+  await supabase.storage.from(DOCUMENTS_BUCKET).remove(paths)
   const { error } = await supabase
     .from('documents')
     .delete()
@@ -255,6 +272,100 @@ export async function deleteDocument(input: {
   if (error) {
     throw new Error(`Failed to delete document: ${error.message}`)
   }
+}
+
+/** A short-lived signed URL for viewing/downloading a private documents object. */
+export async function getSignedUrl(path: string, expiresInSeconds = 3600): Promise<string | null> {
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .createSignedUrl(path, expiresInSeconds)
+    if (error || !data) return null
+    return data.signedUrl
+  } catch {
+    return null
+  }
+}
+
+function fileExtension(name: string): string {
+  const dot = name.lastIndexOf('.')
+  const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, '') : ''
+  return ext || 'bin'
+}
+
+export interface UploadDocumentFileInput {
+  userId: string
+  documentType: StoredDocumentType
+  /** The original uploaded file (binary kept as-is for the real viewer). */
+  file: File
+  /** Text extracted client-side (resumeFileExtractor) — the scoring/builder source. */
+  extractedText: string
+}
+
+/**
+ * Stores an uploaded document as the user's REAL file: the original binary (for
+ * the in-app viewer/download) PLUS its extracted text as a `.txt` (so job-scoring
+ * and the builder are unchanged). One `documents` row carries `file_name`,
+ * `mime_type`, `original_path` (binary) and `storage_path` (.txt). RLS-scoped.
+ */
+export async function uploadDocumentFile(input: UploadDocumentFileInput): Promise<StoredDocumentVersion> {
+  const supabase = getSupabaseClient()
+  const text = input.extractedText ?? ''
+  const contentHash = await sha256(text || input.file.name)
+  const ext = fileExtension(input.file.name)
+
+  for (let attempt = 0; attempt < VERSION_RETRY_LIMIT; attempt += 1) {
+    const version = (await fetchLatestVersion(input.userId, input.documentType)) + 1
+    const stamp = Date.now().toString(36)
+    const hash12 = contentHash.slice(0, 12)
+    const textPath = `${input.userId}/${input.documentType}/v${version}-${hash12}-${stamp}.txt`
+    const originalPath = `${input.userId}/files/v${version}-${hash12}-${stamp}.${ext}`
+
+    const original = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .upload(originalPath, input.file, {
+        upsert: false,
+        contentType: input.file.type || 'application/octet-stream',
+      })
+    if (original.error) {
+      throw new Error(`Failed to upload original file: ${original.error.message}`)
+    }
+
+    const textUpload = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .upload(textPath, text, { upsert: false, contentType: 'text/plain' })
+    if (textUpload.error) {
+      await cleanupStoragePath(originalPath)
+      throw new Error(`Failed to upload document text: ${textUpload.error.message}`)
+    }
+
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
+        user_id: input.userId,
+        storage_path: textPath,
+        document_type: input.documentType,
+        version,
+        content_hash: contentHash,
+        file_name: input.file.name,
+        mime_type: input.file.type || null,
+        original_path: originalPath,
+      })
+      .select('*')
+      .single()
+
+    if (!error) {
+      return toStoredDocumentVersion(data, text)
+    }
+
+    await cleanupStoragePath(originalPath)
+    await cleanupStoragePath(textPath)
+    if (isUniqueViolation(error)) continue
+    throw new Error(`Failed to create document row: ${error.message}`)
+  }
+
+  throw new Error('Failed to upload document after retries.')
 }
 
 export async function linkDocumentsToApplication(input: LinkDocumentsInput): Promise<void> {

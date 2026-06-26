@@ -742,31 +742,43 @@ export type Database = {
       }
       documents: {
         Row: {
+          builder_config: Json | null
           content_hash: string
           created_at: string
           document_type: string
+          file_name: string | null
           id: string
           is_locked: boolean
+          mime_type: string | null
+          original_path: string | null
           storage_path: string
           user_id: string
           version: number
         }
         Insert: {
+          builder_config?: Json | null
           content_hash: string
           created_at?: string
           document_type: string
+          file_name?: string | null
           id?: string
           is_locked?: boolean
+          mime_type?: string | null
+          original_path?: string | null
           storage_path: string
           user_id: string
           version?: number
         }
         Update: {
+          builder_config?: Json | null
           content_hash?: string
           created_at?: string
           document_type?: string
+          file_name?: string | null
           id?: string
           is_locked?: boolean
+          mime_type?: string | null
+          original_path?: string | null
           storage_path?: string
           user_id?: string
           version?: number

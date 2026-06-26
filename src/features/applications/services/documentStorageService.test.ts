@@ -3,9 +3,11 @@ import { getSupabaseClient } from '../../../lib/supabase'
 import {
   createDocumentVersion,
   deleteDocument,
+  getSignedUrl,
   linkDocumentsToApplication,
   listDocuments,
   updateDocumentContent,
+  uploadDocumentFile,
 } from './documentStorageService'
 
 vi.mock('../../../lib/supabase', () => ({
@@ -124,12 +126,13 @@ describe('documentStorageService', () => {
 
   it('listDocuments returns newest-first documents with their downloaded text', async () => {
     const rows = [
-      { id: 'doc-2', document_type: 'resume', version: 2, storage_path: 'user-1/resume/v2.txt', created_at: '2026-06-02T00:00:00.000Z', is_locked: false },
-      { id: 'doc-1', document_type: 'resume', version: 1, storage_path: 'user-1/resume/v1.txt', created_at: '2026-06-01T00:00:00.000Z', is_locked: false },
+      { id: 'doc-2', document_type: 'resume', version: 2, storage_path: 'user-1/resume/v2.txt', created_at: '2026-06-02T00:00:00.000Z', is_locked: false, file_name: 'resume-b.pdf', mime_type: 'application/pdf', original_path: 'user-1/files/v2.pdf', builder_config: null },
+      { id: 'doc-1', document_type: 'resume', version: 1, storage_path: 'user-1/resume/v1.txt', created_at: '2026-06-01T00:00:00.000Z', is_locked: false, file_name: null, mime_type: null, original_path: null, builder_config: null },
     ]
     const limit = vi.fn().mockResolvedValue({ data: rows, error: null })
     const order = vi.fn(() => ({ limit }))
-    const eqType = vi.fn(() => ({ order }))
+    const eqLocked = vi.fn(() => ({ order }))
+    const eqType = vi.fn(() => ({ eq: eqLocked }))
     const eqUser = vi.fn(() => ({ eq: eqType }))
     const select = vi.fn(() => ({ eq: eqUser }))
     const from = vi.fn(() => ({ select }))
@@ -198,5 +201,107 @@ describe('documentStorageService', () => {
     expect(remove).toHaveBeenCalledWith(['user-1/resume/v2.txt'])
     expect(eqId).toHaveBeenCalledWith('id', 'doc-2')
     expect(eqUser).toHaveBeenCalledWith('user_id', 'user-1')
+  })
+
+  it('deleteDocument removes BOTH the text and the original-file objects when present', async () => {
+    const remove = vi.fn().mockResolvedValue({ error: null })
+    const storageFrom = vi.fn(() => ({ remove }))
+    const eqUser = vi.fn().mockResolvedValue({ error: null })
+    const eqId = vi.fn(() => ({ eq: eqUser }))
+    const del = vi.fn(() => ({ eq: eqId }))
+    const from = vi.fn(() => ({ delete: del }))
+    mockGetSupabaseClient.mockReturnValue({
+      from,
+      storage: { from: storageFrom },
+    } as unknown as ReturnType<typeof getSupabaseClient>)
+
+    await deleteDocument({
+      userId: 'user-1',
+      documentId: 'doc-12',
+      storagePath: 'user-1/resume/v12.txt',
+      originalPath: 'user-1/files/v12.pdf',
+    })
+    expect(remove).toHaveBeenCalledWith(['user-1/resume/v12.txt', 'user-1/files/v12.pdf'])
+  })
+
+  it('uploadDocumentFile stores the original binary + extracted text + a row with file metadata', async () => {
+    const limit = vi.fn().mockResolvedValue({ data: [{ version: 11 }], error: null })
+    const order = vi.fn(() => ({ limit }))
+    const eqType = vi.fn(() => ({ order }))
+    const eqUser = vi.fn(() => ({ eq: eqType }))
+    const selectForVersion = vi.fn(() => ({ eq: eqUser }))
+    const single = vi.fn().mockResolvedValue({
+      data: {
+        id: 'doc-12',
+        user_id: 'user-1',
+        storage_path: 'user-1/resume/v12-abc.txt',
+        document_type: 'resume',
+        version: 12,
+        content_hash: 'h',
+        is_locked: false,
+        created_at: '2026-06-26T00:00:00.000Z',
+      },
+      error: null,
+    })
+    const selectForInsert = vi.fn(() => ({ single }))
+    const insert = vi.fn(() => ({ select: selectForInsert }))
+    const from = vi
+      .fn()
+      .mockImplementationOnce(() => ({ select: selectForVersion }))
+      .mockImplementationOnce(() => ({ insert }))
+    const upload = vi.fn().mockResolvedValue({ error: null })
+    const remove = vi.fn().mockResolvedValue({ error: null })
+    const storageFrom = vi.fn(() => ({ upload, remove }))
+
+    mockGetSupabaseClient.mockReturnValue({
+      from,
+      storage: { from: storageFrom },
+    } as unknown as ReturnType<typeof getSupabaseClient>)
+
+    const file = new File(['%PDF-1.7 binary'], 'John Burkhardt - Resume - 6.2026.pdf', {
+      type: 'application/pdf',
+    })
+    const result = await uploadDocumentFile({
+      userId: 'user-1',
+      documentType: 'resume',
+      file,
+      extractedText: 'John Burkhardt\nSummary…',
+    })
+
+    expect(result.version).toBe(12)
+    expect(upload).toHaveBeenCalledTimes(2) // original binary + extracted .txt
+    expect(upload).toHaveBeenCalledWith(
+      expect.stringMatching(/^user-1\/files\/v12-.*\.pdf$/),
+      file,
+      expect.objectContaining({ contentType: 'application/pdf' }),
+    )
+    expect(upload).toHaveBeenCalledWith(
+      expect.stringMatching(/^user-1\/resume\/v12-.*\.txt$/),
+      expect.any(String),
+      expect.objectContaining({ contentType: 'text/plain' }),
+    )
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document_type: 'resume',
+        version: 12,
+        file_name: 'John Burkhardt - Resume - 6.2026.pdf',
+        mime_type: 'application/pdf',
+        original_path: expect.stringMatching(/^user-1\/files\/v12-.*\.pdf$/),
+      }),
+    )
+  })
+
+  it('getSignedUrl returns a signed URL, or null on error', async () => {
+    const createSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl: 'https://signed/url' }, error: null })
+    mockGetSupabaseClient.mockReturnValue({
+      storage: { from: vi.fn(() => ({ createSignedUrl })) },
+    } as unknown as ReturnType<typeof getSupabaseClient>)
+    expect(await getSignedUrl('user-1/files/v12.pdf')).toBe('https://signed/url')
+    expect(createSignedUrl).toHaveBeenCalledWith('user-1/files/v12.pdf', 3600)
+
+    mockGetSupabaseClient.mockReturnValue({
+      storage: { from: vi.fn(() => ({ createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: { message: 'no' } }) })) },
+    } as unknown as ReturnType<typeof getSupabaseClient>)
+    expect(await getSignedUrl('x')).toBeNull()
   })
 })

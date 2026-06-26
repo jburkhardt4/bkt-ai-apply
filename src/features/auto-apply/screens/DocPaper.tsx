@@ -1,13 +1,14 @@
 // BKT AI-Apply — DocPaper: renders a resume / cover letter as a real
 // paper page (template-aware), plus the full-screen PreviewModal viewer.
 // Ported 1:1 from the design-system UI kit (DocPaper.jsx).
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
 import { BktButton } from '@/components/bkt/BktButton'
 import type { ToastFn } from '@/components/bkt/toast'
 import type { DocItem, LetterContent, PaperTemplate, ResumeContent } from '../types'
+import { getSignedUrl } from '../../applications/services/documentStorageService'
 
 export type DocType = 'resume' | 'letter'
 export type DocContent = ResumeContent | LetterContent
@@ -194,7 +195,36 @@ export function PreviewModal({
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Fetch a short-lived signed URL for the ACTUAL uploaded file (for the PDF
+  // viewer + Download). Keyed by path so we never synchronously reset state in
+  // the effect — a stale URL from a prior item is ignored in render below.
+  const [signed, setSigned] = useState<{ path: string; url: string | null } | null>(null)
+  const originalPath = item?.originalPath ?? null
+  useEffect(() => {
+    let active = true
+    if (originalPath) {
+      getSignedUrl(originalPath)
+        .then((url) => {
+          if (active) setSigned({ path: originalPath, url })
+        })
+        .catch(() => {})
+    }
+    return () => {
+      active = false
+    }
+  }, [originalPath])
+
   if (!item) return null
+
+  const signedUrl = signed && signed.path === originalPath ? signed.url : null
+  const displayName = item.fileName ?? item.name
+  const isPdf = item.mimeType === 'application/pdf' || /\.pdf$/i.test(displayName)
+  const isDocx = (item.mimeType ?? '').includes('wordprocessingml') || /\.docx?$/i.test(displayName)
+  const download = () => {
+    if (signedUrl) window.open(signedUrl, '_blank', 'noopener')
+    else onToast(`Preparing ${displayName}…`, 'download', 'var(--bkt-blue-300)')
+  }
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', flexDirection: 'column' }}>
       <div
@@ -236,9 +266,11 @@ export function PreviewModal({
           {item.note ?? 'Document'}
         </BktBadge>
         <span style={{ width: 1, height: 18, background: 'var(--border)' }}></span>
-        <BktButton variant="ghost" size="sm" iconLeft={<Icon name="download" size={14} />} onClick={() => onToast(`Downloading ${item.name}`, 'download', 'var(--bkt-blue-300)')}>
-          Download
-        </BktButton>
+        {item.originalPath && (
+          <BktButton variant="ghost" size="sm" iconLeft={<Icon name="download" size={14} />} onClick={download}>
+            Download
+          </BktButton>
+        )}
         <BktButton variant="primary" size="sm" iconLeft={<Icon name="pencil" size={13} />} onClick={() => onEdit(item)}>
           {type === 'resume' ? 'Open Resume Builder' : 'Open in Builder'}
         </BktButton>
@@ -247,42 +279,51 @@ export function PreviewModal({
         </BktButton>
       </div>
 
-      {/* paper stage — the TRUE document text, verbatim (not parsed/restyled) */}
+      {/* document stage — the ACTUAL uploaded file: real PDF viewer, else text */}
       <div className="bkt-scroll" style={{ position: 'relative', flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '22px 24px 40px' }}>
-        <div
-          className="bkt-enter"
-          style={{
-            width: 'min(820px, 94vw)',
-            flexShrink: 0,
-            alignSelf: 'flex-start',
-            background: '#fff',
-            color: '#1c1c21',
-            borderRadius: 2,
-            boxShadow: 'var(--shadow-lg)',
-            padding: '52px 58px',
-            minHeight: 'calc((min(820px, 94vw)) * 11 / 8.5)',
-            boxSizing: 'border-box',
-          }}
-        >
-          {text.trim() ? (
-            <pre
-              style={{
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontFamily: 'var(--font-body)',
-                fontSize: 14,
-                lineHeight: 1.5,
-              }}
-            >
-              {text}
-            </pre>
+        {item.originalPath && isPdf ? (
+          signedUrl ? (
+            <iframe
+              title={displayName}
+              src={signedUrl}
+              className="bkt-enter"
+              style={{ width: 'min(1215px, 95vw)', height: '82vh', flexShrink: 0, border: 'none', borderRadius: 4, boxShadow: 'var(--shadow-lg)', background: '#fff' }}
+            />
           ) : (
-            <span style={{ color: '#71717a', fontStyle: 'italic' }}>
-              This document has no extractable text. Open it in the builder to add content.
-            </span>
-          )}
-        </div>
+            <span style={{ alignSelf: 'center', color: '#fff', font: '500 14px/1 var(--font-body)' }}>Loading PDF…</span>
+          )
+        ) : (
+          <div
+            className="bkt-enter"
+            style={{
+              width: 'min(1107px, 95vw)',
+              flexShrink: 0,
+              alignSelf: 'flex-start',
+              background: '#fff',
+              color: '#1c1c21',
+              borderRadius: 2,
+              boxShadow: 'var(--shadow-lg)',
+              padding: '52px 58px',
+              minHeight: 'calc((min(1107px, 95vw)) * 11 / 8.5)',
+              boxSizing: 'border-box',
+            }}
+          >
+            {isDocx && item.originalPath && (
+              <div style={{ marginBottom: 16, padding: '9px 13px', background: 'var(--bkt-blue-50)', borderRadius: 8, font: '500 13px/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+                Word documents can't render in the browser — showing the extracted text. Use Download for the original .docx.
+              </div>
+            )}
+            {text.trim() ? (
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'var(--font-body)', fontSize: 14, lineHeight: 1.5 }}>
+                {text}
+              </pre>
+            ) : (
+              <span style={{ color: '#71717a', fontStyle: 'italic' }}>
+                This document has no extractable text. {item.originalPath ? 'Use Download for the original file.' : 'Open it in the builder to add content.'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

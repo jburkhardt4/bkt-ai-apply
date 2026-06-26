@@ -223,6 +223,11 @@ export interface DocItem {
   documentId?: string
   storagePath?: string
   version?: number
+  /** The ACTUAL uploaded file: original filename, MIME, and binary storage path
+   *  (used by the real document viewer). Absent for builder-created docs. */
+  fileName?: string
+  mimeType?: string
+  originalPath?: string
   /** Cover-letter variants override pieces of the letter seed. */
   company?: string
   role?: string

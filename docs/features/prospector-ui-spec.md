@@ -88,7 +88,11 @@ Add `/prospector` to `src/App.tsx` route switch. The Prospector page component l
 
 On mobile (below `md` breakpoint), the page is a single scrollable column. All three sections stack vertically: Search Profile card → Run Status card → Ready to Apply card. The Enable toggle moves inline below the page heading.
 
-The AppShell's existing mobile nav Sheet pattern handles sidebar navigation. No new Sheet is required for this page.
+> **Update (ADR-018, 2026-06-26):** an earlier draft of this spec assumed an
+> "AppShell mobile nav Sheet pattern" existed — it did not. Mobile navigation
+> is now provided by the responsive shell shipped in ADR-018: under 768px
+> `AppShell` renders a `MobileTopBar` (hamburger) + a left slide-in nav drawer,
+> gated on `useIsMobile()`. No page-level Sheet is required for this page.
 
 ---
 

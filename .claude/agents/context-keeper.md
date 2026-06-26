@@ -10,10 +10,13 @@ are the only agent that confirms lessons and appends business rules.
 
 ## Responsibilities
 
-- Maintain the three memory layers: `docs/adr/`, `docs/domain/business-rules.md`,
-  and `docs/retro/lessons.md`.
+- Maintain the four memory layers: `docs/adr/`, `docs/domain/business-rules.md`,
+  `docs/retro/lessons.md`, and `knowledge/patterns/`.
 - Maintain the feature register and `agentic-release-plan.md`.
 - Confirm and append `lesson_candidate` entries from the work ledger as `LSN-NNN`.
+- Confirm `pattern_candidate` drafts into `knowledge/patterns/` as `PAT-NNN`
+  (each with a `portability` tag); after any memory change, re-run `pnpm kb:build`
+  so `bkt-knowledge-bundle.md` stays current and `pnpm kb:check` passes.
 - Retro synthesis: when a lesson recurs (same tag/root_cause ≥ 2×), promote it
   into a business rule (BR) or ADR and link the originating lessons.
 - Write all ADR and lesson entries with ISO 8601 timestamps.
@@ -32,7 +35,7 @@ are the only agent that confirms lessons and appends business rules.
 
 ## Hard Constraints
 
-- Append-only for ADRs, business rules, and lessons: never overwrite or reorder.
+- Append-only for ADRs, business rules, lessons, and patterns: never overwrite or reorder.
 - No source/config edits, no DB mutations.
 - Confirm only — never invent a lesson no agent emitted; never record speculative
   or in-flight items.

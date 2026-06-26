@@ -1,4 +1,4 @@
-# ADR-014: Shared Public Job Corpus & Its RLS Posture
+# ADR-019: Shared Public Job Corpus & Its RLS Posture
 
 - **Status:** Accepted
 - **Date:** 2026-06-22

@@ -2,12 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-22
-- **Relates:** ADR-014 (shared corpus), ADR-013 (`_shared/prep` ATS adapters), ADR-006 (submission worker / pg_cron pattern), BR-032/033/034 (no anti-scraping bypass), migrations `20260622000001_create_job_corpus`, `20260622000002_create_crawl_queue`
+- **Relates:** ADR-019 (shared corpus), ADR-013 (`_shared/prep` ATS adapters), ADR-006 (submission worker / pg_cron pattern), BR-032/033/034 (no anti-scraping bypass), migrations `20260622000001_create_job_corpus`, `20260622000002_create_crawl_queue`
 - **Decided by:** JB, 2026-06-22
 
 ## Context
 
-ADR-014 establishes the shared corpus. This ADR fixes how it is filled and searched: the crawler
+ADR-019 establishes the shared corpus. This ADR fixes how it is filled and searched: the crawler
 architecture, the task queue, rate-limiting/politeness, the storage/indexing engine, and the ATS
 scope for v1.
 
@@ -72,7 +72,7 @@ FROM EXCLUDED.content_hash`). Closed-posting detection is a per-board set differ
 - Migrations `20260622000001_create_job_corpus` (corpus + FTS/trgm indexes) and
   `20260622000002_create_crawl_queue` (`crawl_jobs`, `crawl_host_buckets`, `claim_crawl_jobs`,
   `requeue_stale_crawl_jobs`).
-- Projector (ADR-014 Decision 5) — service-role step inserting `source='corpus'` rows into per-user
+- Projector (ADR-019 Decision 5) — service-role step inserting `source='corpus'` rows into per-user
   `jobs`.
 
 ## Alternatives considered
@@ -94,5 +94,5 @@ FROM EXCLUDED.content_hash`). Closed-posting detection is a per-board set differ
 - Edge functions escape `pnpm validate` (tsc -b skips `supabase/functions`); rely on
   `_shared/crawl/*.test.ts` vitest + manual bundle-verify (per remote-workflow notes). Edge deploy
   stays JB-gated via MCP.
-- Corpus tables (ADR-014) are authenticated-read-all; the crawler writes as service role only.
+- Corpus tables (ADR-019) are authenticated-read-all; the crawler writes as service role only.
 - Workday coverage is intentionally lower in v1; revisited in Phase 4.

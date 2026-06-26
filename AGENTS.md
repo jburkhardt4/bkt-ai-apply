@@ -27,7 +27,7 @@
 
 ## Knowledge Artifacts
 
-Institutional memory lives in three append-only layers. Owned by Context-Keeper;
+Institutional memory lives in four append-only layers. Owned by Context-Keeper;
 proposed by Business-Analyst and Supabase-Security. Agents cite IDs, never literals.
 
 | Layer | File | Owner | Holds |
@@ -35,6 +35,7 @@ proposed by Business-Analyst and Supabase-Security. Agents cite IDs, never liter
 | Decisions | `docs/adr/NNN-*.md` | Context-Keeper | Architectural choices, ISO 8601 |
 | Invariants | `docs/domain/business-rules.md` | Context-Keeper (BA/Security propose) | `BR-001`.. confirmed rules |
 | Lessons | `docs/retro/lessons.md` | Context-Keeper | Every HOLD/BLOCK/escalation + root cause + prevention |
+| Patterns | `knowledge/patterns/PAT-*.md` | Context-Keeper | Production-validated reusable code/UX patterns (`PAT-NNN`, `portability`-tagged) |
 
 Shared protocol (Pre-Flight Reads, Lesson Capture, packet fields):
 `docs/conventions/agent-protocol.md`.

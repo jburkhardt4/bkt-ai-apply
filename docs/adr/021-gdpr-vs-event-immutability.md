@@ -1,4 +1,4 @@
-# ADR-001 — GDPR Purge vs. application_events Immutability
+# ADR-021 — GDPR Purge vs. application_events Immutability
 
 **status:** APPROVED — Option A (MVP anonymize-only)
 **task_id:** BKT-AIAPPLY-PHASE2-SUPABASE-SEC-001

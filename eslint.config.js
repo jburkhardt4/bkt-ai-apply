@@ -6,7 +6,11 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `dist` is build output. `.agents` / `.claude` hold vendored agent-skill
+  // tooling (e.g. the baoyu-design skill's own gen-pptx/gen-video sources) that
+  // ships with its own conventions — it is not application source and must not
+  // be linted by the app's ruleset (it only pollutes `eslint .`).
+  globalIgnores(['dist', '.agents', '.claude']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

@@ -12,6 +12,7 @@ import { BktBadge } from '@/components/bkt/BktBadge'
 import { SearchingPanel } from './SearchingPanel'
 import { companyLogo } from '@/components/bkt/format'
 import { PAGE_SIZE, getPageCount } from '@/lib/pagination'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { JobMatch } from '../types'
 
 function FilterTab({ label, count, badge, active, onClick }: { label: string; count?: number; badge?: ReactNode; active: boolean; onClick: () => void }) {
@@ -108,6 +109,7 @@ export function JobsScreen({
   onRefresh,
   showComp = true,
 }: JobsScreenProps) {
+  const isMobile = useIsMobile()
   const [filter, setFilter] = useState('Review Matches')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -169,8 +171,8 @@ export function JobsScreen({
   const paged = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '0 28px 28px' }}>
-      <div className="bkt-stagger" style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr 1fr', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: isMobile ? '0 16px 24px' : '0 28px 28px' }}>
+      <div className="bkt-stagger" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.25fr 1fr 1fr', gap: 16 }}>
         <BktStatCard
           live={!paused}
           label={paused ? 'Paused' : 'Searching Now'}
@@ -191,14 +193,14 @@ export function JobsScreen({
         <BktStatCard label="Job Matches Found" value={stats.matches} />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 22, borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 14 : 22, borderBottom: '1px solid var(--border)', flexWrap: isMobile ? 'wrap' : undefined }}>
         <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => selectFilter('All')} />
         <FilterTab label="Review Matches" count={reviewCount} badge={reviewCount > 0 ? <BktBadge tone="brand" appearance="soft" style={{ border: '1px solid var(--bkt-blue-200)' }}>{reviewCount}</BktBadge> : undefined} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
         <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => selectFilter('In progress')} />
         <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
         <div style={{ flex: 1 }}></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6, flexWrap: 'wrap', width: isMobile ? '100%' : undefined }}>
           <FilterSelect label="Type" value={typeFilter} options={typeOptions} onChange={onColumnFilter(setTypeFilter)} />
           <FilterSelect label="Environment" value={envFilter} options={envOptions} onChange={onColumnFilter(setEnvFilter)} />
           <FilterSelect label="Source" value={sourceFilter} options={sourceOptions} onChange={onColumnFilter(setSourceFilter)} />
@@ -211,7 +213,7 @@ export function JobsScreen({
               setPage(0)
             }}
             iconLeft={<Icon name="search" size={14} />}
-            style={{ width: 230 }}
+            style={{ width: isMobile ? '100%' : 230 }}
           />
           <BktButton
             variant="outline"
@@ -230,25 +232,27 @@ export function JobsScreen({
       {searching && <SearchingPanel />}
 
       <BktCard padding={0} radius="xl">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: showComp
-              ? 'minmax(200px, 1fr) minmax(230px, 1.4fr) 122px 110px 170px'
-              : 'minmax(220px, 1.1fr) minmax(260px, 1.6fr) 110px 170px',
-            gap: 16,
-            padding: '10px 18px',
-            borderBottom: '1px solid var(--border)',
-            font: '600 var(--text-sm)/1 var(--font-body)',
-            color: 'var(--text-muted)',
-          }}
-        >
-          <span>Company Name</span>
-          <span>Job Posting</span>
-          {showComp && <span>Compensation</span>}
-          <span>Updated At</span>
-          <span style={{ textAlign: 'right' }}>Action</span>
-        </div>
+        {!isMobile && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: showComp
+                ? 'minmax(200px, 1fr) minmax(230px, 1.4fr) 122px 110px 170px'
+                : 'minmax(220px, 1.1fr) minmax(260px, 1.6fr) 110px 170px',
+              gap: 16,
+              padding: '10px 18px',
+              borderBottom: '1px solid var(--border)',
+              font: '600 var(--text-sm)/1 var(--font-body)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <span>Company Name</span>
+            <span>Job Posting</span>
+            {showComp && <span>Compensation</span>}
+            <span>Updated At</span>
+            <span style={{ textAlign: 'right' }}>Action</span>
+          </div>
+        )}
         <div className="bkt-stagger-rows">
           {paged.map((j, i) => (
             <JobRow
@@ -266,6 +270,7 @@ export function JobsScreen({
               updatedAt={j.updated}
               selected={selectedId === j.id}
               applyLabel={j.status === 'In progress' ? 'Mark as applied' : 'Apply'}
+              isMobile={isMobile}
               onClick={() => onOpenJob(j.id)}
               onApply={() => onApply(j.id)}
               onDecline={() => onDecline(j.id)}

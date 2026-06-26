@@ -7,6 +7,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import type { ToastFn } from '@/components/bkt/toast'
 import { useAuth } from '@/contexts/auth-context'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import {
   deleteApplicationAnswer,
   fetchApplicationAnswers,
@@ -760,6 +761,7 @@ function AnswerLibraryTab({
 /* ─────────────────────── MAIN SCREEN ─────────────────────── */
 export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   const TABS = ['Quick Settings', 'Job Preferences', 'Answer Library', 'Rejection reasons']
+  const isMobile = useIsMobile()
   const [tab, setTab] = useState('Job Preferences')
   const tabRef = useRef<HTMLDivElement>(null)
   const [bar, setBar] = useState({ left: 0, width: 0 })
@@ -928,7 +930,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
     })
 
   const salaryRow = (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
       <CompField
         label="Min Salary:"
         value={minSalary}
@@ -947,7 +949,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
   )
 
   const hourlyRow = (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
       <CompField
         label="Min Hourly Rate:"
         value={minHourly}
@@ -1028,7 +1030,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
       {/* sticky header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 30, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         {/* title + save row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 28px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: isMobile ? '14px 16px 0' : '16px 28px 0' }}>
           <h1 style={{ font: '600 var(--text-2xl)/1.1 var(--font-display)', letterSpacing: 'var(--tracking-tighter)', margin: 0 }}>Preferences</h1>
           <span style={{ font: '400 var(--text-sm)/1 var(--font-body)', color: 'var(--text-muted)' }}>Auto Apply</span>
           <div style={{ flex: 1 }} />
@@ -1057,7 +1059,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
           </button>
         </div>
         {/* tabs */}
-        <div ref={tabRef} style={{ display: 'flex', gap: 0, padding: '4px 28px 0', position: 'relative', userSelect: 'none' }}>
+        <div ref={tabRef} style={{ display: 'flex', gap: 0, padding: isMobile ? '4px 16px 0' : '4px 28px 0', position: 'relative', userSelect: 'none', overflowX: isMobile ? 'auto' : undefined }}>
           {TABS.map((t) => (
             <button
               key={t}
@@ -1067,6 +1069,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
               onClick={() => setTab(t)}
               style={{
                 padding: '10px 16px',
+                flexShrink: 0,
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -1094,7 +1097,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
       </div>
 
       {/* scrollable body */}
-      <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 28px 60px' }}>
+      <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0 16px 48px' : '0 28px 60px' }}>
         {tab === 'Quick Settings' && (
           <div key="quick" className="bkt-blur-in">
             <PrefSection title="Application Behaviour" idx={0}>
@@ -1153,7 +1156,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
                   key={i}
                   style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 18, background: 'var(--bkt-zinc-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}
                 >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                     <div>
                       <PrefLabel>Select country</PrefLabel>
                       <div
@@ -1223,7 +1226,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             <PrefSection title="Compensation" idx={2}>
               {/* Standard-width inputs in the left half of the section —
                   not stretched flush to the full section width. */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: isMobile ? '100%' : '50%' }}>
                 {hourlyFirst ? (
                   <>
                     {hourlyRow}
@@ -1295,7 +1298,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             </PrefSection>
 
             <PrefSection title="Personal Information" idx={5}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <PrefLabel>First name</PrefLabel>
                   <PrefInput value={profile.first_name} onChange={(v) => setProfileField('first_name', v)} placeholder="John" />
@@ -1415,7 +1418,7 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
             <PrefSection title="Application Behaviour" idx={6}>
               {/* Mirror the compensation treatment — half-width block with the
                   mode cards stacked rather than stretched across the section. */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '50%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: isMobile ? '100%' : '50%' }}>
                 <ModeCards mode={reviewMode} onChange={changeReviewMode} stack />
                 <PrefSwitch value={emailCopies} onChange={setEmailCopies} label="Receive copies of submitted applications in your personal email" />
               </div>

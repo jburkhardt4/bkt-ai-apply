@@ -6,6 +6,7 @@ import { BktAvatar } from '@/components/bkt/BktAvatar'
 import { BktButton } from '@/components/bkt/BktButton'
 import { companyLogo, formatStamp } from '@/components/bkt/format'
 import type { ToastFn } from '@/components/bkt/toast'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { ComposeModal, type ComposeTarget } from '../components/ComposeModal'
 import type { EmailMessage, InboxData, InboxLabel } from '../types'
 
@@ -193,6 +194,10 @@ export interface InboxScreenProps {
 }
 
 export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live = false }: InboxScreenProps) {
+  const isMobile = useIsMobile()
+  // On phones the 440px master + detail split can't coexist; show one pane at
+  // a time and toggle to the reader when a message is opened. Ignored on desktop.
+  const [view, setView] = useState<'list' | 'detail'>('list')
   const [folder, setFolder] = useState('inbox')
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [labelFilter, setLabelFilter] = useState('all')
@@ -229,6 +234,7 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live 
 
   const openEmail = (id: EmailMessage['id']) => {
     setSelectedId(id)
+    setView('detail')
     setEmails((es) => es.map((e) => (e.id === id ? { ...e, unread: false } : e)))
   }
   const del = (id: EmailMessage['id']) => {
@@ -394,7 +400,16 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live 
       {/* master-detail */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0, gap: 0, borderTop: '1px solid var(--border)' }}>
         {/* list */}
-        <div className="bkt-scroll" style={{ width: 440, flexShrink: 0, overflowY: 'auto', borderRight: '1px solid var(--border)' }}>
+        <div
+          className="bkt-scroll"
+          style={{
+            width: isMobile ? '100%' : 440,
+            flexShrink: isMobile ? 1 : 0,
+            overflowY: 'auto',
+            borderRight: isMobile ? 'none' : '1px solid var(--border)',
+            display: isMobile && view !== 'list' ? 'none' : undefined,
+          }}
+        >
           {visible.length === 0 && (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', font: '400 var(--text-sm)/1.5 var(--font-body)' }}>
               {folder === 'sent' ? 'No sent mail yet.' : folder === 'deleted' ? 'Deleted is empty.' : 'No emails match these filters.'}
@@ -472,10 +487,23 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live 
         </div>
 
         {/* reading pane */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, minWidth: 0, display: isMobile && view !== 'detail' ? 'none' : 'flex', flexDirection: 'column' }}>
           {selected && selectedVisible ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '18px 22px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: isMobile ? '12px 16px' : '18px 22px', borderBottom: '1px solid var(--border)', flexWrap: isMobile ? 'wrap' : undefined }}>
+                {isMobile && (
+                  <BktButton
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Back to inbox"
+                    className="bkt-touch"
+                    data-bkt-icon=""
+                    onClick={() => setView('list')}
+                    style={{ width: 44, height: 44, flexShrink: 0 }}
+                  >
+                    <Icon name="arrow-left" size={18} />
+                  </BktButton>
+                )}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <h2 style={{ font: '600 var(--text-xl)/1.25 var(--font-display)', letterSpacing: 'var(--tracking-tight)', margin: 0, color: 'var(--text-strong)' }}>
                     {selected.subject}
@@ -485,7 +513,7 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live 
                     <LabelPill label={labelMeta(data.labels, selected.label)} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: isMobile ? 'wrap' : undefined }}>
                   <BktButton
                     variant="outline"
                     size="sm"
@@ -523,7 +551,7 @@ export function InboxScreen({ data, onToast, dateOrder = 'dmy', onRefresh, live 
                   </BktButton>
                 </div>
               </div>
-              <div key={String(selected.id)} className="bkt-blur-in bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+              <div key={String(selected.id)} className="bkt-blur-in bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '18px 16px' : '24px 28px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                   <BktAvatar name={selected.sender} src={companyLogo(selected.domain)} size={40} />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>

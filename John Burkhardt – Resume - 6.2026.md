@@ -93,7 +93,7 @@ Salesforce-certified, consulting manager with over 7 years of experience turning
 
 - Licensed FL Real Estate Sales Associate | (March 2019)
 - Salesforce Certified Platform Administrator
-- Salesforce Certified Platform Administrator
 - Salesforce Certified Business Analyst
+- Salesforce Certified Platform App Builder
 - Salesforce Certified AI Associate
 - Salesforce Certified Agentforce Specialist

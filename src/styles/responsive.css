@@ -31,4 +31,30 @@
   .bkt-touch[data-bkt-icon] {
     min-width: 44px !important;
   }
+
+  /* iOS Safari auto-zooms the viewport whenever a focused field renders below
+     16px. The raw/bkt inputs on this surface are 13–14px (set via the inline
+     `font:` shorthand), so pin editable fields to 16px on phones only. The
+     `!important` mirrors the .bkt-touch precedent above and is required to beat
+     the inline shorthand's font-size. Desktop density is untouched (this whole
+     layer is scoped to max-width:767px). `select` is intentionally excluded — the
+     shadcn trigger is a styled button, not a native text field. */
+  input,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Toast stack: the bottom inset (home indicator) is applied inline via
+     --safe-bottom; here we re-anchor the right-aligned 360px desktop capsule into
+     a centered, near-full-width sheet so it never crowds the screen edge or sits
+     off-balance on a 440px phone. */
+  .bkt-toast-stack {
+    left: 16px !important;
+    right: 16px !important;
+    align-items: stretch !important;
+  }
+  .bkt-toast-stack > * {
+    min-width: 0 !important;
+    max-width: none !important;
+  }
 }

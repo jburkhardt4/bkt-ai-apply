@@ -24,7 +24,7 @@ export function BktToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="bkt-toast-stack" style={{ position: 'fixed', right: 20, bottom: 'calc(20px + var(--safe-bottom))', zIndex: 100, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {toasts.map((t) => (
           <div
             key={t.id}

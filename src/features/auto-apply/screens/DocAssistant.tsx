@@ -328,10 +328,10 @@ export function DocAssistant({
           style={{
             position: 'fixed',
             right: 24,
-            bottom: 88,
+            bottom: 'calc(88px + var(--safe-bottom))',
             zIndex: 70,
             width: 372,
-            height: 'min(540px, 72vh)',
+            height: 'min(540px, 72dvh)',
             display: 'flex',
             flexDirection: 'column',
             background: 'color-mix(in oklab, var(--surface) 88%, transparent)',
@@ -354,7 +354,7 @@ export function DocAssistant({
         style={{
           position: 'fixed',
           right: 24,
-          bottom: 26,
+          bottom: 'calc(26px + var(--safe-bottom))',
           zIndex: 70,
           display: 'inline-flex',
           alignItems: 'center',

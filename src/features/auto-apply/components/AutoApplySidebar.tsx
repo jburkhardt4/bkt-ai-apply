@@ -106,9 +106,12 @@ export interface AutoApplySidebarProps {
   onSignOut?: () => void
   /** Opens the platform AI assistant overlay (chat agent). */
   onOpenAssistant?: () => void
+  /** Rendered inside the mobile nav drawer: pad the top/bottom for the notch +
+   *  home indicator. Inert on desktop (the inset tokens resolve to 0px). */
+  safeArea?: boolean
 }
 
-export function AutoApplySidebar({ active, onNavigate, userName, userEmail, badges = {}, onSignOut, onOpenAssistant }: AutoApplySidebarProps) {
+export function AutoApplySidebar({ active, onNavigate, userName, userEmail, badges = {}, onSignOut, onOpenAssistant, safeArea = false }: AutoApplySidebarProps) {
   return (
     <aside
       className="bkt-scroll"
@@ -119,7 +122,9 @@ export function AutoApplySidebar({ active, onNavigate, userName, userEmail, badg
         borderRight: '1px solid var(--sidebar-border)',
         display: 'flex',
         flexDirection: 'column',
-        padding: '16px 12px 12px',
+        padding: safeArea
+          ? 'calc(16px + var(--safe-top)) 12px calc(12px + var(--safe-bottom))'
+          : '16px 12px 12px',
         gap: 4,
         overflowY: 'auto',
       }}

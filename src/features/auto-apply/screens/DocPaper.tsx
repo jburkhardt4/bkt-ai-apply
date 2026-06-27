@@ -398,7 +398,7 @@ export function PreviewModal({
               title={displayName}
               src={signedUrl}
               className="bkt-enter"
-              style={{ width: 'min(1215px, 95vw)', height: isMobile ? '78vh' : '82vh', flexShrink: 0, border: 'none', borderRadius: 4, boxShadow: 'var(--shadow-lg)', background: '#fff' }}
+              style={{ width: 'min(1215px, 95vw)', height: isMobile ? '78dvh' : '82dvh', flexShrink: 0, border: 'none', borderRadius: 4, boxShadow: 'var(--shadow-lg)', background: '#fff' }}
             />
           ) : (
             <span style={{ alignSelf: 'center', color: '#fff', font: '500 14px/1 var(--font-body)' }}>Loading PDF…</span>

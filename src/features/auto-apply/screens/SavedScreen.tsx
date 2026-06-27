@@ -172,7 +172,7 @@ function SavedDetailsModal({
         style={{
           position: 'relative',
           width: 'min(750px, 92vw)',
-          maxHeight: '90vh',
+          maxHeight: '90dvh',
           overflowY: 'auto',
           background: 'var(--surface)',
           borderRadius: 'var(--radius-xl)',

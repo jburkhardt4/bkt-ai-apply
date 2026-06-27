@@ -84,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <SelectedApplicationContext.Provider value={{ selectedApplicationId, setSelectedApplicationId }}>
       <BktToastProvider>
-        <div style={{ display: 'flex', width: '100%', height: '100vh', overflow: 'hidden', background: 'var(--background)' }}>
+        <div style={{ display: 'flex', width: '100%', height: '100dvh', overflow: 'hidden', background: 'var(--background)' }}>
           {!isMobile && (
             <AutoApplySidebar
               active={navKey}
@@ -128,6 +128,7 @@ export function AppShell({ children }: AppShellProps) {
               }}
             >
               <AutoApplySidebar
+                safeArea
                 active={navKey}
                 onNavigate={(k) => {
                   setNavOpen(false)
@@ -165,7 +166,7 @@ export function AppShell({ children }: AppShellProps) {
                 animation: 'bkt-jd-slide-in var(--dur-medium) var(--ease-out) both',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(14px + var(--safe-top)) 18px 14px', borderBottom: '1px solid var(--border)' }}>
                 <span
                   style={{
                     display: 'inline-flex',
@@ -186,7 +187,7 @@ export function AppShell({ children }: AppShellProps) {
                   <Icon name="x" size={16} />
                 </BktButton>
               </div>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 16 }}>
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 16px calc(16px + var(--safe-bottom))' }}>
                 <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
               </div>
             </section>

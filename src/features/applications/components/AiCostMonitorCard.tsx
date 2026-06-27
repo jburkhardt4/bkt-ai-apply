@@ -85,7 +85,9 @@ export function AiCostMonitorCard({ refreshKey = 0 }: AiCostMonitorCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      {/* @container: the top-breakdown grid reflows on THIS card's width, not the
+          viewport (ADR-023). */}
+      <CardContent className="@container space-y-4">
         {loading && status === null ? (
           <div className="space-y-2">
             <Skeleton className="h-3 w-full" />
@@ -119,7 +121,7 @@ export function AiCostMonitorCard({ refreshKey = 0 }: AiCostMonitorCardProps) {
                 </div>
 
                 {/* Top breakdown */}
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 @md:grid-cols-3">
                   {[
                     { label: 'Top provider', item: summary.spendByProvider[0] },
                     { label: 'Top model', item: summary.spendByModel[0] },

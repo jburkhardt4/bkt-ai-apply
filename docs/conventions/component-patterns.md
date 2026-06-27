@@ -152,3 +152,14 @@ Conventions for the iPhone 17 Pro Max device chrome. Full rationale in
   ignores `prefers-color-scheme`; an init-script attribute doesn't survive
   hydration). `e2e/a11y/*.mobile.spec.ts` runs axe-core WCAG 2 A/AA at 440×956 in
   both themes — keep it green.
+- **Bottom tab bar.** Mobile primary nav is `MobileTabBar` (thumb zone); the
+  sidebar/drawer remains for the long tail ("More"). Any bottom-anchored element
+  must reserve `calc(<base> + var(--tabbar-h) + var(--safe-bottom))` (`--tabbar-h`
+  is 0 on desktop, 56px under 768px) so it clears the bar + home indicator.
+- **Overlays.** Hand-rolled fixed overlays (drawer, slide-overs, JD sidebar) use
+  the shared `useOverlay(open, onClose, panelRef)` hook for Escape-to-close,
+  background scroll-lock (`.bkt-overlay-open` freezes `.bkt-app-main`), and focus
+  in/out. The panel sets `role="dialog"` + `aria-modal` + `tabIndex={-1}`. Prefer
+  this over a Radix rewrite so the bkt slide keyframes/z-index stay intact.
+- **Keyboard.** Bottom-pinned composers reserve `useKeyboardInset()` (VisualViewport)
+  so the iOS keyboard doesn't cover them.

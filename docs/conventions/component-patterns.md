@@ -121,3 +121,34 @@ effect bodies. Approved alternatives, all used in `features/auto-apply/`:
 - **Async loaders**: start `loading` true in `useState`; lower it in promise
   callbacks; re-raise it in the action callback that triggers the refetch
   (`useAsyncData.reload`), never in the effect body.
+
+---
+
+## Mobile safe-area, viewport units & visual loop (ADR-022)
+
+Conventions for the iPhone 17 Pro Max device chrome. Full rationale in
+`docs/adr/022-mobile-design-hardening.md`.
+
+- **Safe-area tokens.** Use `var(--safe-top|-bottom|-left|-right)` (defined in
+  `bkt.css` as `env(safe-area-inset-*, 0px)`) via `calc()` — never raw `env()`
+  scattered inline, and never a Tailwind arbitrary value. Apply the inset on the
+  **single outermost fixed/sticky node per edge**; do not double-apply on nested
+  children. The `, 0px` fallback keeps every use desktop- and non-notch-inert.
+  `index.html` must keep `viewport-fit=cover` or these all resolve to 0.
+- **Shared components + insets.** `AutoApplySidebar` renders in both the desktop
+  sidebar and the mobile drawer, so its bottom inset is gated behind the opt-in
+  `safeArea` prop set only by the drawer. Scope any shared-component mobile change
+  (inset, 44px floor, 16px font) to the mobile context (prop, wrapper class, or the
+  `max-width:767px` layer) so desktop density never regresses.
+- **Viewport units.** **svh** for the fixed app frame (`AppShell` root, `body`,
+  `#root`), **dvh** for growable modals/previews, **env()** for device chrome. Never
+  bare `100vh`. This three-unit split is intentional — don't normalize it.
+- **Inputs ≥16px on mobile.** The `max-width:767px` layer pins `input, textarea` to
+  16px (`!important`, to beat the inline `font:` shorthand) to stop iOS focus
+  auto-zoom. Don't bump the per-component inline sizes (that hits desktop).
+- **Visual loop.** `pnpm shot <route> <label>` captures the 440×956 DPR3 matrix
+  (portrait / fold / dark / landscape) to `.screens/` for self-QA before pushing UI
+  work. Dark mode is set via the `data-theme` attribute **after load** (this app
+  ignores `prefers-color-scheme`; an init-script attribute doesn't survive
+  hydration). `e2e/a11y/*.mobile.spec.ts` runs axe-core WCAG 2 A/AA at 440×956 in
+  both themes — keep it green.

@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/brand/bkt-favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- App is light-only today (dark palette exists under [data-theme="dark"] but
+         has no toggle yet). Lock the UA color-scheme to light so native controls,
+         scrollbars and autofill don't render dark chrome on a light surface, and
+         tint the iOS status-bar/address-bar region to the app surface. When a dark
+         toggle ships (see mobile plan Stage 5), drive these dynamically. -->
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
     <link

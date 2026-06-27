@@ -23,11 +23,14 @@ export function MobileTopBar({ onMenu, onAssistant, onNotifications, notifCount 
         top: 0,
         zIndex: 30,
         flexShrink: 0,
-        height: 56,
+        // Reserve the notch/Dynamic Island inset above the 56px control row; the
+        // surface background fills it so the bar reads as one piece. --safe-top is
+        // 0 on desktop / non-notch devices, so this is byte-neutral there.
+        height: 'calc(56px + var(--safe-top))',
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        padding: '0 8px',
+        padding: 'var(--safe-top) 8px 0',
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
       }}
@@ -54,7 +57,7 @@ export function MobileTopBar({ onMenu, onAssistant, onNotifications, notifCount 
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <BktButton variant="ghost" size="icon" aria-label="AI assistant" onClick={onAssistant} style={{ width: 44, height: 44 }}>
           <Icon name="bot" size={20} />
         </BktButton>

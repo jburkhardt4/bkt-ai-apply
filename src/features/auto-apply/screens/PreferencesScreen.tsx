@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import type { ToastFn } from '@/components/bkt/toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -1100,7 +1101,27 @@ export function PreferencesScreen({ onToast }: { onToast: ToastFn }) {
       <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0 16px 48px' : '0 28px 60px' }}>
         {tab === 'Quick Settings' && (
           <div key="quick" className="bkt-blur-in">
-            <PrefSection title="Application Behaviour" idx={0}>
+            <PrefSection title="Appearance" idx={0}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  justifyContent: 'space-between',
+                  gap: 14,
+                }}
+              >
+                <div>
+                  <div style={{ font: '500 var(--text-sm)/1.3 var(--font-body)', color: 'var(--text-strong)' }}>Color theme</div>
+                  <div style={{ marginTop: 2, font: '400 var(--text-xs)/1.4 var(--font-body)', color: 'var(--text-muted)' }}>
+                    Light, dark, or match your system.
+                  </div>
+                </div>
+                <ThemeToggle labels />
+              </div>
+            </PrefSection>
+
+            <PrefSection title="Application Behaviour" idx={1}>
               <p style={{ margin: 0, font: '400 var(--text-sm)/1.6 var(--font-body)', color: 'var(--text-muted)', maxWidth: 620 }}>
                 How should we apply to jobs for you? Pick the mode that best fits your style.
               </p>

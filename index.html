@@ -4,13 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/brand/bkt-favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <!-- App is light-only today (dark palette exists under [data-theme="dark"] but
-         has no toggle yet). Lock the UA color-scheme to light so native controls,
-         scrollbars and autofill don't render dark chrome on a light surface, and
-         tint the iOS status-bar/address-bar region to the app surface. When a dark
-         toggle ships (see mobile plan Stage 5), drive these dynamically. -->
-    <meta name="color-scheme" content="light" />
+    <!-- The app supports both schemes (light + the [data-theme="dark"] palette).
+         color-scheme advertises that to the UA; the resolved scheme + theme-color
+         are written before first paint by the inline script below to avoid a
+         flash of the wrong theme, then kept in sync by ThemeProvider. -->
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" />
+    <!-- FOUC guard: resolve light/dark/system from localStorage BEFORE the bundle
+         loads and paint the right scheme immediately. Mirrors src/lib/theme.ts
+         (keep STORAGE_KEY 'bkt-theme' + colors in lockstep). Inlined on purpose —
+         it must run ahead of React. -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('bkt-theme');
+          var mode = raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system';
+          var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          if (dark) root.setAttribute('data-theme', 'dark');
+          else root.removeAttribute('data-theme');
+          root.style.colorScheme = dark ? 'dark' : 'light';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#0c0c0e' : '#ffffff');
+        } catch (e) {
+          /* no-op: fall back to the light default already in the markup */
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
     <link

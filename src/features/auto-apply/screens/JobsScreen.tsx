@@ -170,6 +170,55 @@ export function JobsScreen({
   const safePage = Math.min(page, pageCount - 1)
   const paged = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
+  // Toolbar controls (filters · search · sort/refresh). Defined once and arranged
+  // differently per breakpoint below: on mobile they stack into three rows — the
+  // dropdowns right-aligned, a full-width search, and Sort/Refresh as two equal
+  // full-width halves — while desktop keeps them inline on one wrapping row.
+  const filterDropdowns = (
+    <>
+      <FilterSelect label="Type" value={typeFilter} options={typeOptions} onChange={onColumnFilter(setTypeFilter)} />
+      <FilterSelect label="Environment" value={envFilter} options={envOptions} onChange={onColumnFilter(setEnvFilter)} />
+      <FilterSelect label="Source" value={sourceFilter} options={sourceOptions} onChange={onColumnFilter(setSourceFilter)} />
+    </>
+  )
+  const searchInput = (
+    <BktInput
+      size="sm"
+      placeholder="Search jobs or companies..."
+      value={query}
+      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+        setQuery(e.target.value)
+        setPage(0)
+      }}
+      iconLeft={<Icon name="search" size={14} />}
+      style={{ width: isMobile ? '100%' : 230 }}
+    />
+  )
+  // flex:1 on mobile makes the two buttons equal halves that sit flush to both
+  // edges of the row; their content is centered by BktButton's default.
+  const sortButton = (
+    <BktButton
+      variant="outline"
+      size="sm"
+      iconLeft={<Icon name="arrow-up-down" size={14} />}
+      onClick={() => setSortIdx((i) => (i + 1) % SORT_MODES.length)}
+      style={isMobile ? { flex: 1 } : undefined}
+    >
+      Sort: {SORT_MODES[sortIdx].label}
+    </BktButton>
+  )
+  const refreshButton = (
+    <BktButton
+      variant="outline"
+      size="sm"
+      iconLeft={<Icon name="refresh-cw" size={14} />}
+      onClick={onRefresh}
+      style={isMobile ? { flex: 1 } : undefined}
+    >
+      Refresh
+    </BktButton>
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: isMobile ? '0 16px 24px' : '0 28px 28px' }}>
       <div className="bkt-stagger" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.25fr 1fr 1fr', gap: 16 }}>
@@ -200,33 +249,25 @@ export function JobsScreen({
         <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
         <div style={{ flex: 1 }}></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6, flexWrap: 'wrap', width: isMobile ? '100%' : undefined }}>
-          <FilterSelect label="Type" value={typeFilter} options={typeOptions} onChange={onColumnFilter(setTypeFilter)} />
-          <FilterSelect label="Environment" value={envFilter} options={envOptions} onChange={onColumnFilter(setEnvFilter)} />
-          <FilterSelect label="Source" value={sourceFilter} options={sourceOptions} onChange={onColumnFilter(setSourceFilter)} />
-          <BktInput
-            size="sm"
-            placeholder="Search jobs or companies..."
-            value={query}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setQuery(e.target.value)
-              setPage(0)
-            }}
-            iconLeft={<Icon name="search" size={14} />}
-            style={{ width: isMobile ? '100%' : 230 }}
-          />
-          <BktButton
-            variant="outline"
-            size="sm"
-            iconLeft={<Icon name="arrow-up-down" size={14} />}
-            onClick={() => setSortIdx((i) => (i + 1) % SORT_MODES.length)}
-          >
-            Sort: {SORT_MODES[sortIdx].label}
-          </BktButton>
-          <BktButton variant="outline" size="sm" iconLeft={<Icon name="refresh-cw" size={14} />} onClick={onRefresh}>
-            Refresh
-          </BktButton>
-        </div>
+        {isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 6, width: '100%' }}>
+            {/* Dropdowns aligned to the right edge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{filterDropdowns}</div>
+            {searchInput}
+            {/* Sort + Refresh: equal halves, flush to both edges */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              {sortButton}
+              {refreshButton}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6, flexWrap: 'wrap' }}>
+            {filterDropdowns}
+            {searchInput}
+            {sortButton}
+            {refreshButton}
+          </div>
+        )}
       </div>
 
       {searching && <SearchingPanel />}

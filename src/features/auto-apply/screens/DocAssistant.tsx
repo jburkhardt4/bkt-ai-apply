@@ -328,7 +328,7 @@ export function DocAssistant({
           style={{
             position: 'fixed',
             right: 24,
-            bottom: 'calc(88px + var(--safe-bottom))',
+            bottom: 'calc(88px + var(--tabbar-h) + var(--safe-bottom))',
             zIndex: 70,
             width: 372,
             height: 'min(540px, 72dvh)',
@@ -354,7 +354,7 @@ export function DocAssistant({
         style={{
           position: 'fixed',
           right: 24,
-          bottom: 'calc(26px + var(--safe-bottom))',
+          bottom: 'calc(26px + var(--tabbar-h) + var(--safe-bottom))',
           zIndex: 70,
           display: 'inline-flex',
           alignItems: 'center',

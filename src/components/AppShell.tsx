@@ -14,6 +14,7 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { AutoApplySidebar } from '@/features/auto-apply/components/AutoApplySidebar'
 import { AutoApplySettingsProvider } from '@/features/auto-apply/components/AutoApplySettingsProvider'
 import { MobileTopBar } from '@/components/MobileTopBar'
+import { MobileTabBar } from '@/components/MobileTabBar'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { navigate, useNavKey } from '@/features/auto-apply/router'
 import { fetchActionRequiredCount } from '@/features/applications/services/actionRequiredService'
@@ -96,7 +97,19 @@ export function AppShell({ children }: AppShellProps) {
               onOpenAssistant={() => setAssistantOpen(true)}
             />
           )}
-          <main className="bkt-scroll" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          <main
+            className="bkt-scroll"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'auto',
+              // Reserve space for the fixed mobile tab bar + home indicator so the
+              // bottom of scroll content isn't occluded. Both vars are 0 on desktop.
+              paddingBottom: 'calc(var(--tabbar-h) + var(--safe-bottom))',
+            }}
+          >
             {isMobile && (
               <MobileTopBar
                 onMenu={() => setNavOpen(true)}
@@ -108,6 +121,17 @@ export function AppShell({ children }: AppShellProps) {
             <AutoApplySettingsProvider>{children}</AutoApplySettingsProvider>
           </main>
         </div>
+
+        {/* Mobile bottom tab bar — thumb-zone access to the top destinations;
+            "More" opens the same nav drawer for the long tail. */}
+        {isMobile && (
+          <MobileTabBar
+            active={navKey}
+            onNavigate={navigate}
+            onMore={() => setNavOpen(true)}
+            badges={badges}
+          />
+        )}
 
         {/* Mobile nav drawer — sidebar as a left slide-in overlay (reuses the
             AI-assistant slide-over pattern; left-origin animation). Selecting a

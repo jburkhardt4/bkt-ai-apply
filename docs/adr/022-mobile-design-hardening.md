@@ -109,6 +109,30 @@ verification remains required for true safe-area behaviour.
   (all changes gated by `--safe-*` 0px fallbacks, the `max-width:767px` layer, or the mobile
   drawer branch).
 
+## Follow-up stages (Stages 2–4, landed in this PR)
+
+- **Touch floors (Stage 2).** shadcn `ui/*` (button/input/select) gain a 44px floor via
+  `max-md:min-h-11` (min-height also lifts the explicit `h-6/h-7` overrides on mobile);
+  the LoginPage eye-toggle gets a 44px hit area. Desktop density unchanged.
+- **Overflow reflows (Stage 3).** Dashboard `TopBar`/ModeTabs row, `SearchScreen`, and two
+  squeezed grids (`AnalyticsReportsSection`, `AiCostMonitorCard`) reflow on mobile.
+  IngestionPage's wide table stays the documented ADR-018 exception.
+- **Bottom tab bar (Stage 4a).** A mobile-only thumb-zone `MobileTabBar`
+  (Home/Inbox/Search/Saved + More→drawer). A single `--tabbar-h` token (0 desktop / 56px
+  mobile) coordinates the `<main>` scroll-padding, the toast stack, and the FAB offsets so
+  nothing is occluded.
+- **Overlay a11y (Stage 4b).** A lightweight `useOverlay` hook (Escape-to-close, scroll-lock
+  via `.bkt-overlay-open` freezing `.bkt-app-main`, focus in/out) + `role="dialog"`/
+  `aria-modal` on the nav drawer and AI-assistant slide-over. Chosen over a Radix Dialog
+  rewrite to preserve the existing slide animations and z-index ordering. The JD sidebar can
+  adopt the same hook as a follow-up.
+- **Keyboard occlusion (Stage 4c).** `useKeyboardInset` (VisualViewport API) reserves the iOS
+  keyboard height for the assistant composer; `interactive-widget=resizes-content` covers
+  Chromium/Android. ComposeModal/DocAssistant composers are follow-ups.
+
+Still deferred (Stage 5): dark-mode toggle + `@custom-variant dark`, partial display-step
+`clamp()`, container queries, and the `@theme --text-*` unification.
+
 ## Verification
 
 `pnpm validate` · `pnpm build` · `pnpm exec playwright test --project=mobile` ·

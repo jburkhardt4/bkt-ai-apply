@@ -11,16 +11,30 @@ import { BktInput } from '@/components/bkt/BktInput'
 import { brandAsset } from '../assets'
 import { REVIEW_MODES } from '../reviewModes'
 import type { ReviewModeId } from '../types'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 /* ---- Top bar: title, live badge, segmented credits capsule, budget CTA ---- */
 export function TopBar({ credits, onBudget, onGetCredits }: { credits: number; onBudget: () => void; onGetCredits: () => void }) {
   const [hoverGift, setHoverGift] = useState(false)
+  const isMobile = useIsMobile()
   return (
-    <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 28px 0' }}>
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        // On phones the row would far exceed 440px; let it wrap (title on top,
+        // capsule + budget CTA below) and tighten padding to match the screens.
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        padding: isMobile ? '16px 16px 0' : '18px 28px 0',
+      }}
+    >
       <h1 style={{ font: '600 var(--text-2xl)/1.1 var(--font-display)', letterSpacing: 'var(--tracking-tighter)', margin: 0 }}>Auto Apply</h1>
-      <BktBadge tone="success" appearance="soft" dot pulse>
-        Searching Now
-      </BktBadge>
+      {!isMobile && (
+        <BktBadge tone="success" appearance="soft" dot pulse>
+          Searching Now
+        </BktBadge>
+      )}
       <div style={{ flex: 1 }}></div>
 
       {/* segmented credits capsule */}
@@ -39,29 +53,31 @@ export function TopBar({ credits, onBudget, onGetCredits }: { credits: number; o
             Get more
           </BktButton>
         </span>
-        <button
-          onMouseEnter={() => setHoverGift(true)}
-          onMouseLeave={() => setHoverGift(false)}
-          onClick={onGetCredits}
-          className="bkt-press"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '0 14px 0 11px',
-            background: hoverGift ? 'var(--bkt-blue-50)' : 'transparent',
-            border: '1px dashed color-mix(in oklab, var(--primary) 40%, transparent)',
-            borderColor: hoverGift ? 'color-mix(in oklab, var(--primary) 60%, transparent)' : undefined,
-            borderRadius: 'var(--radius-pill)',
-            cursor: 'pointer',
-            font: '500 var(--text-sm)/1 var(--font-body)',
-            color: 'var(--text-strong)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <Icon name="gift" size={15} color="var(--primary)" />
-          Get Free Credits
-        </button>
+        {!isMobile && (
+          <button
+            onMouseEnter={() => setHoverGift(true)}
+            onMouseLeave={() => setHoverGift(false)}
+            onClick={onGetCredits}
+            className="bkt-press"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '0 14px 0 11px',
+              background: hoverGift ? 'var(--bkt-blue-50)' : 'transparent',
+              border: '1px dashed color-mix(in oklab, var(--primary) 40%, transparent)',
+              borderColor: hoverGift ? 'color-mix(in oklab, var(--primary) 60%, transparent)' : undefined,
+              borderRadius: 'var(--radius-pill)',
+              cursor: 'pointer',
+              font: '500 var(--text-sm)/1 var(--font-body)',
+              color: 'var(--text-strong)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Icon name="gift" size={15} color="var(--primary)" />
+            Get Free Credits
+          </button>
+        )}
       </div>
 
       <BktButton variant="primary" size="md" style={{ borderRadius: 'var(--radius-pill)' }} onClick={onBudget}>

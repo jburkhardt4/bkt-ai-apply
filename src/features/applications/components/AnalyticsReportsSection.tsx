@@ -78,7 +78,7 @@ export function AnalyticsReportsSection({ refreshKey = 0 }: AnalyticsReportsSect
           <>
             {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {/* Conversion by source */}
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conversion by source</h3>

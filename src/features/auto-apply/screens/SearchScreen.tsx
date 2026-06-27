@@ -8,6 +8,7 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { BktCheckbox, BktSkeleton } from '@/components/bkt/BktCheckbox'
 import { BktInput } from '@/components/bkt/BktInput'
 import { companyLogo } from '@/components/bkt/format'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { openSourceUrl } from '../openSourceUrl'
 import type { ToastFn } from '@/components/bkt/toast'
 import type { SearchData, SearchJob } from '../types'
@@ -504,6 +505,7 @@ export interface SearchScreenProps {
 }
 
 export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDetails, onAutoApply, onToast }: SearchScreenProps) {
+  const isMobile = useIsMobile()
   // Input text shows the seed query/location; the *applied* filters start empty
   // so the full board is visible on mount (applying the seed phrase verbatim
   // would wrongly hide everything). Search/Enter promotes the inputs to applied.
@@ -621,8 +623,17 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
       </div>
 
       <div className="bkt-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-        {/* search row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 28px 0' }}>
+        {/* search row — stacks on mobile so the keyword field isn't squeezed by
+            the fixed-width location field + button at 440px */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
+            gap: 12,
+            padding: isMobile ? '16px 16px 0' : '16px 28px 0',
+          }}
+        >
           <div style={{ flex: 1, minWidth: 0 }}>
             <BktInput
               placeholder="Job title, company, or keyword"
@@ -632,7 +643,7 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
               iconLeft={<Icon name="search" size={16} color="var(--bkt-zinc-400)" />}
             />
           </div>
-          <div style={{ width: 256, flexShrink: 0 }}>
+          <div style={{ width: isMobile ? '100%' : 256, flexShrink: 0 }}>
             <BktInput
               placeholder="City or country"
               value={location}
@@ -641,13 +652,13 @@ export function SearchScreen({ data, appliedIds, saved, onToggleSave, onShowDeta
               iconLeft={<Icon name="map-pin" size={16} color="var(--bkt-zinc-400)" />}
             />
           </div>
-          <BktButton variant="primary" size="lg" style={{ padding: '0 26px' }} loading={searching} onClick={() => runSearch(`Searching "${query.trim()}"`)}>
+          <BktButton variant="primary" size="lg" style={{ padding: '0 26px', width: isMobile ? '100%' : undefined }} loading={searching} onClick={() => runSearch(`Searching "${query.trim()}"`)}>
             Search
           </BktButton>
         </div>
 
         {/* filter chips + sort */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: isMobile ? 'wrap' : 'nowrap', padding: isMobile ? '14px 16px 0' : '14px 28px 0' }}>
           <FilterMenu
             label="Work mode"
             options={['Remote', 'On-site / Hybrid']}

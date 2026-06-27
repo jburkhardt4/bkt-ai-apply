@@ -119,7 +119,7 @@ export function AiCostMonitorCard({ refreshKey = 0 }: AiCostMonitorCardProps) {
                 </div>
 
                 {/* Top breakdown */}
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {[
                     { label: 'Top provider', item: summary.spendByProvider[0] },
                     { label: 'Top model', item: summary.spendByModel[0] },

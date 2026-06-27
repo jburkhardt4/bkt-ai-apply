@@ -33,12 +33,14 @@ import { BktButton } from '@/components/bkt/BktButton'
 import { BktCard } from '@/components/bkt/BktCard'
 import { Icon } from '@/components/bkt/Icon'
 import { REVIEW_MODES } from './reviewModes'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { JobsScreen } from './screens/JobsScreen'
 import { QuickReview } from './screens/QuickReview'
 import { JDSidebar } from './screens/JDSidebar'
 import type { JobMatch } from './types'
 
 export function AutoApplyDashboard() {
+  const isMobile = useIsMobile()
   const toast = useBktToast()
   const { user } = useAuth()
   const userId = user?.id ?? null
@@ -349,7 +351,7 @@ export function AutoApplyDashboard() {
           toast('25 free credits added', 'gift', 'var(--bkt-blue-300)')
         }}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '6px 28px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 24, padding: isMobile ? '6px 16px 0' : '6px 28px 0' }}>
         <ModeTabs mode={mode} setMode={setMode} reviewCount={reviewCount} />
         <div style={{ flex: 1 }}></div>
         <ReviewModeMenu

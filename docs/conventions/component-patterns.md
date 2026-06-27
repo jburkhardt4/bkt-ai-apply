@@ -163,3 +163,38 @@ Conventions for the iPhone 17 Pro Max device chrome. Full rationale in
   this over a Radix rewrite so the bkt slide keyframes/z-index stay intact.
 - **Keyboard.** Bottom-pinned composers reserve `useKeyboardInset()` (VisualViewport)
   so the iOS keyboard doesn't cover them.
+
+---
+
+## Theme (light / dark / system), fluid type & container queries (ADR-023)
+
+- **Theme is token-driven via `[data-theme="dark"]`.** Never add a `.dark` class or
+  hard-code dark colors. Read/write theme through `useTheme()` (mode, resolved, setMode,
+  toggle) from `@/contexts/theme-context`. The DOM side-effects (the `data-theme`
+  attribute, UA `color-scheme`, `<meta name="theme-color">`) go through one authority,
+  `applyResolvedTheme()` in `src/lib/theme.ts`. The `index.html` FOUC inline script is a
+  hand-copied twin of that resolution logic and MUST stay in sync (storage key
+  `'bkt-theme'`, the `#ffffff`/`#0c0c0e` colors, the resolve rule) or a theme flash
+  returns. Default mode is `system`.
+- **The `ThemeToggle`** (`src/components/ThemeToggle.tsx`) is the only theme control —
+  a segmented Light/System/Dark switch (icon-only, or `labels`). It lives in the
+  `AutoApplySidebar` footer (covers desktop + drawer) and Preferences → Quick Settings.
+  Reuse it; don't roll a second toggle.
+- **`dark:` Tailwind utilities** work via `@custom-variant dark` (index.css) for legacy
+  pages, but prefer the semantic tokens (`bg-background`, `text-foreground`, …) which
+  already flip — only reach for `dark:` when a page hard-codes a non-token color.
+- **Fluid type is display-only.** `--text-2xl…5xl` are `clamp()`s whose MAX equals the
+  old fixed value and is hit by a 768px viewport (desktop stays byte-inert), easing down
+  below that. The body/UI steps (`--text-2xs…xl`) stay static — do NOT fluidize them or
+  the dense scale regresses. New display headings just use the tokens; they're fluid for
+  free.
+- **Container queries over viewport breakpoints for bounded content.** A grid/flex block
+  that lives inside a card/panel/drawer (not the full viewport) should reflow on its
+  container: put `@container` on the parent and use `@sm`/`@md`/`@2xl` variants, not
+  `sm:`/`lg:`. See `AnalyticsReportsSection`, `AiCostMonitorCard`,
+  `DashboardSummarySection`. Keep page-level, truly-viewport-driven layouts on the normal
+  breakpoints.
+- **Visual loop + a11y honor the real theme path.** `pnpm shot` seeds
+  `localStorage['bkt-theme']` (FOUC path) and logs in when `SHOT_USER_EMAIL/PASSWORD`
+  (or `TEST_USER_*`) are set; the mobile axe gate runs light + dark and adds
+  creds-gated authenticated coverage. Keep both green.

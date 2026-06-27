@@ -360,6 +360,12 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left:   env(safe-area-inset-left, 0px);
   --safe-right:  env(safe-area-inset-right, 0px);
+
+  /* Height of the mobile bottom tab bar's content row. 0 on desktop (no tab
+     bar); responsive.css lifts it to 56px under 768px. Bottom-anchored chrome
+     (scroll padding, toast, FAB) reserves calc(... + --tabbar-h + --safe-bottom)
+     so it clears the bar + home indicator without per-component isMobile logic. */
+  --tabbar-h: 0px;
 }
 
 

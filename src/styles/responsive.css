@@ -25,6 +25,13 @@
    desktop toolbars keep their exact current sizing. Opt-in markers:
    `bkt-touch` on the control, `data-bkt-icon` on square icon buttons. */
 @media (max-width: 767px) {
+  /* The mobile bottom tab bar is 56px tall; expose it so bottom-anchored chrome
+     reserves space for it. (The bar only renders inside the authenticated shell;
+     /login has nothing that consumes this, so a global mobile value is safe.) */
+  :root {
+    --tabbar-h: 56px;
+  }
+
   .bkt-touch {
     min-height: 44px !important;
   }

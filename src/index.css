@@ -3,6 +3,11 @@
 @import "./styles/auto-apply.css";
 @import "./styles/responsive.css";
 
+/* Map Tailwind's `dark:` variant onto the bkt palette's [data-theme="dark"]
+   attribute (the app has no `.dark` class). Lets legacy Tailwind pages opt into
+   dark-specific utilities; token-driven surfaces already flip via the CSS vars. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ============================================================
    BKT AI-Apply — global stylesheet
    Design tokens now come from ./styles/bkt.css (the BKT AI-Apply

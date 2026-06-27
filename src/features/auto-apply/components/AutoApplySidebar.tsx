@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import { Icon } from '@/components/bkt/Icon'
 import { BktBadge } from '@/components/bkt/BktBadge'
 import { ChevronBadge } from '@/components/bkt/ChevronBadge'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { brandAsset } from '../assets'
 import type { NavKey } from '../types'
 
@@ -165,6 +166,10 @@ export function AutoApplySidebar({ active, onNavigate, userName, userEmail, badg
           active={active === 'notifications'}
         />
         {onSignOut && <NavItem icon="log-out" label="Sign out" active={false} onClick={onSignOut} />}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 8px 2px' }}>
+          <span className="bkt-eyebrow">Theme</span>
+          <ThemeToggle />
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 8px 4px', borderTop: '1px solid var(--border)' }}>
           <span
             title={userEmail ?? undefined}

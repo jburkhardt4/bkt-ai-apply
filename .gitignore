@@ -21,6 +21,9 @@ dist-ssr
 test-results/
 playwright-report/
 
+# Mobile visual-QA screenshots (scripts/shot.ts)
+.screens/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

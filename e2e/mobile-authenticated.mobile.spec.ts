@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// Authenticated mobile smoke (iPhone 17 Pro Max, 430x932 — the `mobile`
+// Authenticated mobile smoke (iPhone 17 Pro Max, 440x956 — the `mobile`
 // Playwright project). Exercises the useIsMobile() layouts *past* the auth gate:
 // the slide-in nav drawer replacing the desktop sidebar, and key routes
-// rendering without horizontal overflow at 430px.
+// rendering without horizontal overflow at 440px.
 //
 // Credentials come from TEST_USER_EMAIL / TEST_USER_PASSWORD (the same
 // convention as e2e/ai-uat/_helpers/setup.ts) — never hard-coded. The suite
@@ -31,11 +31,11 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
     return { scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }
   })
   // 1px allowance for sub-pixel rounding; more means a fixed-width element is
-  // pushing the page wider than the 430px phone viewport.
+  // pushing the page wider than the 440px phone viewport.
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1)
 }
 
-test.describe('authenticated mobile @ 430px', () => {
+test.describe('authenticated mobile @ 440px', () => {
   test.skip(!hasCreds, 'set TEST_USER_EMAIL / TEST_USER_PASSWORD to run authenticated mobile smoke')
 
   test('mobile shell: hamburger reveals the nav drawer; no horizontal overflow', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('authenticated mobile @ 430px', () => {
     await expect(page.getByText('Job Search', { exact: true })).toBeVisible()
   })
 
-  test('job search renders without horizontal overflow at 430px', async ({ page }) => {
+  test('job search renders without horizontal overflow at 440px', async ({ page }) => {
     await login(page)
     await page.getByRole('button', { name: /open navigation/i }).click()
     await page.getByText('Job Search', { exact: true }).click()

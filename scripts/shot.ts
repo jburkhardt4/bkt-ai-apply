@@ -17,10 +17,11 @@
  *
  *  1. Dark mode. The bkt palette is driven by the `data-theme="dark"` attribute,
  *     NOT prefers-color-scheme — so `emulateMedia({colorScheme:'dark'})` would do
- *     nothing. We set the attribute AFTER load (an init-script attribute does not
- *     survive this app's hydration) so the final capture is genuinely dark. There
- *     is no in-app dark toggle yet, so these shots preview an otherwise-unreachable
- *     state — useful for token QA.
+ *     nothing. Since the dark toggle shipped (ADR-023), the faithful way to force
+ *     a scheme is to seed `localStorage['bkt-theme']` BEFORE navigation (via an
+ *     init script) and let the index.html FOUC guard apply it on first paint —
+ *     exactly the real user path. We seed every context ('light' or 'dark') so
+ *     captures are deterministic regardless of the runner's OS preference.
  *
  *  2. Safe-area insets. Headless Chromium has no notch, so env(safe-area-inset-*)
  *     resolves to 0 and the safe-area padding would be invisible. We SIMULATE the
@@ -28,6 +29,12 @@
  *     bottom 21) by overriding the --safe-* tokens, so the screenshots actually
  *     show the padding working. Set SIMULATE_INSETS=0 to capture raw (0-inset).
  *     This is an approximation — real-device verification is still required.
+ *
+ * Authenticated routes: anything other than /login redirects to the auth gate.
+ * Set SHOT_USER_EMAIL / SHOT_USER_PASSWORD (or TEST_USER_EMAIL / TEST_USER_PASSWORD)
+ * and the script logs in once per context before capturing, so `pnpm shot
+ * /preferences after` shoots the real authenticated screen. Without creds it
+ * captures whatever renders (the login screen for protected routes).
  *
  * Dev server: expects Vite on :5173 (run `pnpm dev`). Override the target with
  * SHOT_BASE_URL, or it auto-derives the Codespaces forwarded URL.
@@ -79,24 +86,49 @@ const url = `${baseUrl()}${route}`
 const slug = route.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'root'
 const dir = '.screens'
 
+const EMAIL = process.env['SHOT_USER_EMAIL'] ?? process.env['TEST_USER_EMAIL'] ?? ''
+const PASSWORD = process.env['SHOT_USER_PASSWORD'] ?? process.env['TEST_USER_PASSWORD'] ?? ''
+const hasCreds = Boolean(EMAIL && PASSWORD)
+// Only /login renders without a session; everything else needs auth.
+const needsAuth = route !== '/login' && route !== '/login/'
+
 type Insets = [top: number, bottom: number, left: number, right: number]
 
-/** Navigate, then apply theme + simulated insets to the FINAL DOM and let fonts
- *  settle, so the capture reflects exactly what we want to QA. */
-async function prepare(page: Page, opts: { dark?: boolean; insets?: Insets }): Promise<void> {
+/** Seed the persisted theme on a context so the index.html FOUC guard applies it
+ *  on first paint — the real user path, deterministic across runner OS settings. */
+async function seedTheme(context: BrowserContext, theme: 'light' | 'dark'): Promise<void> {
+  await context.addInitScript((t) => {
+    try {
+      localStorage.setItem('bkt-theme', t as string)
+    } catch {
+      /* private mode — capture falls back to the default scheme */
+    }
+  }, theme)
+}
+
+/** Sign in through the real login form so authenticated routes render. */
+async function login(page: Page): Promise<void> {
+  await page.goto(`${baseUrl()}/`, { waitUntil: 'domcontentloaded' }).catch(() => undefined)
+  await page.waitForURL(/\/login/, { timeout: 20_000 }).catch(() => undefined)
+  await page.locator('input[type="email"]').fill(EMAIL)
+  await page.locator('input[type="password"]').fill(PASSWORD)
+  await page.getByRole('button', { name: /sign in/i }).click()
+  await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 30_000 }).catch(() => undefined)
+}
+
+/** Authenticate (when needed + possible), navigate, apply simulated insets to the
+ *  FINAL DOM, and let fonts settle — so the capture reflects what we want to QA. */
+async function prepare(page: Page, opts: { insets?: Insets }): Promise<void> {
+  if (needsAuth && hasCreds) await login(page)
   await page.goto(url, { waitUntil: 'networkidle' }).catch(() => undefined)
-  await page.evaluate(
-    ({ dark, insets }) => {
-      if (dark) document.documentElement.setAttribute('data-theme', 'dark')
-      if (insets) {
-        const [t, b, l, r] = insets
-        const s = document.createElement('style')
-        s.textContent = `:root{--safe-top:${t}px;--safe-bottom:${b}px;--safe-left:${l}px;--safe-right:${r}px;}`
-        document.documentElement.appendChild(s)
-      }
-    },
-    { dark: Boolean(opts.dark), insets: opts.insets ?? null },
-  )
+  if (opts.insets) {
+    await page.evaluate((insets) => {
+      const [t, b, l, r] = insets
+      const s = document.createElement('style')
+      s.textContent = `:root{--safe-top:${t}px;--safe-bottom:${b}px;--safe-left:${l}px;--safe-right:${r}px;}`
+      document.documentElement.appendChild(s)
+    }, opts.insets)
+  }
   // Geist is a network webfont; wait for it so captures are deterministic.
   await page.evaluate(() => document.fonts?.ready).catch(() => undefined)
   await page.waitForTimeout(250)
@@ -111,28 +143,35 @@ async function main(): Promise<void> {
 
   // Portrait, light: full page + above-the-fold.
   const light: BrowserContext = await browser.newContext({ ...iPhone17ProMax })
+  await seedTheme(light, 'light')
   const lp = await light.newPage()
   await prepare(lp, { insets: simulateInsets ? portraitInsets : undefined })
   await lp.screenshot({ path: `${dir}/${label}-${slug}-full.png`, fullPage: true })
   await lp.screenshot({ path: `${dir}/${label}-${slug}-fold.png` })
   await light.close()
 
-  // Portrait, dark: toggle the data-theme the bkt palette keys on.
+  // Portrait, dark: seed bkt-theme=dark so the FOUC guard paints dark (real path).
   const dark: BrowserContext = await browser.newContext({ ...iPhone17ProMax })
+  await seedTheme(dark, 'dark')
   const dp = await dark.newPage()
-  await prepare(dp, { dark: true, insets: simulateInsets ? portraitInsets : undefined })
+  await prepare(dp, { insets: simulateInsets ? portraitInsets : undefined })
   await dp.screenshot({ path: `${dir}/${label}-${slug}-dark.png`, fullPage: true })
   await dark.close()
 
   // Landscape: home indicator shrinks (21) and the notch moves to the side (59).
   const land: BrowserContext = await browser.newContext({ ...iPhone17ProMax, viewport: { width: 956, height: 440 } })
+  await seedTheme(land, 'light')
   const landPage = await land.newPage()
   await prepare(landPage, { insets: simulateInsets ? landscapeInsets : undefined })
   await landPage.screenshot({ path: `${dir}/${label}-${slug}-landscape.png` })
   await land.close()
 
   await browser.close()
-  const note = simulateInsets ? ' (safe-area insets simulated)' : ''
+  const notes = [
+    simulateInsets ? 'safe-area insets simulated' : '',
+    needsAuth ? (hasCreds ? 'authenticated' : 'NO CREDS — protected route may show /login') : '',
+  ].filter(Boolean)
+  const note = notes.length ? ` (${notes.join('; ')})` : ''
   console.log(`[shot] ${url} -> ${dir}/${label}-${slug}-{full,fold,dark,landscape}.png${note}`)
 }
 

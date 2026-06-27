@@ -59,7 +59,9 @@ export function DashboardSummarySection({ refreshKey = 0 }: DashboardSummarySect
     : []
 
   return (
-    <section>
+    // @container: the metric cards reflow on the dashboard column's width rather
+    // than the viewport, so the sidebar/drawer state never skews the count (ADR-023).
+    <section className="@container">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h2
@@ -83,7 +85,7 @@ export function DashboardSummarySection({ refreshKey = 0 }: DashboardSummarySect
         <p className="mb-3 text-sm text-destructive">{error}</p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @2xl:grid-cols-5">
         {loading && metrics === null
           ? Array.from({ length: 5 }).map((_, i) => (
               <Card key={i}>

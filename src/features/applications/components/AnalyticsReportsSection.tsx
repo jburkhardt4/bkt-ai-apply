@@ -69,7 +69,10 @@ export function AnalyticsReportsSection({ refreshKey = 0 }: AnalyticsReportsSect
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      {/* @container: the breakdown grid reflows on THIS card's width, not the
+          viewport — correct whether it's in a wide dashboard column or a narrow
+          panel/drawer (ADR-023). */}
+      <CardContent className="@container space-y-4">
         {loading && report === null ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
@@ -78,7 +81,7 @@ export function AnalyticsReportsSection({ refreshKey = 0 }: AnalyticsReportsSect
           <>
             {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
               {/* Conversion by source */}
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conversion by source</h3>

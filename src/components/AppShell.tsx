@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useOverlay } from '@/hooks/useOverlay'
+import { useKeyboardInset } from '@/hooks/useKeyboardInset'
 import { useAuth } from '@/contexts/auth-context'
 import { AiAssistantPanel } from '@/features/ai-agent/components/AiAssistantPanel'
 import { SelectedApplicationContext } from '@/contexts/selected-application-context'
@@ -38,6 +39,9 @@ export function AppShell({ children }: AppShellProps) {
   // Escape-to-close, scroll-lock, and focus management for the two shell overlays.
   useOverlay(isMobile && navOpen, () => setNavOpen(false), navDrawerRef)
   useOverlay(assistantOpen, () => setAssistantOpen(false), assistantRef)
+  // On iOS the keyboard overlays the layout viewport; reserve its height so the
+  // assistant composer stays visible. 0 on desktop / when no keyboard is shown.
+  const keyboardInset = useKeyboardInset()
 
   // Unified "Action Required" nav badge — the centralized bottleneck count
   // (unreviewed matches + interviews + offers + unread recruiter inbox). The
@@ -231,7 +235,7 @@ export function AppShell({ children }: AppShellProps) {
                   <Icon name="x" size={16} />
                 </BktButton>
               </div>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '16px 16px calc(16px + var(--safe-bottom))' }}>
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: `16px 16px calc(16px + var(--safe-bottom) + ${keyboardInset}px)` }}>
                 <AiAssistantPanel selectedApplicationId={selectedApplicationId} />
               </div>
             </section>

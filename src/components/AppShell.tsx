@@ -3,8 +3,9 @@
 // Interview / Platform groups + user footer). Main: the routed page.
 // The AI chat agent from the previous shell is preserved as a right-hand
 // slide-over, launched from the sidebar's "AI Assistant" item.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useOverlay } from '@/hooks/useOverlay'
 import { useAuth } from '@/contexts/auth-context'
 import { AiAssistantPanel } from '@/features/ai-agent/components/AiAssistantPanel'
 import { SelectedApplicationContext } from '@/contexts/selected-application-context'
@@ -32,6 +33,11 @@ export function AppShell({ children }: AppShellProps) {
   const [navOpen, setNavOpen] = useState(false)
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
   const [badges, setBadges] = useState<Partial<Record<NavKey, number>>>({})
+  const navDrawerRef = useRef<HTMLDivElement>(null)
+  const assistantRef = useRef<HTMLElement>(null)
+  // Escape-to-close, scroll-lock, and focus management for the two shell overlays.
+  useOverlay(isMobile && navOpen, () => setNavOpen(false), navDrawerRef)
+  useOverlay(assistantOpen, () => setAssistantOpen(false), assistantRef)
 
   // Unified "Action Required" nav badge — the centralized bottleneck count
   // (unreviewed matches + interviews + offers + unread recruiter inbox). The
@@ -98,7 +104,7 @@ export function AppShell({ children }: AppShellProps) {
             />
           )}
           <main
-            className="bkt-scroll"
+            className="bkt-scroll bkt-app-main"
             style={{
               flex: 1,
               minWidth: 0,
@@ -140,13 +146,20 @@ export function AppShell({ children }: AppShellProps) {
           <div style={{ position: 'fixed', inset: 0, zIndex: 95, display: 'flex', justifyContent: 'flex-start' }}>
             <div
               onClick={() => setNavOpen(false)}
+              aria-hidden="true"
               style={{ position: 'absolute', inset: 0, background: 'rgba(0, 24, 72, 0.30)', animation: 'bkt-fade-up 0.2s var(--ease-out) both' }}
             ></div>
             <div
+              ref={navDrawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
+              tabIndex={-1}
               style={{
                 position: 'relative',
                 height: '100%',
                 display: 'flex',
+                outline: 'none',
                 animation: 'bkt-drawer-slide-in var(--dur-medium) var(--ease-out) both',
                 boxShadow: 'var(--shadow-xl)',
               }}
@@ -176,9 +189,15 @@ export function AppShell({ children }: AppShellProps) {
           <div style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', justifyContent: 'flex-end' }}>
             <div
               onClick={() => setAssistantOpen(false)}
+              aria-hidden="true"
               style={{ position: 'absolute', inset: 0, background: 'rgba(0, 24, 72, 0.18)', animation: 'bkt-fade-up 0.2s var(--ease-out) both' }}
             ></div>
             <section
+              ref={assistantRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="AI Assistant"
+              tabIndex={-1}
               style={{
                 position: 'relative',
                 width: 'min(420px, 92vw)',
@@ -187,6 +206,7 @@ export function AppShell({ children }: AppShellProps) {
                 boxShadow: 'var(--shadow-xl)',
                 display: 'flex',
                 flexDirection: 'column',
+                outline: 'none',
                 animation: 'bkt-jd-slide-in var(--dur-medium) var(--ease-out) both',
               }}
             >

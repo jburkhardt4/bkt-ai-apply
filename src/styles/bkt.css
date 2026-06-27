@@ -454,6 +454,11 @@ code, kbd, pre, samp { font-family: var(--font-mono); }
    page/body behind it (stops iOS rubber-band leak under drawers/sheets). */
 .bkt-scroll { overscroll-behavior: contain; }
 .bkt-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+
+/* Freeze the main scroll region while a modal overlay (nav drawer / slide-over)
+   is open, so background content can't scroll behind the scrim (set by the
+   useOverlay hook). */
+html.bkt-overlay-open .bkt-app-main { overflow: hidden; }
 .bkt-scroll::-webkit-scrollbar-thumb {
   background: var(--bkt-zinc-300);
   border: 3px solid transparent;

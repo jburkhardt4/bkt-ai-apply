@@ -213,12 +213,13 @@ export function ReviewModeMenu({ value, onChange, fullWidth = false }: { value: 
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          // Mobile (fullWidth): match the Search Profile / Score buttons — 34px tall,
-          // weight-600 label, content centered. Desktop unchanged (36px, weight 500).
+          // Mobile (fullWidth): match the Search Profile / Score buttons — they carry
+          // the .bkt-touch 44px floor on phones, so use 44px here too; weight-600
+          // label, content centered. Desktop unchanged (36px, weight 500).
           justifyContent: fullWidth ? 'center' : undefined,
           gap: 8,
           width: fullWidth ? '100%' : undefined,
-          height: fullWidth ? 34 : 36,
+          height: fullWidth ? 44 : 36,
           padding: '0 12px',
           background: 'var(--surface)',
           border: '1px solid var(--border)',

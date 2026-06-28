@@ -196,8 +196,9 @@ export function JobsScreen({
       style={{
         width: '100%',
         minWidth: 0,
-        // Match the Search Profile / Score buttons: 34px tall + weight-600 label.
-        height: 34,
+        // Match the Search Profile / Score buttons (which get the .bkt-touch 44px
+        // floor on mobile): 44px tall + weight-600 label.
+        height: 44,
         padding: '0 12px',
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--input)',

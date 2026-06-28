@@ -51,7 +51,7 @@ const SORT_MODES: { label: string; cmp: (a: JobMatch, b: JobMatch) => number }[]
 
 /** Per-column filter dropdown (audit §6 #3 — ported from the prospector table).
  *  Renders nothing when the column has no values in view. */
-function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+function FilterSelect({ label, value, options, onChange, fill = false }: { label: string; value: string; options: string[]; onChange: (v: string) => void; fill?: boolean }) {
   if (options.length === 0) return null
   return (
     <select
@@ -59,6 +59,10 @@ function FilterSelect({ label, value, options, onChange }: { label: string; valu
       onChange={(e) => onChange(e.target.value)}
       aria-label={label}
       style={{
+        // fill = mobile: each select stretches to fill its equal grid column.
+        // Off (desktop) keeps the original auto width — desktop is unchanged.
+        width: fill ? '100%' : undefined,
+        minWidth: fill ? 0 : undefined,
         height: 32,
         padding: '0 8px',
         borderRadius: 'var(--radius-md)',
@@ -171,15 +175,44 @@ export function JobsScreen({
   const paged = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   // Toolbar controls (filters · search · sort/refresh). Defined once and arranged
-  // differently per breakpoint below: on mobile they stack into three rows — the
-  // dropdowns right-aligned, a full-width search, and Sort/Refresh as two equal
-  // full-width halves — while desktop keeps them inline on one wrapping row.
+  // per breakpoint below. On mobile: the status filter collapses to a single
+  // full-width dropdown, the Type/Env/Source selects sit in an equal 3-column grid,
+  // a full-width search, and Sort/Refresh as two equal halves. Desktop keeps the
+  // inline tabs + wrapping controls row (unchanged).
   const filterDropdowns = (
     <>
-      <FilterSelect label="Type" value={typeFilter} options={typeOptions} onChange={onColumnFilter(setTypeFilter)} />
-      <FilterSelect label="Environment" value={envFilter} options={envOptions} onChange={onColumnFilter(setEnvFilter)} />
-      <FilterSelect label="Source" value={sourceFilter} options={sourceOptions} onChange={onColumnFilter(setSourceFilter)} />
+      <FilterSelect fill={isMobile} label="Type" value={typeFilter} options={typeOptions} onChange={onColumnFilter(setTypeFilter)} />
+      <FilterSelect fill={isMobile} label="Environment" value={envFilter} options={envOptions} onChange={onColumnFilter(setEnvFilter)} />
+      <FilterSelect fill={isMobile} label="Source" value={sourceFilter} options={sourceOptions} onChange={onColumnFilter(setSourceFilter)} />
     </>
+  )
+  // Mobile only: the All/Review/In-progress/Applied/Declined tabs collapse into a
+  // single full-width dropdown styled like the search field (req #3).
+  const mobileFilterSelect = (
+    <select
+      value={filter}
+      onChange={(e) => selectFilter(e.target.value)}
+      aria-label="Filter jobs"
+      style={{
+        width: '100%',
+        minWidth: 0,
+        height: 36,
+        padding: '0 12px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--input)',
+        background: 'var(--surface)',
+        color: 'var(--text-strong)',
+        font: '500 var(--text-sm)/1 var(--font-body)',
+        boxShadow: 'var(--shadow-xs)',
+        cursor: 'pointer',
+      }}
+    >
+      <option value="All">All · {stats.matches}</option>
+      <option value="Review Matches">Review Matches · {reviewCount}</option>
+      <option value="In progress">In progress · {inProgressCount}</option>
+      <option value="Applied">Applied · {stats.submitted}</option>
+      <option value="Declined">Declined · {declinedCount}</option>
+    </select>
   )
   const searchInput = (
     <BktInput
@@ -247,36 +280,36 @@ export function JobsScreen({
         <BktStatCard label="Job Matches Found" value={stats.matches} />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 14 : 22, borderBottom: '1px solid var(--border)', flexWrap: isMobile ? 'wrap' : undefined }}>
-        <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => selectFilter('All')} />
-        <FilterTab label="Review Matches" count={reviewCount} badge={reviewCount > 0 ? <BktBadge tone="brand" appearance="soft" style={{ border: '1px solid var(--bkt-blue-200)' }}>{reviewCount}</BktBadge> : undefined} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
-        <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => selectFilter('In progress')} />
-        <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
-        <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
-        <div style={{ flex: 1 }}></div>
-        {isMobile ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', borderTop: '1px solid var(--border)', paddingTop: 14, paddingBottom: 14 }}>
-            {/* Top divider above the filters; symmetric 14px padding brackets the
-                filter controls between this divider and the container's borderBottom
-                (matches the job card's vertical rhythm for breathing room). */}
-            {/* Dropdowns aligned to the right edge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{filterDropdowns}</div>
-            {searchInput}
-            {/* Sort + Refresh: equal halves, flush to both edges */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              {sortButton}
-              {refreshButton}
-            </div>
+      {isMobile ? (
+        // Mobile: the status filter is a single full-width dropdown (req #3); the
+        // field stack (filter · Type/Env/Source equal-3-col grid · search ·
+        // Sort/Refresh) is bracketed by top + bottom dividers with symmetric 14px
+        // padding for breathing room.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', paddingTop: 14, paddingBottom: 14 }}>
+          {mobileFilterSelect}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>{filterDropdowns}</div>
+          {searchInput}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {sortButton}
+            {refreshButton}
           </div>
-        ) : (
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22, borderBottom: '1px solid var(--border)' }}>
+          <FilterTab label="All" count={stats.matches} active={filter === 'All'} onClick={() => selectFilter('All')} />
+          <FilterTab label="Review Matches" count={reviewCount} badge={reviewCount > 0 ? <BktBadge tone="brand" appearance="soft" style={{ border: '1px solid var(--bkt-blue-200)' }}>{reviewCount}</BktBadge> : undefined} active={filter === 'Review Matches'} onClick={() => selectFilter('Review Matches')} />
+          <FilterTab label="In progress" count={inProgressCount} active={filter === 'In progress'} onClick={() => selectFilter('In progress')} />
+          <FilterTab label="Applied" count={stats.submitted} active={filter === 'Applied'} onClick={() => selectFilter('Applied')} />
+          <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
+          <div style={{ flex: 1 }}></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6, flexWrap: 'wrap' }}>
             {filterDropdowns}
             {searchInput}
             {sortButton}
             {refreshButton}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {searching && <SearchingPanel />}
 

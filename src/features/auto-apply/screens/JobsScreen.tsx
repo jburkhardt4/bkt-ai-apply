@@ -196,13 +196,18 @@ export function JobsScreen({
   )
   // flex:1 on mobile makes the two buttons equal halves that sit flush to both
   // edges of the row; their content is centered by BktButton's default.
+  // On mobile, Sort + Refresh match the search input's chrome (height 36, the
+  // lighter var(--input) border, shadow-xs; radius + surface bg already match) so
+  // the field group reads as one set; icons match the search icon's muted color.
+  const fieldMatch = isMobile ? { flex: 1, height: 36, borderColor: 'var(--input)', boxShadow: 'var(--shadow-xs)' } : undefined
+  const iconColor = isMobile ? 'var(--text-subtle)' : undefined
   const sortButton = (
     <BktButton
       variant="outline"
       size="sm"
-      iconLeft={<Icon name="arrow-up-down" size={14} />}
+      iconLeft={<Icon name="arrow-up-down" size={14} color={iconColor} />}
       onClick={() => setSortIdx((i) => (i + 1) % SORT_MODES.length)}
-      style={isMobile ? { flex: 1 } : undefined}
+      style={fieldMatch}
     >
       Sort: {SORT_MODES[sortIdx].label}
     </BktButton>
@@ -211,9 +216,9 @@ export function JobsScreen({
     <BktButton
       variant="outline"
       size="sm"
-      iconLeft={<Icon name="refresh-cw" size={14} />}
+      iconLeft={<Icon name="refresh-cw" size={14} color={iconColor} />}
       onClick={onRefresh}
-      style={isMobile ? { flex: 1 } : undefined}
+      style={fieldMatch}
     >
       Refresh
     </BktButton>
@@ -250,7 +255,10 @@ export function JobsScreen({
         <FilterTab label="Declined" count={declinedCount} active={filter === 'Declined'} onClick={() => selectFilter('Declined')} />
         <div style={{ flex: 1 }}></div>
         {isMobile ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 6, width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', borderTop: '1px solid var(--border)', paddingTop: 14, paddingBottom: 14 }}>
+            {/* Top divider above the filters; symmetric 14px padding brackets the
+                filter controls between this divider and the container's borderBottom
+                (matches the job card's vertical rhythm for breathing room). */}
             {/* Dropdowns aligned to the right edge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{filterDropdowns}</div>
             {searchInput}

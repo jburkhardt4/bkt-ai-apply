@@ -363,12 +363,16 @@ export function AutoApplyDashboard() {
         />
       </div>
       {mode === 'jobs' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 28px 0', flexWrap: 'wrap' }}>
+        // On mobile: 16px side padding (matches JobsScreen's content inset so the
+        // row's edges line up with the stat cards below) + each button flex:1, so
+        // the two sit as equal 50% halves flush to both edges. Desktop unchanged.
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '10px 16px 0' : '10px 28px 0', flexWrap: 'wrap' }}>
           <BktButton
             variant="outline"
             size="sm"
             iconLeft={<Icon name={configOpen ? 'chevron-down' : 'sliders-horizontal'} size={14} />}
             onClick={() => setConfigOpen((o) => !o)}
+            style={isMobile ? { flex: 1 } : undefined}
           >
             Search Profile
           </BktButton>
@@ -379,6 +383,7 @@ export function AutoApplyDashboard() {
               iconLeft={<Icon name="sparkles" size={14} />}
               onClick={handleScoreInbox}
               disabled={isScoring}
+              style={isMobile ? { flex: 1 } : undefined}
             >
               {isScoring ? 'Scoring…' : `Score ${scoreTargets.length} ${scoreTargets.length === 1 ? 'job' : 'jobs'}`}
             </BktButton>

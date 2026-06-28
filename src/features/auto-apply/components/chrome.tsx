@@ -37,23 +37,24 @@ export function TopBar({ credits, onBudget, onGetCredits }: { credits: number; o
       )}
       <div style={{ flex: 1 }}></div>
 
-      {/* segmented credits capsule */}
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, background: 'var(--bkt-zinc-100)', borderRadius: 'var(--radius-pill)', padding: 4 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 6px 0 10px' }}>
-          <img src={brandAsset('/brand/bkt-web-app-logo.png')} alt="" style={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 6 }} />
-          <span className="bkt-num" style={{ font: '600 var(--text-sm)/1 var(--font-body)', color: 'var(--text-strong)' }}>
-            {credits} credits
+      {/* Segmented credits capsule — desktop only. On mobile it's hidden so the
+          blue "Update Monthly Budget" CTA takes its place (mobile-only change). */}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, background: 'var(--bkt-zinc-100)', borderRadius: 'var(--radius-pill)', padding: 4 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 6px 0 10px' }}>
+            <img src={brandAsset('/brand/bkt-web-app-logo.png')} alt="" style={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 6 }} />
+            <span className="bkt-num" style={{ font: '600 var(--text-sm)/1 var(--font-body)', color: 'var(--text-strong)' }}>
+              {credits} credits
+            </span>
+            <BktButton
+              variant="primary"
+              size="sm"
+              style={{ height: 28, padding: '0 12px', borderRadius: 'var(--radius-pill)', fontSize: 'var(--text-xs)', boxShadow: 'none' }}
+              onClick={onGetCredits}
+            >
+              Get more
+            </BktButton>
           </span>
-          <BktButton
-            variant="primary"
-            size="sm"
-            style={{ height: 28, padding: '0 12px', borderRadius: 'var(--radius-pill)', fontSize: 'var(--text-xs)', boxShadow: 'none' }}
-            onClick={onGetCredits}
-          >
-            Get more
-          </BktButton>
-        </span>
-        {!isMobile && (
           <button
             onMouseEnter={() => setHoverGift(true)}
             onMouseLeave={() => setHoverGift(false)}
@@ -77,8 +78,8 @@ export function TopBar({ credits, onBudget, onGetCredits }: { credits: number; o
             <Icon name="gift" size={15} color="var(--primary)" />
             Get Free Credits
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <BktButton variant="primary" size="md" style={{ borderRadius: 'var(--radius-pill)' }} onClick={onBudget}>
         Update Monthly Budget
@@ -193,7 +194,7 @@ export function ModeTabs({
 }
 
 /* ---- Review mode dropdown (3 modes) ---- */
-export function ReviewModeMenu({ value, onChange }: { value: ReviewModeId; onChange: (m: ReviewModeId) => void }) {
+export function ReviewModeMenu({ value, onChange, fullWidth = false }: { value: ReviewModeId; onChange: (m: ReviewModeId) => void; fullWidth?: boolean }) {
   const [open, setOpen] = useState(false)
   const current = REVIEW_MODES.find((m) => m.id === value) ?? REVIEW_MODES[0]!
   const rootRef = useRef<HTMLDivElement>(null)
@@ -205,7 +206,7 @@ export function ReviewModeMenu({ value, onChange }: { value: ReviewModeId; onCha
     return () => document.removeEventListener('pointerdown', close)
   }, [])
   return (
-    <div ref={rootRef} style={{ position: 'relative' }}>
+    <div ref={rootRef} style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="bkt-press"
@@ -213,6 +214,7 @@ export function ReviewModeMenu({ value, onChange }: { value: ReviewModeId; onCha
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
+          width: fullWidth ? '100%' : undefined,
           height: 36,
           padding: '0 12px',
           background: 'var(--surface)',
@@ -229,7 +231,7 @@ export function ReviewModeMenu({ value, onChange }: { value: ReviewModeId; onCha
           name="chevron-down"
           size={14}
           color="var(--bkt-zinc-500)"
-          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
+          style={{ marginLeft: fullWidth ? 'auto' : undefined, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
         />
       </button>
       {open && (
@@ -237,9 +239,10 @@ export function ReviewModeMenu({ value, onChange }: { value: ReviewModeId; onCha
           className="bkt-enter"
           style={{
             position: 'absolute',
+            left: fullWidth ? 0 : undefined,
             right: 0,
             top: 'calc(100% + 8px)',
-            width: 288,
+            width: fullWidth ? 'auto' : 288,
             zIndex: 60,
             background: 'var(--surface)',
             border: '1px solid var(--border)',

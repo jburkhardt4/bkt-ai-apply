@@ -37,7 +37,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { JobsScreen } from './screens/JobsScreen'
 import { QuickReview } from './screens/QuickReview'
 import { JDSidebar } from './screens/JDSidebar'
-import type { JobMatch } from './types'
+import type { JobMatch, ReviewModeId } from './types'
 
 export function AutoApplyDashboard() {
   const isMobile = useIsMobile()
@@ -341,6 +341,11 @@ export function AutoApplyDashboard() {
       .catch(() => undefined)
   }, [userId, reviewMode, reload, toast])
 
+  const changeReviewMode = (m: ReviewModeId) => {
+    setReviewMode(m)
+    toast(`Switched to ${REVIEW_MODES.find((x) => x.id === m)?.label ?? m}`, 'settings-2', 'var(--bkt-blue-300)')
+  }
+
   return (
     <>
       <TopBar
@@ -354,14 +359,15 @@ export function AutoApplyDashboard() {
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 24, padding: isMobile ? '6px 16px 0' : '6px 28px 0' }}>
         <ModeTabs mode={mode} setMode={setMode} reviewCount={reviewCount} />
         <div style={{ flex: 1 }}></div>
-        <ReviewModeMenu
-          value={reviewMode}
-          onChange={(m) => {
-            setReviewMode(m)
-            toast(`Switched to ${REVIEW_MODES.find((x) => x.id === m)?.label ?? m}`, 'settings-2', 'var(--bkt-blue-300)')
-          }}
-        />
+        {!isMobile && <ReviewModeMenu value={reviewMode} onChange={changeReviewMode} />}
       </div>
+      {isMobile && (
+        // Review/Hybrid/Auto mode selector on its own full-width row, below the
+        // Quick Review / Your Jobs tabs and above the Search Profile actions (mobile).
+        <div style={{ padding: '10px 16px 0' }}>
+          <ReviewModeMenu fullWidth value={reviewMode} onChange={changeReviewMode} />
+        </div>
+      )}
       {mode === 'jobs' && (
         // On mobile: 16px side padding (matches JobsScreen's content inset so the
         // row's edges line up with the stat cards below) + each button flex:1, so

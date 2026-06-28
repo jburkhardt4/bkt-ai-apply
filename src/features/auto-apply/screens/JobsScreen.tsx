@@ -196,13 +196,14 @@ export function JobsScreen({
       style={{
         width: '100%',
         minWidth: 0,
-        height: 36,
+        // Match the Search Profile / Score buttons: 34px tall + weight-600 label.
+        height: 34,
         padding: '0 12px',
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--input)',
         background: 'var(--surface)',
         color: 'var(--text-strong)',
-        font: '500 var(--text-sm)/1 var(--font-body)',
+        font: '600 var(--text-sm)/1 var(--font-body)',
         boxShadow: 'var(--shadow-xs)',
         cursor: 'pointer',
       }}

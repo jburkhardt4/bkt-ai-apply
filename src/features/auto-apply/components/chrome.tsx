@@ -213,14 +213,17 @@ export function ReviewModeMenu({ value, onChange, fullWidth = false }: { value: 
         style={{
           display: 'inline-flex',
           alignItems: 'center',
+          // Mobile (fullWidth): match the Search Profile / Score buttons — 34px tall,
+          // weight-600 label, content centered. Desktop unchanged (36px, weight 500).
+          justifyContent: fullWidth ? 'center' : undefined,
           gap: 8,
           width: fullWidth ? '100%' : undefined,
-          height: 36,
+          height: fullWidth ? 34 : 36,
           padding: '0 12px',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-md)',
-          font: '500 var(--text-sm)/1 var(--font-body)',
+          font: fullWidth ? '600 var(--text-sm)/1 var(--font-body)' : '500 var(--text-sm)/1 var(--font-body)',
           color: 'var(--text-strong)',
           cursor: 'pointer',
         }}
@@ -231,7 +234,7 @@ export function ReviewModeMenu({ value, onChange, fullWidth = false }: { value: 
           name="chevron-down"
           size={14}
           color="var(--bkt-zinc-500)"
-          style={{ marginLeft: fullWidth ? 'auto' : undefined, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
+          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
         />
       </button>
       {open && (

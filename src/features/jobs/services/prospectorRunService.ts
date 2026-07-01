@@ -5,7 +5,7 @@
 // The recurring 12-hour cadence is owned server-side; this is only the manual
 // "trigger now" leg.
 import { getSupabaseClientSafe } from '@/lib/supabase'
-import { summarizeRunResults, type ProspectorRunResponse } from '../summarizeRunResults'
+import { summarizeRunResults, type ProspectorRunResponse, type RunOutcomeKind } from '../summarizeRunResults'
 
 // Transport/UX ceiling on the invoke — a hung Edge Function must not strand the
 // "searching…" state. A full prospector run fans out several SerpApi queries, so
@@ -16,13 +16,14 @@ const RUN_TIMEOUT_MS = 90_000
 
 export interface ProspectorRunOutcome {
   ok: boolean
+  kind: RunOutcomeKind
   message: string
 }
 
 export async function triggerProspectorRun(): Promise<ProspectorRunOutcome> {
   const supabase = getSupabaseClientSafe()
   if (!supabase) {
-    return { ok: false, message: 'Supabase is not configured — search requires a live backend.' }
+    return { ok: false, kind: 'error', message: 'Supabase is not configured — search requires a live backend.' }
   }
 
   const controller = new AbortController()
@@ -32,14 +33,15 @@ export async function triggerProspectorRun(): Promise<ProspectorRunOutcome> {
       'prospector-cron',
       { signal: controller.signal },
     )
-    if (error) return { ok: false, message: 'Search failed. Please try again.' }
+    if (error) return { ok: false, kind: 'error', message: 'Search failed. Please try again.' }
     const outcome = summarizeRunResults(data ?? null)
-    return { ok: outcome.kind !== 'error', message: outcome.message }
+    return { ok: outcome.kind !== 'error', kind: outcome.kind, message: outcome.message }
   } catch (err) {
     const aborted =
       controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')
     return {
       ok: false,
+      kind: 'error',
       message: aborted ? 'Search timed out — please try again' : 'Search failed. Please try again.',
     }
   } finally {

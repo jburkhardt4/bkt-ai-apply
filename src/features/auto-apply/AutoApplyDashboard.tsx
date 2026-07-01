@@ -205,7 +205,12 @@ export function AutoApplyDashboard() {
       .then(() => triggerProspectorRun())
       .then((res) => {
         reload()
-        if (!res.ok) toast(res.message, 'circle-alert', 'var(--bkt-warning)')
+        if (res.kind === 'throttled') {
+          // Run-frequency skip — informative, not an error (a recent search still stands).
+          toast(res.message, 'clock', 'var(--bkt-blue-300)')
+        } else if (!res.ok) {
+          toast(res.message, 'circle-alert', 'var(--bkt-warning)')
+        }
       })
       .finally(() => setSearching(false))
   }

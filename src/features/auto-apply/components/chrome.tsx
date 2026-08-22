@@ -234,7 +234,9 @@ export function ReviewModeMenu({ value, onChange, fullWidth = false }: { value: 
         <Icon
           name="chevron-down"
           size={14}
-          color="var(--bkt-zinc-500)"
+          // Mobile (fullWidth): use the same muted var(--text-subtle) as the Sort/Refresh
+          // field icons so all dropdown indicators read consistently. Desktop unchanged.
+          color={fullWidth ? 'var(--text-subtle)' : 'var(--bkt-zinc-500)'}
           style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform var(--dur-base) var(--ease-standard)' }}
         />
       </button>

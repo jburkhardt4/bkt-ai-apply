@@ -138,6 +138,12 @@
       "sourceType": "github",
       "skillPath": "skills/tailor-resume/SKILL.md",
       "computedHash": "aece3520f4c708131ab3a2dd6f10129ba1bf7718ab0bcdee0137212098544131"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "523b8063c07eedd2b8a1ca94d7a0be9ad340026bd9f21a1eda0b6be2a855298f"
     }
   }
 }

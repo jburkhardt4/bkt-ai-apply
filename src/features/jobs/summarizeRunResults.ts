@@ -22,9 +22,13 @@ export interface ProspectorRunResponse {
   message?: string
   profiles_processed?: number
   results?: ProspectorRunProfileResult[]
+  /** Set by the Edge Function when a run is skipped by the run-frequency throttle. */
+  throttled?: boolean
+  min_run_interval_minutes?: number
+  last_run_at?: string | null
 }
 
-export type RunOutcomeKind = 'error' | 'empty' | 'success'
+export type RunOutcomeKind = 'error' | 'empty' | 'success' | 'throttled'
 
 export interface RunOutcome {
   kind: RunOutcomeKind
@@ -36,12 +40,26 @@ export interface RunOutcome {
  * outcome. Pure + side-effect-free.
  *
  * Precedence:
+ *   0. data.throttled === true               → throttled (run-frequency skip)
  *   1. any result with status 'error'        → error
  *   2. no results, or every result 'empty'   → empty (no new jobs)
  *   3. otherwise                             → success (sum jobs_queued);
  *      a soft note is appended when any result was 'partial'.
  */
 export function summarizeRunResults(data: ProspectorRunResponse | null): RunOutcome {
+  // A throttled run is skipped server-side (run-frequency limit) — surface it as
+  // its own informative state rather than a generic "No new jobs found".
+  if (data?.throttled) {
+    const minutes = data.min_run_interval_minutes
+    return {
+      kind: 'throttled',
+      message:
+        typeof minutes === 'number'
+          ? `You searched recently — searches run at most once every ${minutes} minutes. Try again shortly.`
+          : 'You searched recently — try again in a few minutes.',
+    }
+  }
+
   const results = data?.results ?? []
 
   if (results.some((r) => r.status === 'error')) {

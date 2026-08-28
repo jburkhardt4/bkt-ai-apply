@@ -80,4 +80,23 @@ describe('summarizeRunResults', () => {
     expect(outcome.kind).toBe('success')
     expect(outcome.message).toBe('Added 0 new jobs (some searches were incomplete)')
   })
+
+  it('returns a throttled outcome (not empty) when the run was throttled', () => {
+    const outcome = summarizeRunResults({ throttled: true, min_run_interval_minutes: 30 })
+    expect(outcome.kind).toBe('throttled')
+    expect(outcome.message).toBe(
+      'You searched recently — searches run at most once every 30 minutes. Try again shortly.',
+    )
+  })
+
+  it('throttled takes precedence over the empty branch (no results present)', () => {
+    // A throttled response carries no results; the empty branch must not swallow it.
+    expect(summarizeRunResults({ throttled: true, results: [] }).kind).toBe('throttled')
+  })
+
+  it('falls back to a generic throttled message when the interval is unknown', () => {
+    const outcome = summarizeRunResults({ throttled: true })
+    expect(outcome.kind).toBe('throttled')
+    expect(outcome.message).toBe('You searched recently — try again in a few minutes.')
+  })
 })

@@ -19,12 +19,22 @@
  * - INT-RULE-006: SERPAPI_KEY accessed only via Deno.env; never in client bundle
  */
 
-// @ts-expect-error — esm.sh URL import; resolved by Deno runtime, not Node TS server
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getApiKeyForProvider } from '../_shared/llm/factory.ts'
 import { formatJdMarkdown } from '../_shared/jd-format.ts'
 import { corsHeaders } from '../_shared/http.ts'
 import { cronSecretConfigured, hasValidCronSecret } from '../_shared/cron-auth.ts'
+import {
+  readProspectorRuntimeConfig,
+  SerpApiGuard,
+  RateLimitError,
+  shouldThrottleRun,
+  isFeedStale,
+  planFeedAlerts,
+  type SerpApiSkipReason,
+  type ProfileRunSummary,
+  type FeedAlert,
+} from '../_shared/prospector/guard.ts'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -178,9 +188,7 @@ const BACKOFF_BASE_MS = 1_000
 // ---------------------------------------------------------------------------
 
 function createServiceClient(): SupabaseClient {
-  // @ts-expect-error — Deno global provided by Edge Function runtime
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  // @ts-expect-error — Deno global provided by Edge Function runtime
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -326,7 +334,7 @@ function isAllowedByProfileFilters(
   // Only restrict when the profile explicitly limits to specific work modes.
   // Prospector form stores "in-office" but job rows use "onsite" — normalise
   // before comparing so in-office-only profiles are not silently skipped.
-  const wantedEnvs = profile.environments
+  const wantedEnvs: string[] = profile.environments
     .map((e) => {
       const lower = e.toLowerCase().trim()
       return lower === 'in-office' ? 'onsite' : lower
@@ -399,7 +407,7 @@ async function fetchSerpApi(url: string): Promise<SerpApiJobResult[]> {
 
     if (response.status === 429) {
       if (attempt === BACKOFF_MAX_RETRIES) {
-        throw new Error(`SerpApi rate limit hit after ${BACKOFF_MAX_RETRIES} retries`)
+        throw new RateLimitError(`SerpApi rate limit hit after ${BACKOFF_MAX_RETRIES} retries`)
       }
       const delayMs = BACKOFF_BASE_MS * Math.pow(2, attempt)
       console.warn(`prospector-cron: SerpApi 429 — retrying in ${delayMs}ms (attempt ${attempt + 1})`)
@@ -772,10 +780,20 @@ async function mapJobResult(
  * Error isolation: errors on a single title query are caught and accumulated.
  * A per-profile failure does not abort processing of other profiles.
  */
+/** Records a single note when the SerpApi guard halts further calls this run. */
+function noteGuardStop(stats: RunStats, reason: SerpApiSkipReason | undefined): void {
+  const msg = reason === 'rate_limited'
+    ? 'SerpApi rate-limited (429) — remaining searches skipped this run'
+    : 'SerpApi per-run call budget reached — remaining searches skipped this run'
+  if (!stats.errors.includes(msg)) stats.errors.push(msg)
+}
+
 async function runForProfile(
   profile: ProspectingProfile,
   supabase: SupabaseClient,
-  serpApiKey: string
+  serpApiKey: string,
+  guard: SerpApiGuard,
+  atsPassesEnabled: boolean,
 ): Promise<RunStats> {
   const stats: RunStats = {
     jobs_fetched_raw: 0,
@@ -795,13 +813,20 @@ async function runForProfile(
   }
 
   for (const jobTitle of profile.job_titles) {
+    const gate = guard.check()
+    if (!gate.allowed) {
+      noteGuardStop(stats, gate.reason)
+      break
+    }
     let serpResults: SerpApiJobResult[]
 
     try {
       const url = buildSerpApiUrl(jobTitle, profile, serpApiKey)
       console.log(`prospector-cron: querying SerpApi for profile ${profile.id}, title="${jobTitle}"`)
+      guard.recordCall()
       serpResults = await fetchSerpApi(url)
     } catch (err) {
+      if (err instanceof RateLimitError) guard.tripRateLimit()
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`prospector-cron: SerpApi failed for profile ${profile.id}, title="${jobTitle}": ${msg}`)
       stats.errors.push(`[${jobTitle}] SerpApi error: ${msg}`)
@@ -877,15 +902,22 @@ async function runForProfile(
   // One additional SerpApi call per job title × ATS host. Errors on individual
   // passes are logged and accumulated but never abort the overall run —
   // the main Google Jobs loop already captured the bulk of results.
-  for (const jobTitle of profile.job_titles) {
+  for (const jobTitle of atsPassesEnabled ? profile.job_titles : []) {
     for (const atsHost of ATS_BOARD_HOSTS) {
+      const gate = guard.check()
+      if (!gate.allowed) {
+        noteGuardStop(stats, gate.reason)
+        break
+      }
       let atsSerpResults: SerpApiJobResult[]
 
       try {
         const atsUrl = buildAtsBoardUrl(jobTitle, profile, serpApiKey, atsHost)
         console.log(`prospector-cron: querying ${atsHost} for profile ${profile.id}, title="${jobTitle}"`)
+        guard.recordCall()
         atsSerpResults = await fetchSerpApi(atsUrl)
       } catch (err) {
+        if (err instanceof RateLimitError) guard.tripRateLimit()
         const msg = err instanceof Error ? err.message : String(err)
         console.warn(`prospector-cron: ATS board search failed for ${atsHost}, title="${jobTitle}": ${msg}`)
         stats.errors.push(`[${jobTitle}@${atsHost}] SerpApi error: ${msg}`)
@@ -962,11 +994,48 @@ async function runForProfile(
   return stats
 }
 
+/** Dedup window for feed alerts — avoids re-notifying on every twice-daily run. */
+const ALERT_DEDUP_HOURS = 12
+
+/**
+ * Inserts in-app cost_alert notifications for a stalled/failing feed (best-effort).
+ * Deduped: skips a user who already has a feed alert within ALERT_DEDUP_HOURS so a
+ * persistent outage notifies at most ~twice a day, not every run. Uses the existing
+ * 'cost_alert' type (SerpApi quota is the usual cause) to avoid a schema migration.
+ */
+async function raiseFeedAlerts(supabase: SupabaseClient, alerts: FeedAlert[]): Promise<void> {
+  const sinceIso = new Date(Date.now() - ALERT_DEDUP_HOURS * 3_600_000).toISOString()
+  for (const alert of alerts) {
+    try {
+      const { data: recent } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', alert.userId)
+        .eq('notification_type', 'cost_alert')
+        .ilike('title', 'Job search feed%')
+        .gte('created_at', sinceIso)
+        .limit(1)
+      if (recent && recent.length > 0) continue
+
+      const { error } = await supabase.from('notifications').insert({
+        user_id: alert.userId,
+        notification_type: 'cost_alert',
+        title: alert.title,
+        body: alert.body,
+      })
+      if (error) {
+        console.error(`prospector-cron: feed alert insert failed for ${alert.userId}: ${error.message}`)
+      }
+    } catch (err) {
+      console.error(`prospector-cron: feed alert error for ${alert.userId}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
-// @ts-expect-error — Deno global provided by Edge Function runtime
 Deno.serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight — required for supabase.functions.invoke() from the browser
   if (req.method === 'OPTIONS') {
@@ -987,7 +1056,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error('prospector-cron: SECURITY — unauthenticated invocation allowed; set CRON_SECRET to require auth')
   }
 
-  // @ts-expect-error — Deno global provided by Edge Function runtime
+  // Optional { force } body flag lets an intentional manual run bypass the run-frequency throttle.
+  let force = false
+  try {
+    const body = await req.json()
+    if (body && typeof body.force === 'boolean') force = body.force
+  } catch {
+    // no / non-JSON body — default force=false
+  }
+
+  // Runtime safeguards (all env-overridable) — see _shared/prospector/guard.ts.
+  const config = readProspectorRuntimeConfig({
+    PROSPECTOR_ATS_PASSES: Deno.env.get('PROSPECTOR_ATS_PASSES'),
+    PROSPECTOR_MAX_SERPAPI_CALLS: Deno.env.get('PROSPECTOR_MAX_SERPAPI_CALLS'),
+    PROSPECTOR_MIN_RUN_INTERVAL_MIN: Deno.env.get('PROSPECTOR_MIN_RUN_INTERVAL_MIN'),
+    PROSPECTOR_STALE_FEED_HOURS: Deno.env.get('PROSPECTOR_STALE_FEED_HOURS'),
+  })
+
   const serpApiKey = Deno.env.get('SERPAPI_KEY')
   if (!serpApiKey) {
     console.error('prospector-cron: SERPAPI_KEY env var is not set')
@@ -1008,6 +1093,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
       { status: 500, headers: jsonHeaders }
     )
   }
+
+  // Run-frequency throttle (SerpApi burn control): skip a run that starts too soon
+  // after the previous one unless explicitly forced. Prevents manual-trigger storms
+  // from burning quota — a contributor to the 2026-06-17 SerpApi exhaustion.
+  const nowDate = new Date()
+  const { data: lastRunRow } = await supabase
+    .from('prospecting_runs')
+    .select('run_at')
+    .order('run_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (shouldThrottleRun(lastRunRow?.run_at ?? null, nowDate, config.minRunIntervalMinutes, force)) {
+    console.log(`prospector-cron: throttled — last run ${lastRunRow?.run_at}, min interval ${config.minRunIntervalMinutes}m`)
+    return new Response(
+      JSON.stringify({
+        message: 'throttled',
+        throttled: true,
+        last_run_at: lastRunRow?.run_at ?? null,
+        min_run_interval_minutes: config.minRunIntervalMinutes,
+      }),
+      { status: 200, headers: jsonHeaders },
+    )
+  }
+
+  const guard = new SerpApiGuard(config.maxSerpApiCallsPerRun)
 
   // Fetch all active profiles (BR-107: is_active = false are excluded at query time)
   // Service role bypasses RLS intentionally — this is a server-side cron, not a user request.
@@ -1034,14 +1144,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   console.log(`prospector-cron: processing ${profiles.length} active profile(s)`)
 
-  const runAt = new Date().toISOString()
+  const runAt = nowDate.toISOString()
   const profileResults: Array<{ profile_id: string; status: string; jobs_found: number; jobs_queued: number }> = []
+  const runSummaries: ProfileRunSummary[] = []
 
   for (const profile of profiles as ProspectingProfile[]) {
     let stats: RunStats
 
     try {
-      stats = await runForProfile(profile, supabase, serpApiKey)
+      stats = await runForProfile(profile, supabase, serpApiKey, guard, config.atsPassesEnabled)
     } catch (err) {
       // Unexpected error in runForProfile itself — isolate and continue (BR-107 / per-profile isolation)
       const msg = err instanceof Error ? err.message : String(err)
@@ -1099,6 +1210,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       jobs_found: stats.jobs_found,
       jobs_queued: stats.jobs_queued,
     })
+    runSummaries.push({
+      profileId: profile.id,
+      userId: profile.user_id,
+      status: stats.status,
+      hasTitles: profile.job_titles.length > 0,
+    })
 
     console.log(
       `prospector-cron: profile ${profile.id} complete — status=${stats.status}, ` +
@@ -1107,11 +1224,38 @@ Deno.serve(async (req: Request): Promise<Response> => {
     )
   }
 
+  // ── Silent-failure alerting ───────────────────────────────────────────────
+  // Raise in-app notifications when a run errors or the feed has gone stale so a
+  // dead feed surfaces instead of failing silently (the 2026-06-17 stall ran for
+  // ~2 weeks unnoticed). Best-effort — never affects the run outcome.
+  let lastQueuedAt: string | null = null
+  try {
+    const { data } = await supabase
+      .from('prospecting_runs')
+      .select('run_at')
+      .gt('jobs_queued', 0)
+      .order('run_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    lastQueuedAt = data?.run_at ?? null
+  } catch (err) {
+    console.warn(`prospector-cron: stale-feed lookup failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  const feedStale = isFeedStale(lastQueuedAt, nowDate, config.staleFeedHours)
+  const alerts = planFeedAlerts(runSummaries, feedStale, config.staleFeedHours)
+  await raiseFeedAlerts(supabase, alerts)
+
   return new Response(
     JSON.stringify({
       message: 'prospector-cron complete',
       profiles_processed: profiles.length,
       results: profileResults,
+      serpapi_calls: guard.callsMade,
+      serpapi_rate_limited: guard.rateLimited,
+      ats_passes_enabled: config.atsPassesEnabled,
+      feed_stale: feedStale,
+      alerts_raised: alerts.length,
     }),
     { status: 200, headers: jsonHeaders }
   )

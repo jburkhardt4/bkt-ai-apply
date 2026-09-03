@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Python bytecode (e.g. skill search scripts under .agents/skills/**/scripts)
+__pycache__/
+*.pyc
+
 # Local environment files — never commit real secrets (see .env.example)
 .env
 .env.*

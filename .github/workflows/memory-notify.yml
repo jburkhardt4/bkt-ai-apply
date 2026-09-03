@@ -1,0 +1,38 @@
+name: Notify memory orchestrator
+
+on:
+  pull_request:
+    types: [closed]
+  # Per-push mode (Gate 2 alternative — leave commented):
+  # push:
+  #   branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: memory-notify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to BKT-WritingTools
+        env:
+          GH_TOKEN: ${{ secrets.MEMORY_DISPATCH_TOKEN }}
+          EV:     ${{ github.event_name }}
+          SHA:    ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          PR:     ${{ github.event.pull_request.number }}
+        run: |
+          gh api repos/jburkhardt4/BKT-WritingTools/dispatches \
+            -f event_type=memory-sync \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[event]=$EV" \
+            -f "client_payload[sha]=$SHA" \
+            -f "client_payload[before]=$BEFORE" \
+            -f "client_payload[pr]=$PR" \
+            -f "client_payload[actor]=${{ github.actor }}"
